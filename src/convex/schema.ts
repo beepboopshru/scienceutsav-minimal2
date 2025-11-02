@@ -39,6 +39,8 @@ const schema = defineSchema(
       name: v.string(),
       description: v.optional(v.string()),
       tags: v.optional(v.array(v.string())),
+      categories: v.optional(v.array(v.string())),
+      usesVariants: v.optional(v.boolean()),
       status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
       createdBy: v.id("users"),
     })

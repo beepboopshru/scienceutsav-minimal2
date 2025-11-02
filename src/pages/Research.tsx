@@ -35,12 +35,19 @@ export default function Research() {
   const [selectedProgram, setSelectedProgram] = useState<Id<"programs"> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [view, setView] = useState<"list" | "kit-builder">("list");
 
   // Program dialog state
   const [programDialogOpen, setProgramDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Id<"programs"> | null>(null);
-  const [programForm, setProgramForm] = useState({ name: "", description: "", tags: [] as string[] });
+  const [programForm, setProgramForm] = useState({ 
+    name: "", 
+    description: "", 
+    tags: [] as string[], 
+    categories: [] as string[],
+    usesVariants: false 
+  });
 
   // Kit builder state
   const [editingKit, setEditingKit] = useState<Id<"kits"> | null>(null);
@@ -88,17 +95,21 @@ export default function Research() {
     const matchesSearch = kit.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProgram = !selectedProgram || kit.programId === selectedProgram;
     const matchesTag = tagFilter === "all" || kit.tags?.includes(tagFilter);
-    return matchesSearch && matchesProgram && matchesTag;
+    const matchesCategory = categoryFilter === "all" || kit.category === categoryFilter;
+    return matchesSearch && matchesProgram && matchesTag && matchesCategory;
   });
 
   const allTags = Array.from(new Set(activeKits.flatMap((k) => k.tags || [])));
+  
+  const selectedProgramData = selectedProgram ? programs.find((p) => p._id === selectedProgram) : null;
+  const availableCategories = selectedProgramData?.categories || [];
 
   const handleCreateProgram = async () => {
     try {
       await createProgram(programForm);
       toast.success("Program created successfully");
       setProgramDialogOpen(false);
-      setProgramForm({ name: "", description: "", tags: [] });
+      setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false });
     } catch (error) {
       toast.error("Failed to create program");
     }
@@ -111,7 +122,7 @@ export default function Research() {
       toast.success("Program updated successfully");
       setProgramDialogOpen(false);
       setEditingProgram(null);
-      setProgramForm({ name: "", description: "", tags: [] });
+      setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false });
     } catch (error) {
       toast.error("Failed to update program");
     }
@@ -171,6 +182,8 @@ export default function Research() {
       name: program.name,
       description: program.description || "",
       tags: program.tags || [],
+      categories: program.categories || [],
+      usesVariants: program.usesVariants || false,
     });
     setProgramDialogOpen(true);
   };
@@ -245,7 +258,7 @@ export default function Research() {
             <div className="flex gap-2">
               <Dialog open={programDialogOpen} onOpenChange={setProgramDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { setEditingProgram(null); setProgramForm({ name: "", description: "", tags: [] }); }}>
+                  <Button onClick={() => { setEditingProgram(null); setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false }); }}>
                     <Plus className="mr-2 h-4 w-4" />
                     New Program
                   </Button>
@@ -263,6 +276,28 @@ export default function Research() {
                     <div>
                       <Label>Description</Label>
                       <Textarea value={programForm.description} onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })} placeholder="Brief overview of the program" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        id="usesVariants"
+                        checked={programForm.usesVariants}
+                        onChange={(e) => setProgramForm({ ...programForm, usesVariants: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="usesVariants">Uses CSTEM Variants (Explorer/Discoverer)</Label>
+                    </div>
+                    <div>
+                      <Label>Categories (comma-separated)</Label>
+                      <Input 
+                        value={programForm.categories.join(", ")} 
+                        onChange={(e) => setProgramForm({ 
+                          ...programForm, 
+                          categories: e.target.value.split(",").map(c => c.trim()).filter(c => c) 
+                        })} 
+                        placeholder="e.g., Beginner, Intermediate, Advanced" 
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Define category options for kits in this program</p>
                     </div>
                   </div>
                   <DialogFooter>
@@ -339,6 +374,19 @@ export default function Research() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {availableCategories.length > 0 && (
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger className="w-40">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {availableCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             </CardHeader>

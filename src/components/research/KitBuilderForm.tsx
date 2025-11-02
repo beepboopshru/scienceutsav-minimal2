@@ -12,7 +12,13 @@ import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements, stringifyPackingRequirements } from "@/lib/kitPacking";
 
 interface KitBuilderFormProps {
-  programs: Array<{ _id: Id<"programs">; name: string; status?: string }>;
+  programs: Array<{ 
+    _id: Id<"programs">; 
+    name: string; 
+    status?: string;
+    categories?: string[];
+    usesVariants?: boolean;
+  }>;
   inventory: Array<{ _id: Id<"inventory">; name: string; quantity: number }>;
   editingKit?: {
     _id: Id<"kits">;
@@ -191,29 +197,81 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
             </div>
             <div>
               <Label>Category</Label>
-              <Input
-                value={kitForm.category}
-                onChange={(e) => setKitForm({ ...kitForm, category: e.target.value })}
-                placeholder="e.g., Physics"
-              />
+              {(() => {
+                const selectedProgram = programs.find(p => p._id === kitForm.programId);
+                const programCategories = selectedProgram?.categories || [];
+                
+                if (programCategories.length > 0) {
+                  return (
+                    <Select
+                      value={kitForm.category || "none"}
+                      onValueChange={(value) => setKitForm({ ...kitForm, category: value === "none" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {programCategories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                }
+                
+                return (
+                  <Input
+                    value={kitForm.category}
+                    onChange={(e) => setKitForm({ ...kitForm, category: e.target.value })}
+                    placeholder="e.g., Physics"
+                  />
+                );
+              })()}
             </div>
             <div>
               <Label>CSTEM Variant</Label>
-              <Select
-                value={kitForm.cstemVariant || "none"}
-                onValueChange={(value) =>
-                  setKitForm({ ...kitForm, cstemVariant: value === "none" ? undefined : (value as "explorer" | "discoverer") })
+              {(() => {
+                const selectedProgram = programs.find(p => p._id === kitForm.programId);
+                const usesVariants = selectedProgram?.usesVariants || false;
+                
+                if (!usesVariants) {
+                  return (
+                    <Select value="none" disabled>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Not applicable" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not applicable</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  );
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="explorer">Explorer</SelectItem>
-                  <SelectItem value="discoverer">Discoverer</SelectItem>
-                </SelectContent>
-              </Select>
+                
+                return (
+                  <Select
+                    value={kitForm.cstemVariant || "none"}
+                    onValueChange={(value) =>
+                      setKitForm({ ...kitForm, cstemVariant: value === "none" ? undefined : (value as "explorer" | "discoverer") })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="explorer">Explorer</SelectItem>
+                      <SelectItem value="discoverer">Discoverer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
+              {(() => {
+                const selectedProgram = programs.find(p => p._id === kitForm.programId);
+                return selectedProgram?.usesVariants && (
+                  <p className="text-xs text-muted-foreground mt-1">This program uses CSTEM variants</p>
+                );
+              })()}
             </div>
           </div>
 

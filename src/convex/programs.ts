@@ -21,6 +21,8 @@ export const create = mutation({
     name: v.string(),
     description: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    categories: v.optional(v.array(v.string())),
+    usesVariants: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -30,6 +32,8 @@ export const create = mutation({
       name: args.name,
       description: args.description,
       tags: args.tags,
+      categories: args.categories,
+      usesVariants: args.usesVariants,
       status: "active",
       createdBy: userId,
     });
@@ -42,6 +46,8 @@ export const update = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    categories: v.optional(v.array(v.string())),
+    usesVariants: v.optional(v.boolean()),
     status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
   },
   handler: async (ctx, args) => {
