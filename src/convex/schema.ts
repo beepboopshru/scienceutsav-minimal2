@@ -37,6 +37,7 @@ const schema = defineSchema(
     // Educational programs
     programs: defineTable({
       name: v.string(),
+      slug: v.optional(v.string()),
       description: v.optional(v.string()),
       tags: v.optional(v.array(v.string())),
       categories: v.optional(v.array(v.string())),
@@ -45,7 +46,8 @@ const schema = defineSchema(
       createdBy: v.id("users"),
     })
       .index("by_created_by", ["createdBy"])
-      .index("by_status", ["status"]),
+      .index("by_status", ["status"])
+      .index("by_slug", ["slug"]),
 
     // Kit specifications
     kits: defineTable({

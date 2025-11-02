@@ -16,6 +16,13 @@ export const get = query({
   },
 });
 
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export const create = mutation({
   args: {
     name: v.string(),
@@ -28,8 +35,11 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const slug = generateSlug(args.name);
+
     return await ctx.db.insert("programs", {
       name: args.name,
+      slug,
       description: args.description,
       tags: args.tags,
       categories: args.categories,
@@ -54,8 +64,15 @@ export const update = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    const { id, name, ...updates } = args;
+    
+    const updateData: any = { ...updates };
+    if (name) {
+      updateData.name = name;
+      updateData.slug = generateSlug(name);
+    }
+    
+    await ctx.db.patch(id, updateData);
   },
 });
 
