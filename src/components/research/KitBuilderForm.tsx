@@ -132,6 +132,13 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
 
   return (
     <div className="space-y-6">
+      {/* Global datalist for inventory search */}
+      <datalist id="inventory-names">
+        {inventory.map((item) => (
+          <option key={item._id} value={item.name} />
+        ))}
+      </datalist>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -346,26 +353,16 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
                             {pouch.materials.map((material, matIdx) => (
                               <TableRow key={matIdx}>
                                 <TableCell>
-                                  <Select
+                                  <Input
                                     value={material.name}
-                                    onValueChange={(value) => {
-                                      structure.pouches[pouchIdx].materials[matIdx].name = value;
+                                    list="inventory-names"
+                                    onChange={(e) => {
+                                      structure.pouches[pouchIdx].materials[matIdx].name = e.target.value;
                                       setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                     }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select inventory item" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {inventory.map((item) => (
-                                        <SelectItem key={item._id} value={item.name}>
-                                          {item.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    placeholder="Search inventory..."
+                                  />
                                 </TableCell>
-=======
                                 <TableCell>
                                   <Input
                                     type="number"
@@ -494,26 +491,16 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
                             {packet.materials.map((material, matIdx) => (
                               <TableRow key={matIdx}>
                                 <TableCell>
-                                  <Select
+                                  <Input
                                     value={material.name}
-                                    onValueChange={(value) => {
-                                      structure.packets[packetIdx].materials[matIdx].name = value;
+                                    list="inventory-names"
+                                    onChange={(e) => {
+                                      structure.packets[packetIdx].materials[matIdx].name = e.target.value;
                                       setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                     }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select inventory item" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {inventory.map((item) => (
-                                        <SelectItem key={item._id} value={item.name}>
-                                          {item.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                    placeholder="Search inventory..."
+                                  />
                                 </TableCell>
-=======
                                 <TableCell>
                                   <Input
                                     type="number"
