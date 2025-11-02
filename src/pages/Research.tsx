@@ -13,7 +13,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, Download, ChevronDown, ChevronUp, Upload } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { ResearchFileManager } from "@/components/research/ResearchFileManager";
@@ -698,7 +698,7 @@ export default function Research() {
                 {filteredKits.map((kit, index) => {
                   const isExpanded = expandedKitId === kit._id;
                   return (
-                    <tbody key={kit._id}>
+                    <React.Fragment key={kit._id}>
                       <motion.tr
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -884,7 +884,7 @@ export default function Research() {
                           </td>
                         </tr>
                       )}
-                    </tbody>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
