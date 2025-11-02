@@ -631,7 +631,7 @@ export default function Inventory() {
                       <div className="space-y-2">
                         <Input
                           type="number"
-                          placeholder="Quantity"
+                          placeholder="e.g., 50"
                           value={item.quantity}
                           onChange={(e) => {
                             const newItems = [...billForm.items];
@@ -639,11 +639,12 @@ export default function Inventory() {
                             setBillForm({ ...billForm, items: newItems });
                           }}
                         />
+                        <p className="text-xs text-muted-foreground">Quantity purchased</p>
                       </div>
                       <div className="space-y-2">
                         <Input
                           type="number"
-                          placeholder="Unit Price"
+                          placeholder="e.g., 150.00"
                           value={item.unitPrice}
                           onChange={(e) => {
                             const newItems = [...billForm.items];
@@ -651,6 +652,7 @@ export default function Inventory() {
                             setBillForm({ ...billForm, items: newItems });
                           }}
                         />
+                        <p className="text-xs text-muted-foreground">Price per unit (₹)</p>
                       </div>
                     </div>
                   ))}
