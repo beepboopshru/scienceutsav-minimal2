@@ -805,7 +805,7 @@ export default function Research() {
 
                       {isExpanded && (
                         <tr className="bg-muted/20">
-                          <td colSpan={7} className="px-4 py-4">
+                          <td colSpan={4} className="px-4 py-4">
                             <div className="space-y-4">
                               {kit.description && (
                                 <div>
