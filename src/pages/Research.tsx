@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { Loader2, Plus, Search, Package, Beaker, Edit, Copy, Archive, AlertCircle, DollarSign, Box } from "lucide-react";
+import { Loader2, Plus, Search, Package, Beaker, Edit, Copy, Archive, DollarSign, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,12 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
-import { parsePackingRequirements, stringifyPackingRequirements } from "@/lib/kitPacking";
+import { KitBuilderForm } from "@/components/research/KitBuilderForm";
 
 export default function Research() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -35,24 +33,23 @@ export default function Research() {
   const cloneKit = useMutation(api.kits.clone);
 
   const [selectedProgram, setSelectedProgram] = useState<Id<"programs"> | null>(null);
-  const [selectedKit, setSelectedKit] = useState<Id<"kits"> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<string>("all");
+  const [view, setView] = useState<"list" | "kit-builder">("list");
 
   // Program dialog state
   const [programDialogOpen, setProgramDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Id<"programs"> | null>(null);
   const [programForm, setProgramForm] = useState({ name: "", description: "", tags: [] as string[] });
 
-  // Kit dialog state
-  const [kitDialogOpen, setKitDialogOpen] = useState(false);
+  // Kit builder state
   const [editingKit, setEditingKit] = useState<Id<"kits"> | null>(null);
   const [kitForm, setKitForm] = useState({
     name: "",
     programId: "" as Id<"programs">,
     serialNumber: "",
     category: "",
-    cstemVariant: undefined as "explorer" | "discoverer" | undefined,
+    cstemVariant: undefined,
     description: "",
     remarks: "",
     tags: [] as string[],
@@ -61,16 +58,10 @@ export default function Research() {
     lowStockThreshold: 10,
     isStructured: false,
     packingRequirements: "",
-    spareKits: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
-    bulkMaterials: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
-    miscellaneous: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
-    components: [] as Array<{
-      inventoryItemId: Id<"inventory">;
-      quantityPerKit: number;
-      unit: string;
-      wastageNotes?: string;
-      comments?: string;
-    }>,
+    spareKits: [],
+    bulkMaterials: [],
+    miscellaneous: [],
+    components: [],
   });
 
   useEffect(() => {
@@ -135,68 +126,24 @@ export default function Research() {
     }
   };
 
-  const handleCreateKit = async () => {
+  const handleSaveKit = async (kitData: any) => {
     try {
-      await createKit(kitForm);
-      toast.success("Kit created successfully");
-      setKitDialogOpen(false);
-      setKitForm({
-        name: "",
-        programId: "" as Id<"programs">,
-        serialNumber: "",
-        category: "",
-        cstemVariant: undefined,
-        description: "",
-        remarks: "",
-        tags: [],
-        notes: "",
-        stockCount: 0,
-        lowStockThreshold: 10,
-        isStructured: false,
-        packingRequirements: "",
-        spareKits: [],
-        bulkMaterials: [],
-        miscellaneous: [],
-        components: [],
-      });
-    } catch (error) {
-      toast.error("Failed to create kit");
-    }
-  };
-
-  const handleUpdateKit = async () => {
-    if (!editingKit) return;
-    try {
-      const { cstemVariant, ...rest } = kitForm;
-      await updateKit({
-        id: editingKit,
-        ...rest,
-        ...(cstemVariant ? { cstemVariant } : {}),
-      });
-      toast.success("Kit updated successfully");
-      setKitDialogOpen(false);
+      const { cstemVariant, ...rest } = kitData;
+      if (editingKit) {
+        await updateKit({
+          id: editingKit,
+          ...rest,
+          ...(cstemVariant ? { cstemVariant } : {}),
+        });
+        toast.success("Kit updated successfully");
+      } else {
+        await createKit(kitData);
+        toast.success("Kit created successfully");
+      }
+      setView("list");
       setEditingKit(null);
-      setKitForm({
-        name: "",
-        programId: "" as Id<"programs">,
-        serialNumber: "",
-        category: "",
-        cstemVariant: undefined,
-        description: "",
-        remarks: "",
-        tags: [],
-        notes: "",
-        stockCount: 0,
-        lowStockThreshold: 10,
-        isStructured: false,
-        packingRequirements: "",
-        spareKits: [],
-        bulkMaterials: [],
-        miscellaneous: [],
-        components: [],
-      });
     } catch (error) {
-      toast.error("Failed to update kit");
+      toast.error(editingKit ? "Failed to update kit" : "Failed to create kit");
     }
   };
 
@@ -230,29 +177,15 @@ export default function Research() {
 
   const openEditKit = (kit: typeof kits[0]) => {
     setEditingKit(kit._id);
-    setKitForm({
-      name: kit.name,
-      programId: kit.programId,
-      serialNumber: kit.serialNumber || "",
-      category: kit.category || "",
-      cstemVariant: kit.cstemVariant,
-      description: kit.description || "",
-      remarks: kit.remarks || "",
-      tags: kit.tags || [],
-      notes: kit.notes || "",
-      stockCount: kit.stockCount || 0,
-      lowStockThreshold: kit.lowStockThreshold || 10,
-      isStructured: kit.isStructured || false,
-      packingRequirements: kit.packingRequirements || "",
-      spareKits: kit.spareKits || [],
-      bulkMaterials: kit.bulkMaterials || [],
-      miscellaneous: kit.miscellaneous || [],
-      components: kit.components || [],
-    });
-    setKitDialogOpen(true);
+    setView("kit-builder");
   };
 
-  const calculateKitCost = (components: typeof kitForm.components) => {
+  const openNewKit = () => {
+    setEditingKit(null);
+    setView("kit-builder");
+  };
+
+  const calculateKitCost = (components: Array<{ inventoryItemId: Id<"inventory">; quantityPerKit: number }>) => {
     let total = 0;
     for (const comp of components) {
       const item = inventory.find((i) => i._id === comp.inventoryItemId);
@@ -263,7 +196,7 @@ export default function Research() {
     return total;
   };
 
-  const calculateBuildableUnits = (components: typeof kitForm.components) => {
+  const calculateBuildableUnits = (components: Array<{ inventoryItemId: Id<"inventory">; quantityPerKit: number }>) => {
     if (components.length === 0) return 0;
     let min = Infinity;
     for (const comp of components) {
@@ -276,35 +209,29 @@ export default function Research() {
     return min === Infinity ? 0 : min;
   };
 
-  const addComponent = () => {
-    setKitForm({
-      ...kitForm,
-      components: [
-        ...kitForm.components,
-        {
-          inventoryItemId: "" as Id<"inventory">,
-          quantityPerKit: 1,
-          unit: "pcs",
-          wastageNotes: "",
-          comments: "",
-        },
-      ],
-    });
-  };
+  // Show Kit Builder view
+  if (view === "kit-builder") {
+    const editingKitData = editingKit ? kits.find((k) => k._id === editingKit) : null;
+    
+    return (
+      <Layout>
+        <div className="p-8">
+          <KitBuilderForm
+            programs={programs}
+            inventory={inventory}
+            editingKit={editingKitData}
+            onSave={handleSaveKit}
+            onCancel={() => {
+              setView("list");
+              setEditingKit(null);
+            }}
+          />
+        </div>
+      </Layout>
+    );
+  }
 
-  const removeComponent = (index: number) => {
-    setKitForm({
-      ...kitForm,
-      components: kitForm.components.filter((_, i) => i !== index),
-    });
-  };
-
-  const updateComponent = (index: number, field: string, value: any) => {
-    const updated = [...kitForm.components];
-    updated[index] = { ...updated[index], [field]: value };
-    setKitForm({ ...kitForm, components: updated });
-  };
-
+  // Show List view
   return (
     <Layout>
       <div className="p-8">
@@ -347,447 +274,10 @@ export default function Research() {
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={kitDialogOpen} onOpenChange={setKitDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" onClick={() => { 
-                    setEditingKit(null); 
-                    setKitForm({ 
-                      name: "", 
-                      programId: "" as Id<"programs">, 
-                      serialNumber: "",
-                      category: "",
-                      cstemVariant: undefined,
-                      description: "", 
-                      remarks: "",
-                      tags: [], 
-                      notes: "", 
-                      stockCount: 0,
-                      lowStockThreshold: 10,
-                      isStructured: false,
-                      packingRequirements: "",
-                      spareKits: [],
-                      bulkMaterials: [],
-                      miscellaneous: [],
-                      components: [] 
-                    }); 
-                  }}>
-                    <Package className="mr-2 h-4 w-4" />
-                    New Kit
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingKit ? "Edit Kit" : "Create Kit"}</DialogTitle>
-                    <DialogDescription>Define kit specifications and bill of materials</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Kit Name</Label>
-                        <Input value={kitForm.name} onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })} placeholder="e.g., Electric Circuit Kit" />
-                      </div>
-                      <div>
-                        <Label>Program</Label>
-                        <Select value={kitForm.programId} onValueChange={(value) => setKitForm({ ...kitForm, programId: value as Id<"programs"> })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select program" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {activePrograms.map((p) => (
-                              <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Description</Label>
-                      <Textarea value={kitForm.description} onChange={(e) => setKitForm({ ...kitForm, description: e.target.value })} placeholder="Kit overview" />
-                    </div>
-
-                    <div>
-                      <Label>Notes</Label>
-                      <Textarea value={kitForm.notes} onChange={(e) => setKitForm({ ...kitForm, notes: e.target.value })} placeholder="Assembly notes, special instructions" />
-                    </div>
-
-                    <Separator />
-
-                    {/* BOM Structure Toggle */}
-                    <div className="flex items-center gap-4">
-                      <Label className="text-base">BOM Structure</Label>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant={!kitForm.isStructured ? "default" : "outline"}
-                          onClick={() => setKitForm({ ...kitForm, isStructured: false })}
-                        >
-                          Legacy (Components)
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={kitForm.isStructured ? "default" : "outline"}
-                          onClick={() => setKitForm({ ...kitForm, isStructured: true })}
-                        >
-                          Structured (Pouches/Packets)
-                        </Button>
-                      </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Structured BOM: Pouches and Packets */}
-                    {kitForm.isStructured ? (
-                      <div className="space-y-6">
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <Label className="text-base">Pouches</Label>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                const structure = parsePackingRequirements(kitForm.packingRequirements);
-                                structure.pouches.push({ name: "Main Pouch", materials: [] });
-                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                              }}
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Pouch
-                            </Button>
-                          </div>
-                          {(() => {
-                            const structure = parsePackingRequirements(kitForm.packingRequirements);
-                            return structure.pouches.map((pouch, pouchIdx) => (
-                              <Card key={pouchIdx} className="mb-4">
-                                <CardHeader>
-                                  <div className="flex items-center justify-between">
-                                    <Input
-                                      value={pouch.name}
-                                      onChange={(e) => {
-                                        structure.pouches[pouchIdx].name = e.target.value;
-                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                      }}
-                                      placeholder="Pouch name (e.g., Main Pouch)"
-                                      className="max-w-xs"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        structure.pouches.splice(pouchIdx, 1);
-                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                      }}
-                                    >
-                                      Remove Pouch
-                                    </Button>
-                                  </div>
-                                </CardHeader>
-                                <CardContent>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Material Name</TableHead>
-                                        <TableHead>Quantity</TableHead>
-                                        <TableHead>Unit</TableHead>
-                                        <TableHead>Notes</TableHead>
-                                        <TableHead></TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {pouch.materials.map((material, matIdx) => (
-                                        <TableRow key={matIdx}>
-                                          <TableCell>
-                                            <Input
-                                              value={material.name}
-                                              onChange={(e) => {
-                                                structure.pouches[pouchIdx].materials[matIdx].name = e.target.value;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              placeholder="Match inventory name"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              type="number"
-                                              value={material.quantity}
-                                              onChange={(e) => {
-                                                structure.pouches[pouchIdx].materials[matIdx].quantity = parseFloat(e.target.value);
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              className="w-20"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              value={material.unit}
-                                              onChange={(e) => {
-                                                structure.pouches[pouchIdx].materials[matIdx].unit = e.target.value;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              className="w-20"
-                                              placeholder="pcs"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              value={material.notes || ""}
-                                              onChange={(e) => {
-                                                structure.pouches[pouchIdx].materials[matIdx].notes = e.target.value;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              placeholder="Optional"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={() => {
-                                                structure.pouches[pouchIdx].materials.splice(matIdx, 1);
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                            >
-                                              Remove
-                                            </Button>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="mt-2"
-                                    onClick={() => {
-                                      structure.pouches[pouchIdx].materials.push({ name: "", quantity: 1, unit: "pcs" });
-                                      setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                    }}
-                                  >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Material
-                                  </Button>
-                                </CardContent>
-                              </Card>
-                            ));
-                          })()}
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <Label className="text-base">Packets (Pre-sealed)</Label>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                const structure = parsePackingRequirements(kitForm.packingRequirements);
-                                structure.packets.push({ name: "Packet A", materials: [] });
-                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                              }}
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Packet
-                            </Button>
-                          </div>
-                          {(() => {
-                            const structure = parsePackingRequirements(kitForm.packingRequirements);
-                            return structure.packets.map((packet, packetIdx) => (
-                              <Card key={packetIdx} className="mb-4 border-blue-200">
-                                <CardHeader>
-                                  <div className="flex items-center justify-between">
-                                    <Input
-                                      value={packet.name}
-                                      onChange={(e) => {
-                                        structure.packets[packetIdx].name = e.target.value;
-                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                      }}
-                                      placeholder="Packet name (e.g., Packet A - Hardware)"
-                                      className="max-w-xs"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        structure.packets.splice(packetIdx, 1);
-                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                      }}
-                                    >
-                                      Remove Packet
-                                    </Button>
-                                  </div>
-                                </CardHeader>
-                                <CardContent>
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Material Name</TableHead>
-                                        <TableHead>Quantity</TableHead>
-                                        <TableHead>Unit</TableHead>
-                                        <TableHead>Notes</TableHead>
-                                        <TableHead></TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {packet.materials.map((material, matIdx) => (
-                                        <TableRow key={matIdx}>
-                                          <TableCell>
-                                            <Input
-                                              value={material.name}
-                                              onChange={(e) => {
-                                                structure.packets[packetIdx].materials[matIdx].name = e.target.value;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              placeholder="Match inventory name"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              type="number"
-                                              value={material.quantity}
-                                              onChange={(e) => {
-                                                structure.packets[packetIdx].materials[matIdx].quantity = parseFloat(e.target.value);
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              className="w-20"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              value={material.unit}
-                                              onChange={(e) => {
-                                                structure.packets[packetIdx].materials[matIdx].unit = e.target.value;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              className="w-20"
-                                              placeholder="pcs"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Input
-                                              value={material.notes || ""}
-                                              onChange={(e) => {
-                                                structure.packets[packetIdx].materials[matIdx].notes = e.target.value;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                              placeholder="Optional"
-                                            />
-                                          </TableCell>
-                                          <TableCell>
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={() => {
-                                                structure.packets[packetIdx].materials.splice(matIdx, 1);
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                            >
-                                              Remove
-                                            </Button>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="mt-2"
-                                    onClick={() => {
-                                      structure.packets[packetIdx].materials.push({ name: "", quantity: 1, unit: "pcs" });
-                                      setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                    }}
-                                  >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Material
-                                  </Button>
-                                </CardContent>
-                              </Card>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    ) : (
-                      /* Legacy BOM: Components */
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <Label className="text-base">Bill of Materials (BOM)</Label>
-                          <Button size="sm" variant="outline" onClick={addComponent}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Component
-                          </Button>
-                        </div>
-
-                      {kitForm.components.length === 0 ? (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Box className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p>No components added yet</p>
-                        </div>
-                      ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Inventory Item</TableHead>
-                              <TableHead>Qty/Kit</TableHead>
-                              <TableHead>Unit</TableHead>
-                              <TableHead>Notes</TableHead>
-                              <TableHead></TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {kitForm.components.map((comp, idx) => (
-                              <TableRow key={idx}>
-                                <TableCell>
-                                  <Select value={comp.inventoryItemId} onValueChange={(value) => updateComponent(idx, "inventoryItemId", value)}>
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select item" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {inventory.map((item) => (
-                                        <SelectItem key={item._id} value={item._id}>{item.name}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  <Input type="number" value={comp.quantityPerKit} onChange={(e) => updateComponent(idx, "quantityPerKit", parseFloat(e.target.value))} className="w-20" />
-                                </TableCell>
-                                <TableCell>
-                                  <Input value={comp.unit} onChange={(e) => updateComponent(idx, "unit", e.target.value)} className="w-20" />
-                                </TableCell>
-                                <TableCell>
-                                  <Input value={comp.wastageNotes || ""} onChange={(e) => updateComponent(idx, "wastageNotes", e.target.value)} placeholder="Optional" />
-                                </TableCell>
-                                <TableCell>
-                                  <Button size="sm" variant="ghost" onClick={() => removeComponent(idx)}>Remove</Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      )}
-
-                        {kitForm.components.length > 0 && (
-                          <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">Estimated Cost:</span>
-                              <span className="text-sm">₹{calculateKitCost(kitForm.components).toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium">Buildable Units:</span>
-                              <span className="text-sm">{calculateBuildableUnits(kitForm.components)}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setKitDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={editingKit ? handleUpdateKit : handleCreateKit}>
-                      {editingKit ? "Update Kit" : "Create Kit"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button variant="outline" onClick={openNewKit}>
+                <Package className="mr-2 h-4 w-4" />
+                New Kit
+              </Button>
             </div>
           </div>
 
