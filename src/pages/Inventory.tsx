@@ -131,7 +131,7 @@ export default function Inventory() {
       inventory
         .filter((item) => filterType === "all" || item.type === filterType)
         .map((item) => item.subcategory)
-        .filter(Boolean)
+        .filter((subcat): subcat is string => Boolean(subcat))
     )
   );
 
@@ -793,8 +793,8 @@ export default function Inventory() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Subcategories</SelectItem>
-                      {availableSubcategories.map((subcat) => (
-                        <SelectItem key={subcat} value={subcat || ""}>
+                      {availableSubcategories.filter(Boolean).map((subcat) => (
+                        <SelectItem key={subcat} value={subcat}>
                           {subcat}
                         </SelectItem>
                       ))}
