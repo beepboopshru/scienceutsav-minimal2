@@ -299,11 +299,8 @@ export default function Research() {
                     <div>
                       <Label>Categories (comma-separated)</Label>
                       <Input 
-                        value={programForm.categories.join(", ")} 
-                        onChange={(e) => setProgramForm({ 
-                          ...programForm, 
-                          categories: e.target.value.split(",").map(c => c.trim()).filter(c => c.length > 0) 
-                        })} 
+                        value={categoryInput} 
+                        onChange={(e) => setCategoryInput(e.target.value)} 
                         onBlur={(e) => setProgramForm({
                           ...programForm,
                           categories: e.target.value.split(",").map(c => c.trim()).filter(c => c.length > 0)
