@@ -334,14 +334,18 @@ export default function Inventory() {
                         type="number"
                         value={itemForm.quantity}
                         onChange={(e) => setItemForm({ ...itemForm, quantity: Number(e.target.value) })}
+                        placeholder="e.g., 100"
                       />
+                      <p className="text-xs text-muted-foreground">Current stock amount</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Unit</Label>
                       <Input
                         value={itemForm.unit}
                         onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
+                        placeholder="e.g., kg, pcs, meters"
                       />
+                      <p className="text-xs text-muted-foreground">Measurement unit</p>
                     </div>
                     <div className="space-y-2">
                       <Label>Min Stock Level</Label>
@@ -349,7 +353,9 @@ export default function Inventory() {
                         type="number"
                         value={itemForm.minStockLevel}
                         onChange={(e) => setItemForm({ ...itemForm, minStockLevel: Number(e.target.value) })}
+                        placeholder="e.g., 10"
                       />
+                      <p className="text-xs text-muted-foreground">Low stock alert threshold</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
