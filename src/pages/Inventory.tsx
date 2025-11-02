@@ -15,7 +15,8 @@ import {
   Settings,
   Info,
   Scissors,
-  Upload
+  Upload,
+  Trash2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -606,7 +607,7 @@ export default function Inventory() {
                   <Separator />
                   <Label>Items</Label>
                   {billForm.items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-4">
+                    <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start">
                       <div className="space-y-2">
                         <Select
                           value={item.inventoryId}
@@ -654,6 +655,22 @@ export default function Inventory() {
                         />
                         <p className="text-xs text-muted-foreground">Price per unit (₹)</p>
                       </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const newItems = billForm.items.filter((_, i) => i !== index);
+                          if (newItems.length === 0) {
+                            setBillForm({ ...billForm, items: [{ inventoryId: "" as Id<"inventory">, quantity: 0, unitPrice: 0 }] });
+                          } else {
+                            setBillForm({ ...billForm, items: newItems });
+                          }
+                        }}
+                        disabled={billForm.items.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                   <Button
