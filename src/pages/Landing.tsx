@@ -64,9 +64,9 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center space-y-12">
           <motion.div variants={fadeInUp} className="space-y-6">
             <h1 className="text-6xl md:text-7xl font-bold tracking-tight leading-tight">
-              Science Event
+              ScienceUtsav 
               <br />
-              Management
+              Management System
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Streamline your science festival operations with a simple, powerful management system
