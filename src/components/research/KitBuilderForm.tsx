@@ -346,15 +346,26 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
                             {pouch.materials.map((material, matIdx) => (
                               <TableRow key={matIdx}>
                                 <TableCell>
-                                  <Input
+                                  <Select
                                     value={material.name}
-                                    onChange={(e) => {
-                                      structure.pouches[pouchIdx].materials[matIdx].name = e.target.value;
+                                    onValueChange={(value) => {
+                                      structure.pouches[pouchIdx].materials[matIdx].name = value;
                                       setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                     }}
-                                    placeholder="Match inventory name"
-                                  />
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select inventory item" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {inventory.map((item) => (
+                                        <SelectItem key={item._id} value={item.name}>
+                                          {item.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </TableCell>
+=======
                                 <TableCell>
                                   <Input
                                     type="number"
@@ -483,15 +494,26 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
                             {packet.materials.map((material, matIdx) => (
                               <TableRow key={matIdx}>
                                 <TableCell>
-                                  <Input
+                                  <Select
                                     value={material.name}
-                                    onChange={(e) => {
-                                      structure.packets[packetIdx].materials[matIdx].name = e.target.value;
+                                    onValueChange={(value) => {
+                                      structure.packets[packetIdx].materials[matIdx].name = value;
                                       setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                     }}
-                                    placeholder="Match inventory name"
-                                  />
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select inventory item" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {inventory.map((item) => (
+                                        <SelectItem key={item._id} value={item.name}>
+                                          {item.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </TableCell>
+=======
                                 <TableCell>
                                   <Input
                                     type="number"
