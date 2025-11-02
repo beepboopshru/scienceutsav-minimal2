@@ -131,7 +131,7 @@ export default function Inventory() {
       inventory
         .filter((item) => filterType === "all" || item.type === filterType)
         .map((item) => item.subcategory)
-        .filter((subcat): subcat is string => Boolean(subcat))
+        .filter((subcat): subcat is string => typeof subcat === "string" && subcat.trim() !== "")
     )
   );
 
