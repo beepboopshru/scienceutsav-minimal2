@@ -361,7 +361,8 @@ export default function Research() {
   if (selectedProgramId === null) {
     return (
       <Layout>
-        <div className="space-y-8">
+        {/* Add horizontal padding so cards don't touch the sidebar or screen edge */}
+        <div className="px-4 sm:px-6 lg:px-10 space-y-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Research & Development</h1>
@@ -568,7 +569,8 @@ export default function Research() {
   // Kit Design view
   return (
     <Layout>
-      <div className="space-y-8">
+      {/* Add horizontal padding consistently in kit design view too */}
+      <div className="px-4 sm:px-6 lg:px-10 space-y-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
