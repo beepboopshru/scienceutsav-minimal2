@@ -122,12 +122,6 @@ export function Layout({ children }: LayoutProps) {
       path: "/laser-files",
       roles: ["admin", "laser_operator"],
     },
-    {
-      title: "Kit Sheet Maker",
-      icon: FileText,
-      path: "/kit-sheet-maker",
-      roles: ["admin", "research_development"],
-    },
   ];
 
   const adminSection: NavItem[] = [

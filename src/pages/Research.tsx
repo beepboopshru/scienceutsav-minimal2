@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, Download, ChevronDown, ChevronUp, Upload } from "lucide-react";
+import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, ChevronDown, ChevronUp, Upload } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -318,17 +318,17 @@ export default function Research() {
 
   const handleEditKit = (kit: any) => {
     if (kit.isStructured) {
-      navigate(`/kit-sheet-maker?edit=${kit._id}`);
-    } else {
-      setEditingKit(kit);
-      setSimpleKitFormData({
-        name: kit.name || "",
-        serialNumber: kit.serialNumber || "",
-        category: kit.category,
-        description: kit.description || "",
-      });
-      setIsCreateSimpleKitOpen(true);
+      toast("Editing structured kits is unavailable.");
+      return;
     }
+    setEditingKit(kit);
+    setSimpleKitFormData({
+      name: kit.name || "",
+      serialNumber: kit.serialNumber || "",
+      category: kit.category,
+      description: kit.description || "",
+    });
+    setIsCreateSimpleKitOpen(true);
   };
 
   const handleDeleteKit = async (kitId: Id<"kits">) => {
@@ -342,10 +342,6 @@ export default function Research() {
         });
       }
     }
-  };
-
-  const handleOpenKitSheet = (kitId: Id<"kits">) => {
-    navigate(`/kit-sheet-maker?edit=${kitId}`);
   };
 
   if (isLoading || !kits || !programs) {
@@ -623,11 +619,6 @@ export default function Research() {
           <div className="flex gap-2">
             {isAdminOrManager && (
               <>
-                <Button onClick={() => navigate("/kit-sheet-maker")} variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Kit Builder
-                </Button>
-
                 <Dialog
                   open={isCreateSimpleKitOpen}
                   onOpenChange={(open) => {
@@ -803,15 +794,6 @@ export default function Research() {
                                     </div>
                                   </DialogContent>
                                 </Dialog>
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenKitSheet(kit._id)}
-                                  title="Open Kit Sheet"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
 
                                 <Button variant="ghost" size="sm" onClick={() => handleEditKit(kit)} title="Edit Kit">
                                   <Edit className="h-4 w-4" />

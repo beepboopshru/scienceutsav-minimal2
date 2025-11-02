@@ -18,7 +18,6 @@ import ProcessingJobs from "./pages/ProcessingJobs.tsx";
 import BillRecords from "./pages/BillRecords.tsx";
 import VendorContacts from "./pages/VendorContacts.tsx";
 import Services from "./pages/Services.tsx";
-import KitSheetMaker from "./pages/KitSheetMaker.tsx";
 import KitBuilder from "./pages/KitBuilder.tsx";
 import Clients from "@/pages/Clients.tsx";
 import Assignments from "@/pages/Assignments.tsx";
@@ -79,7 +78,6 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/inventory/bill-records" element={<BillRecords />} />
             <Route path="/vendor-contacts" element={<VendorContacts />} />
             <Route path="/services" element={<Services />} />
-            <Route path="/kit-sheet-maker" element={<KitSheetMaker />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
