@@ -20,8 +20,11 @@ import type * as clients from "../clients.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as kits from "../kits.js";
+import type * as processingJobs from "../processingJobs.js";
 import type * as programs from "../programs.js";
+import type * as services from "../services.js";
 import type * as users from "../users.js";
+import type * as vendorImports from "../vendorImports.js";
 import type * as vendors from "../vendors.js";
 
 /**
@@ -40,8 +43,11 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   inventory: typeof inventory;
   kits: typeof kits;
+  processingJobs: typeof processingJobs;
   programs: typeof programs;
+  services: typeof services;
   users: typeof users;
+  vendorImports: typeof vendorImports;
   vendors: typeof vendors;
 }>;
 export declare const api: FilterApi<

@@ -119,24 +119,29 @@ const schema = defineSchema(
     // Material processing jobs
     processingJobs: defineTable({
       name: v.string(),
-      inputMaterialId: v.id("inventory"),
-      outputMaterialId: v.id("inventory"),
-      inputQuantity: v.number(),
-      outputQuantity: v.number(),
+      sourceItemId: v.id("inventory"),
+      sourceQuantity: v.number(),
+      targets: v.array(
+        v.object({
+          targetItemId: v.id("inventory"),
+          targetQuantity: v.number(),
+        })
+      ),
       status: v.union(
         v.literal("pending"),
         v.literal("in_progress"),
         v.literal("completed"),
         v.literal("cancelled")
       ),
-      serviceId: v.optional(v.id("services")),
+      processedBy: v.optional(v.string()),
+      processedByType: v.optional(v.union(v.literal("vendor"), v.literal("service"))),
+      notes: v.optional(v.string()),
       startedAt: v.optional(v.number()),
       completedAt: v.optional(v.number()),
       createdBy: v.id("users"),
     })
       .index("by_status", ["status"])
-      .index("by_input_material", ["inputMaterialId"])
-      .index("by_output_material", ["outputMaterialId"])
+      .index("by_source_item", ["sourceItemId"])
       .index("by_created_by", ["createdBy"]),
 
     // Vendor purchase bills
@@ -161,11 +166,22 @@ const schema = defineSchema(
     // Vendor contacts
     vendors: defineTable({
       name: v.string(),
+      organization: v.optional(v.string()),
       contactPerson: v.optional(v.string()),
       email: v.optional(v.string()),
       phone: v.optional(v.string()),
       address: v.optional(v.string()),
+      gstn: v.optional(v.string()),
       notes: v.optional(v.string()),
+      inventoryItems: v.optional(v.array(v.id("inventory"))),
+      itemPrices: v.optional(
+        v.array(
+          v.object({
+            itemId: v.id("inventory"),
+            averagePrice: v.number(),
+          })
+        )
+      ),
       createdBy: v.id("users"),
     }).index("by_created_by", ["createdBy"]),
 
@@ -180,6 +196,25 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
       createdBy: v.id("users"),
     }).index("by_created_by", ["createdBy"]),
+
+    // Vendor imports/bills
+    vendorImports: defineTable({
+      vendorId: v.id("vendors"),
+      billNumber: v.string(),
+      billDate: v.string(),
+      billImageId: v.optional(v.id("_storage")),
+      items: v.array(
+        v.object({
+          inventoryId: v.id("inventory"),
+          quantity: v.number(),
+          unitPrice: v.number(),
+        })
+      ),
+      totalAmount: v.number(),
+      createdBy: v.id("users"),
+    })
+      .index("by_vendor", ["vendorId"])
+      .index("by_created_by", ["createdBy"]),
   },
   {
     schemaValidation: false,
