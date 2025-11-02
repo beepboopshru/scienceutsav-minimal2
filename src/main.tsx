@@ -22,7 +22,6 @@ import KitSheetMaker from "./pages/KitSheetMaker.tsx";
 import KitBuilder from "./pages/KitBuilder.tsx";
 import Clients from "@/pages/Clients.tsx";
 import Assignments from "@/pages/Assignments.tsx";
-import Kits from "@/pages/Kits.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
 import AdminZone from "@/pages/AdminZone.tsx";
@@ -72,7 +71,6 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/kit-builder" element={<KitBuilder />} />
             <Route path="/clients" element={<Clients />} />
             <Route path="/assignments" element={<Assignments />} />
-            <Route path="/kits" element={<Kits />} />
             <Route path="/laser-files" element={<LaserFiles />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/admin-zone" element={<AdminZone />} />

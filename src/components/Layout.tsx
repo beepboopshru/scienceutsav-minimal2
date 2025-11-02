@@ -81,7 +81,7 @@ export function Layout({ children }: LayoutProps) {
       title: "Kits",
       icon: Package,
       path: "/kits",
-      roles: ["admin", "research_development", "operations", "inventory"],
+      roles: ["admin", "research_development"],
     },
     {
       title: "Clients",
