@@ -39,8 +39,6 @@ export default function KitBuilder() {
     serialNumber: "",
     category: "",
     description: "",
-    stockCount: 0,
-    lowStockThreshold: 5,
     isStructured: true,
     packingRequirements: "",
     spareKits: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
@@ -65,8 +63,6 @@ export default function KitBuilder() {
         serialNumber: editingKit.serialNumber || "",
         category: editingKit.category || "",
         description: editingKit.description || "",
-        stockCount: editingKit.stockCount || 0,
-        lowStockThreshold: editingKit.lowStockThreshold || 5,
         isStructured: editingKit.isStructured || true,
         packingRequirements: editingKit.packingRequirements || "",
         spareKits: editingKit.spareKits || [],
@@ -106,7 +102,8 @@ export default function KitBuilder() {
       } else {
         await createKit({
           ...kitForm,
-          stockCount: kitForm.stockCount || 0,
+          stockCount: 0,
+          lowStockThreshold: 5,
         });
         toast.success("Kit created successfully");
       }
@@ -314,27 +311,6 @@ export default function KitBuilder() {
                       rows={3}
                       disabled={!canEdit}
                     />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Stock Count</Label>
-                      <Input
-                        type="number"
-                        value={kitForm.stockCount}
-                        onChange={(e) => setKitForm({ ...kitForm, stockCount: parseInt(e.target.value) || 0 })}
-                        disabled={!canEdit}
-                      />
-                    </div>
-                    <div>
-                      <Label>Low Stock Alert</Label>
-                      <Input
-                        type="number"
-                        value={kitForm.lowStockThreshold}
-                        onChange={(e) => setKitForm({ ...kitForm, lowStockThreshold: parseInt(e.target.value) || 5 })}
-                        disabled={!canEdit}
-                      />
-                    </div>
                   </div>
 
                   <div>
