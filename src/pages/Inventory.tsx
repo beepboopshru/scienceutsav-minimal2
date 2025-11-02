@@ -370,7 +370,7 @@ export default function Inventory() {
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {categories?.map((cat) => (
+                          {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
                             <SelectItem key={cat._id} value={cat.value}>
                               {cat.name}
                             </SelectItem>
@@ -974,7 +974,7 @@ export default function Inventory() {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categories?.map((cat) => (
+                        {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
                           <SelectItem key={cat._id} value={cat.value}>
                             {cat.name}
                           </SelectItem>
