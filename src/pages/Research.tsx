@@ -48,6 +48,7 @@ export default function Research() {
     categories: [] as string[],
     usesVariants: false 
   });
+  const [categoryInput, setCategoryInput] = useState("");
 
   // Kit builder state
   const [editingKit, setEditingKit] = useState<Id<"kits"> | null>(null);
@@ -110,6 +111,7 @@ export default function Research() {
       toast.success("Program created successfully");
       setProgramDialogOpen(false);
       setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false });
+      setCategoryInput("");
     } catch (error) {
       toast.error("Failed to create program");
     }
@@ -123,6 +125,7 @@ export default function Research() {
       setProgramDialogOpen(false);
       setEditingProgram(null);
       setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false });
+      setCategoryInput("");
     } catch (error) {
       toast.error("Failed to update program");
     }
@@ -178,13 +181,15 @@ export default function Research() {
 
   const openEditProgram = (program: typeof programs[0]) => {
     setEditingProgram(program._id);
+    const cats = program.categories || [];
     setProgramForm({
       name: program.name,
       description: program.description || "",
       tags: program.tags || [],
-      categories: program.categories || [],
+      categories: cats,
       usesVariants: program.usesVariants || false,
     });
+    setCategoryInput(cats.join(", "));
     setProgramDialogOpen(true);
   };
 
@@ -258,7 +263,11 @@ export default function Research() {
             <div className="flex gap-2">
               <Dialog open={programDialogOpen} onOpenChange={setProgramDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => { setEditingProgram(null); setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false }); }}>
+                  <Button onClick={() => { 
+                    setEditingProgram(null); 
+                    setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false }); 
+                    setCategoryInput("");
+                  }}>
                     <Plus className="mr-2 h-4 w-4" />
                     New Program
                   </Button>
@@ -293,8 +302,12 @@ export default function Research() {
                         value={programForm.categories.join(", ")} 
                         onChange={(e) => setProgramForm({ 
                           ...programForm, 
-                          categories: e.target.value.split(",").map(c => c.trim()).filter(c => c) 
+                          categories: e.target.value.split(",").map(c => c.trim()).filter(c => c.length > 0) 
                         })} 
+                        onBlur={(e) => setProgramForm({
+                          ...programForm,
+                          categories: e.target.value.split(",").map(c => c.trim()).filter(c => c.length > 0)
+                        })}
                         placeholder="e.g., Beginner, Intermediate, Advanced" 
                       />
                       <p className="text-xs text-muted-foreground mt-1">Define category options for kits in this program</p>
