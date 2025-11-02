@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
+import { parsePackingRequirements, stringifyPackingRequirements } from "@/lib/kitPacking";
 
 export default function Research() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -412,14 +413,308 @@ export default function Research() {
 
                     <Separator />
 
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
-                        <Label className="text-base">Bill of Materials (BOM)</Label>
-                        <Button size="sm" variant="outline" onClick={addComponent}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Component
+                    {/* BOM Structure Toggle */}
+                    <div className="flex items-center gap-4">
+                      <Label className="text-base">BOM Structure</Label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant={!kitForm.isStructured ? "default" : "outline"}
+                          onClick={() => setKitForm({ ...kitForm, isStructured: false })}
+                        >
+                          Legacy (Components)
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={kitForm.isStructured ? "default" : "outline"}
+                          onClick={() => setKitForm({ ...kitForm, isStructured: true })}
+                        >
+                          Structured (Pouches/Packets)
                         </Button>
                       </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Structured BOM: Pouches and Packets */}
+                    {kitForm.isStructured ? (
+                      <div className="space-y-6">
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <Label className="text-base">Pouches</Label>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const structure = parsePackingRequirements(kitForm.packingRequirements);
+                                structure.pouches.push({ name: "Main Pouch", materials: [] });
+                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Pouch
+                            </Button>
+                          </div>
+                          {(() => {
+                            const structure = parsePackingRequirements(kitForm.packingRequirements);
+                            return structure.pouches.map((pouch, pouchIdx) => (
+                              <Card key={pouchIdx} className="mb-4">
+                                <CardHeader>
+                                  <div className="flex items-center justify-between">
+                                    <Input
+                                      value={pouch.name}
+                                      onChange={(e) => {
+                                        structure.pouches[pouchIdx].name = e.target.value;
+                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                      }}
+                                      placeholder="Pouch name (e.g., Main Pouch)"
+                                      className="max-w-xs"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        structure.pouches.splice(pouchIdx, 1);
+                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                      }}
+                                    >
+                                      Remove Pouch
+                                    </Button>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Material Name</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        <TableHead>Unit</TableHead>
+                                        <TableHead>Notes</TableHead>
+                                        <TableHead></TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {pouch.materials.map((material, matIdx) => (
+                                        <TableRow key={matIdx}>
+                                          <TableCell>
+                                            <Input
+                                              value={material.name}
+                                              onChange={(e) => {
+                                                structure.pouches[pouchIdx].materials[matIdx].name = e.target.value;
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              placeholder="Match inventory name"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              type="number"
+                                              value={material.quantity}
+                                              onChange={(e) => {
+                                                structure.pouches[pouchIdx].materials[matIdx].quantity = parseFloat(e.target.value);
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              className="w-20"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              value={material.unit}
+                                              onChange={(e) => {
+                                                structure.pouches[pouchIdx].materials[matIdx].unit = e.target.value;
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              className="w-20"
+                                              placeholder="pcs"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              value={material.notes || ""}
+                                              onChange={(e) => {
+                                                structure.pouches[pouchIdx].materials[matIdx].notes = e.target.value;
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              placeholder="Optional"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                structure.pouches[pouchIdx].materials.splice(matIdx, 1);
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                            >
+                                              Remove
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="mt-2"
+                                    onClick={() => {
+                                      structure.pouches[pouchIdx].materials.push({ name: "", quantity: 1, unit: "pcs" });
+                                      setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                    }}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Material
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            ));
+                          })()}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <Label className="text-base">Packets (Pre-sealed)</Label>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const structure = parsePackingRequirements(kitForm.packingRequirements);
+                                structure.packets.push({ name: "Packet A", materials: [] });
+                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                              }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Packet
+                            </Button>
+                          </div>
+                          {(() => {
+                            const structure = parsePackingRequirements(kitForm.packingRequirements);
+                            return structure.packets.map((packet, packetIdx) => (
+                              <Card key={packetIdx} className="mb-4 border-blue-200">
+                                <CardHeader>
+                                  <div className="flex items-center justify-between">
+                                    <Input
+                                      value={packet.name}
+                                      onChange={(e) => {
+                                        structure.packets[packetIdx].name = e.target.value;
+                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                      }}
+                                      placeholder="Packet name (e.g., Packet A - Hardware)"
+                                      className="max-w-xs"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        structure.packets.splice(packetIdx, 1);
+                                        setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                      }}
+                                    >
+                                      Remove Packet
+                                    </Button>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Material Name</TableHead>
+                                        <TableHead>Quantity</TableHead>
+                                        <TableHead>Unit</TableHead>
+                                        <TableHead>Notes</TableHead>
+                                        <TableHead></TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {packet.materials.map((material, matIdx) => (
+                                        <TableRow key={matIdx}>
+                                          <TableCell>
+                                            <Input
+                                              value={material.name}
+                                              onChange={(e) => {
+                                                structure.packets[packetIdx].materials[matIdx].name = e.target.value;
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              placeholder="Match inventory name"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              type="number"
+                                              value={material.quantity}
+                                              onChange={(e) => {
+                                                structure.packets[packetIdx].materials[matIdx].quantity = parseFloat(e.target.value);
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              className="w-20"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              value={material.unit}
+                                              onChange={(e) => {
+                                                structure.packets[packetIdx].materials[matIdx].unit = e.target.value;
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              className="w-20"
+                                              placeholder="pcs"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              value={material.notes || ""}
+                                              onChange={(e) => {
+                                                structure.packets[packetIdx].materials[matIdx].notes = e.target.value;
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                              placeholder="Optional"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              onClick={() => {
+                                                structure.packets[packetIdx].materials.splice(matIdx, 1);
+                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                              }}
+                                            >
+                                              Remove
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="mt-2"
+                                    onClick={() => {
+                                      structure.packets[packetIdx].materials.push({ name: "", quantity: 1, unit: "pcs" });
+                                      setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                    }}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Material
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Legacy BOM: Components */
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <Label className="text-base">Bill of Materials (BOM)</Label>
+                          <Button size="sm" variant="outline" onClick={addComponent}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Component
+                          </Button>
+                        </div>
 
                       {kitForm.components.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
@@ -470,19 +765,20 @@ export default function Research() {
                         </Table>
                       )}
 
-                      {kitForm.components.length > 0 && (
-                        <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Estimated Cost:</span>
-                            <span className="text-sm">₹{calculateKitCost(kitForm.components).toFixed(2)}</span>
+                        {kitForm.components.length > 0 && (
+                          <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Estimated Cost:</span>
+                              <span className="text-sm">₹{calculateKitCost(kitForm.components).toFixed(2)}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Buildable Units:</span>
+                              <span className="text-sm">{calculateBuildableUnits(kitForm.components)}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Buildable Units:</span>
-                            <span className="text-sm">{calculateBuildableUnits(kitForm.components)}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setKitDialogOpen(false)}>Cancel</Button>
