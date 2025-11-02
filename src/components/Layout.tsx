@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   Home,
-  Package,
   Users,
   ClipboardList,
   Warehouse,
@@ -75,12 +74,6 @@ export function Layout({ children }: LayoutProps) {
       title: "Research",
       icon: Beaker,
       path: "/research",
-      roles: ["admin", "research_development"],
-    },
-    {
-      title: "Kits",
-      icon: Package,
-      path: "/kits",
       roles: ["admin", "research_development"],
     },
     {
