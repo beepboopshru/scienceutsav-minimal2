@@ -250,25 +250,6 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
               rows={2}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Stock Count</Label>
-              <Input
-                type="number"
-                value={kitForm.stockCount}
-                onChange={(e) => setKitForm({ ...kitForm, stockCount: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div>
-              <Label>Low Stock Threshold</Label>
-              <Input
-                type="number"
-                value={kitForm.lowStockThreshold}
-                onChange={(e) => setKitForm({ ...kitForm, lowStockThreshold: parseInt(e.target.value) || 10 })}
-              />
-            </div>
-          </div>
         </CardContent>
       </Card>
 
