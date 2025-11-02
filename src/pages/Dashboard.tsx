@@ -1,6 +1,5 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogoDropdown } from "@/components/LogoDropdown";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
 import { 
@@ -10,7 +9,10 @@ import {
   Warehouse, 
   Loader2,
   Settings,
-  UserCog
+  UserCog,
+  Beaker,
+  Contact,
+  Wrench
 } from "lucide-react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
@@ -40,7 +42,7 @@ export default function Dashboard() {
     {
       title: "Research & Kits",
       description: "Manage programs and kit specifications",
-      icon: Package,
+      icon: Beaker,
       path: "/research",
       roles: ["admin", "research_development"],
     },
@@ -65,6 +67,20 @@ export default function Dashboard() {
       path: "/inventory",
       roles: ["admin", "inventory", "operations"],
     },
+    {
+      title: "Vendor Contacts",
+      description: "Manage vendor relationships",
+      icon: Contact,
+      path: "/vendor-contacts",
+      roles: ["admin", "inventory"],
+    },
+    {
+      title: "Services",
+      description: "Manage service providers",
+      icon: Wrench,
+      path: "/services",
+      roles: ["admin", "inventory"],
+    },
   ];
 
   const adminActions = [
@@ -87,38 +103,25 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border-b border-border bg-background"
-      >
-        <div className="max-w-7xl mx-auto px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <LogoDropdown />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">
-                Welcome back, {user.name || user.email || "User"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-8 py-12">
+    <Layout>
+      <div className="p-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-12"
+          className="space-y-8"
         >
+          {/* Welcome Section */}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground mt-2">
+              Welcome back, {user.name || user.email || "User"}
+            </p>
+          </div>
+
           {/* Quick Actions */}
           <section>
             <h2 className="text-xl font-bold tracking-tight mb-6">Quick Actions</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredActions.map((action, index) => (
                 <motion.div
                   key={action.path}
@@ -169,7 +172,7 @@ export default function Dashboard() {
             </section>
           )}
         </motion.div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 }
