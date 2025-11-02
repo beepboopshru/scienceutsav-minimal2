@@ -475,24 +475,26 @@ export default function Research() {
                           {program.name}
                         </CardTitle>
                         {isAdminOrManager && (
-                          <div className="flex gap-1">
+                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditProgram(program);
                               }}
+                              title="Edit Program"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteProgram(program._id as Id<"programs">, program.name);
                               }}
+                              title="Delete Program"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
