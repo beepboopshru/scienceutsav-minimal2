@@ -469,13 +469,13 @@ export default function Research() {
                     }}
                   >
                     <CardHeader>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <CardTitle className="flex items-center gap-2">
                           <Box className="h-6 w-6" />
                           {program.name}
                         </CardTitle>
                         {isAdminOrManager && (
-                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="outline"
                               size="sm"
@@ -484,6 +484,7 @@ export default function Research() {
                                 handleEditProgram(program);
                               }}
                               title="Edit Program"
+                              className="h-8 w-8 p-0"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -495,13 +496,14 @@ export default function Research() {
                                 handleDeleteProgram(program._id as Id<"programs">, program.name);
                               }}
                               title="Delete Program"
+                              className="h-8 w-8 p-0"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         )}
                       </div>
-                      {program.description && <p className="text-xs text-muted-foreground">{program.description}</p>}
+                      {program.description && <p className="text-xs text-muted-foreground mt-1">{program.description}</p>}
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-1 gap-4">
