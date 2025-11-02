@@ -1,448 +1,918 @@
 import { Layout } from "@/components/Layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation } from "convex/react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { Loader2, Plus, Search, Package, Beaker, Edit, Copy, Archive, DollarSign, Box } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
-import { KitBuilderForm } from "@/components/research/KitBuilderForm";
+import { motion } from "framer-motion";
+import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, Download, ChevronDown, ChevronUp, Upload } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { ResearchFileManager } from "@/components/research/ResearchFileManager";
+import { parsePackingRequirements } from "@/lib/kitPacking";
+
+// Helper to render structured materials (pouches/packets)
+function StructuredMaterials({ packingRequirements }: { packingRequirements?: string }) {
+  const structure = parsePackingRequirements(packingRequirements);
+  const hasContent =
+    (structure.pouches?.length ?? 0) > 0 ||
+    (structure.packets?.length ?? 0) > 0;
+
+  if (!hasContent) {
+    return <div className="text-center py-4 text-muted-foreground text-sm">No structured materials found for this kit</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {structure.pouches?.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold mb-2 text-primary">Pouches</div>
+          <div className="space-y-3">
+            {structure.pouches.map((pouch, pIdx) => (
+              <div key={pIdx} className="border rounded p-3 bg-background">
+                <div className="font-medium text-sm text-center mb-3 pb-2 border-b">{pouch.name}</div>
+                {pouch.materials && pouch.materials.length > 0 ? (
+                  <ul className="space-y-2 text-sm">
+                    {pouch.materials.map((material, mIdx) => (
+                      <li key={mIdx}>
+                        <div className="flex justify-between gap-2">
+                          <span className="flex-1 break-words">• {material.name}</span>
+                          <span className="flex-shrink-0 font-medium whitespace-nowrap">
+                            {material.quantity} {material.unit}
+                          </span>
+                        </div>
+                        {material.notes && (
+                          <div className="text-muted-foreground ml-3 mt-0.5 italic text-xs">
+                            {material.notes}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-xs text-muted-foreground text-center">
+                    No components defined
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {structure.packets?.length > 0 && (
+        <div>
+          <div className="text-sm font-semibold mb-2 text-primary">Packets</div>
+          <div className="space-y-3">
+            {structure.packets.map((packet, pIdx) => (
+              <div key={pIdx} className="border rounded p-3 bg-background">
+                <div className="font-medium text-sm text-center mb-3 pb-2 border-b">{packet.name}</div>
+                {packet.materials && packet.materials.length > 0 ? (
+                  <ul className="space-y-2 text-sm">
+                    {packet.materials.map((material, mIdx) => (
+                      <li key={mIdx}>
+                        <div className="flex justify-between gap-2">
+                          <span className="flex-1 break-words">• {material.name}</span>
+                          <span className="flex-shrink-0 font-medium whitespace-nowrap">
+                            {material.quantity} {material.unit}
+                          </span>
+                        </div>
+                        {material.notes && (
+                          <div className="text-muted-foreground ml-3 mt-0.5 italic text-xs">
+                            {material.notes}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-xs text-muted-foreground text-center">
+                    No components defined
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Research() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const programs = useQuery(api.programs.list);
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) navigate("/auth");
+    if (!isLoading && isAuthenticated && user && !user.isApproved) navigate("/pending-approval");
+  }, [isLoading, isAuthenticated, user, navigate]);
+
   const kits = useQuery(api.kits.list);
-  const inventory = useQuery(api.inventory.list);
+  const programs = useQuery(api.programs.list);
+
+  const createKit = useMutation(api.kits.create);
+  const updateKit = useMutation(api.kits.update);
+  const deleteKit = useMutation(api.kits.remove);
 
   const createProgram = useMutation(api.programs.create);
   const updateProgram = useMutation(api.programs.update);
-  const createKit = useMutation(api.kits.create);
-  const updateKit = useMutation(api.kits.update);
-  const cloneKit = useMutation(api.kits.clone);
+  const deleteProgram = useMutation(api.programs.remove);
 
-  const [selectedProgram, setSelectedProgram] = useState<Id<"programs"> | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [tagFilter, setTagFilter] = useState<string>("all");
+  const isAdminOrManager = user?.role === "research_development";
+
+  // View state
+  const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
+
+  // Program dialogs
+  const [isCreateProgramOpen, setIsCreateProgramOpen] = useState(false);
+  const [isEditProgramOpen, setIsEditProgramOpen] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<any>(null);
+  const [newProgramData, setNewProgramData] = useState({ name: "", description: "", categories: "" });
+  const [editProgramData, setEditProgramData] = useState({ name: "", description: "", categories: "" });
+
+  // Simple kit dialog
+  const [isCreateSimpleKitOpen, setIsCreateSimpleKitOpen] = useState(false);
+  const [editingKit, setEditingKit] = useState<any>(null);
+  const [simpleKitFormData, setSimpleKitFormData] = useState<{
+    name: string;
+    serialNumber: string;
+    category?: string;
+    description: string;
+  }>({ name: "", serialNumber: "", category: undefined, description: "" });
+
+  // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [view, setView] = useState<"list" | "kit-builder">("list");
+  const [kitSearchQuery, setKitSearchQuery] = useState<string>("");
 
-  // Program dialog state
-  const [programDialogOpen, setProgramDialogOpen] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<Id<"programs"> | null>(null);
-  const [programForm, setProgramForm] = useState({ 
-    name: "", 
-    description: "", 
-    tags: [] as string[], 
-    categories: [] as string[],
-    usesVariants: false 
-  });
-  const [categoryInput, setCategoryInput] = useState("");
+  // File manager
+  const [fileManager, setFileManager] = useState<{
+    kitId: Id<"kits">;
+    fileType: "image" | "laser" | "component" | "workbook";
+  } | null>(null);
 
-  // Kit builder state
-  const [editingKit, setEditingKit] = useState<Id<"kits"> | null>(null);
-  const [kitForm, setKitForm] = useState({
-    name: "",
-    programId: "" as Id<"programs">,
-    serialNumber: "",
-    category: "",
-    cstemVariant: undefined,
-    description: "",
-    remarks: "",
-    tags: [] as string[],
-    notes: "",
-    stockCount: 0,
-    lowStockThreshold: 10,
-    isStructured: false,
-    packingRequirements: "",
-    spareKits: [],
-    bulkMaterials: [],
-    miscellaneous: [],
-    components: [],
-  });
+  // Row expand
+  const [expandedKitId, setExpandedKitId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
+  const selectedProgram = useMemo(
+    () => (programs ?? []).find((p) => p._id === selectedProgramId) || null,
+    [programs, selectedProgramId]
+  );
+
+  const programStats = useMemo(() => {
+    const result: Record<string, number> = {};
+    if (!programs || !kits) return result;
+    for (const p of programs) {
+      const count = kits.filter((k) => k.programId === p._id).length;
+      result[String(p._id)] = count;
     }
-    if (!isLoading && isAuthenticated && user && !user.isApproved) {
-      navigate("/pending-approval");
-    }
-  }, [isLoading, isAuthenticated, user, navigate]);
+    return result;
+  }, [programs, kits]);
 
-  if (isLoading || !user || !programs || !kits || !inventory) {
+  const filteredKits = useMemo(() => {
+    if (!kits) return [];
+    return kits.filter((k) => {
+      if (selectedProgramId && k.programId !== selectedProgramId) return false;
+
+      let categoryOk = true;
+      if (categoryFilter !== "all") categoryOk = k.category === categoryFilter;
+
+      let searchOk = true;
+      if (kitSearchQuery.trim()) {
+        searchOk = k.name.toLowerCase().includes(kitSearchQuery.toLowerCase());
+      }
+      return categoryOk && searchOk;
+    });
+  }, [kits, selectedProgramId, categoryFilter, kitSearchQuery]);
+
+  // Program handlers
+  const handleCreateProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProgramData.name.trim()) {
+      toast("Please enter a program name");
+      return;
+    }
+    try {
+      const categories = newProgramData.categories
+        .split(",")
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0);
+
+      await createProgram({
+        name: newProgramData.name,
+        description: newProgramData.description || undefined,
+        categories: categories.length > 0 ? categories : undefined,
+      });
+
+      toast("Program created successfully");
+      setIsCreateProgramOpen(false);
+      setNewProgramData({ name: "", description: "", categories: "" });
+    } catch (error) {
+      toast("Error creating program", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  const handleEditProgram = (program: any) => {
+    setEditingProgram(program);
+    setEditProgramData({
+      name: program.name,
+      description: program.description || "",
+      categories: program.categories ? program.categories.join(", ") : "",
+    });
+    setIsEditProgramOpen(true);
+  };
+
+  const handleUpdateProgram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProgram || !editProgramData.name.trim()) {
+      toast("Please enter a program name");
+      return;
+    }
+    try {
+      const categories = editProgramData.categories
+        .split(",")
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0);
+
+      await updateProgram({
+        id: editingProgram._id,
+        name: editProgramData.name,
+        description: editProgramData.description || undefined,
+        categories: categories.length > 0 ? categories : undefined,
+      });
+
+      toast("Program updated successfully");
+      setIsEditProgramOpen(false);
+      setEditingProgram(null);
+      setEditProgramData({ name: "", description: "", categories: "" });
+    } catch (error) {
+      toast("Error updating program", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  const handleDeleteProgram = async (programId: Id<"programs">, programName: string) => {
+    if (confirm(`Delete "${programName}" program? This will fail if any kits are associated.`)) {
+      try {
+        await deleteProgram({ id: programId });
+        toast("Program deleted successfully");
+      } catch (error) {
+        toast("Error deleting program", {
+          description: error instanceof Error ? error.message : "Cannot delete program with associated kits",
+        });
+      }
+    }
+  };
+
+  // Kit handlers
+  const handleCreateSimpleKit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProgramId) {
+      toast("Please select a program");
+      return;
+    }
+    try {
+      if (editingKit) {
+        await updateKit({
+          id: editingKit._id,
+          name: simpleKitFormData.name,
+          serialNumber: simpleKitFormData.serialNumber || undefined,
+          category: simpleKitFormData.category,
+          description: simpleKitFormData.description || undefined,
+        });
+        toast("Kit updated successfully");
+      } else {
+        await createKit({
+          name: simpleKitFormData.name,
+          programId: selectedProgramId,
+          serialNumber: simpleKitFormData.serialNumber || undefined,
+          category: simpleKitFormData.category,
+          description: simpleKitFormData.description || undefined,
+          stockCount: 0,
+          lowStockThreshold: 5,
+          isStructured: false,
+        });
+        toast("Kit created successfully");
+      }
+
+      setIsCreateSimpleKitOpen(false);
+      setEditingKit(null);
+      setSimpleKitFormData({ name: "", serialNumber: "", category: undefined, description: "" });
+    } catch (error) {
+      toast("Error saving kit", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  const handleEditKit = (kit: any) => {
+    if (kit.isStructured) {
+      navigate(`/kit-sheet-maker?edit=${kit._id}`);
+    } else {
+      setEditingKit(kit);
+      setSimpleKitFormData({
+        name: kit.name || "",
+        serialNumber: kit.serialNumber || "",
+        category: kit.category,
+        description: kit.description || "",
+      });
+      setIsCreateSimpleKitOpen(true);
+    }
+  };
+
+  const handleDeleteKit = async (kitId: Id<"kits">) => {
+    if (confirm("Are you sure you want to delete this kit blueprint?")) {
+      try {
+        await deleteKit({ id: kitId });
+        toast("Kit deleted successfully");
+      } catch (error) {
+        toast("Error deleting kit", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+  };
+
+  const handleOpenKitSheet = (kitId: Id<"kits">) => {
+    navigate(`/kit-sheet-maker?edit=${kitId}`);
+  };
+
+  if (isLoading || !kits || !programs) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-      </div>
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">Loading...</div>
+      </Layout>
     );
   }
 
-  const activePrograms = programs.filter((p) => p.status !== "archived");
-  const activeKits = kits.filter((k) => k.status !== "archived");
-
-  const filteredKits = activeKits.filter((kit) => {
-    const matchesSearch = kit.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProgram = !selectedProgram || kit.programId === selectedProgram;
-    const matchesTag = tagFilter === "all" || kit.tags?.includes(tagFilter);
-    const matchesCategory = categoryFilter === "all" || kit.category === categoryFilter;
-    return matchesSearch && matchesProgram && matchesTag && matchesCategory;
-  });
-
-  const allTags = Array.from(new Set(activeKits.flatMap((k) => k.tags || [])));
-  
-  const selectedProgramData = selectedProgram ? programs.find((p) => p._id === selectedProgram) : null;
-  const availableCategories = selectedProgramData?.categories || [];
-
-  const handleCreateProgram = async () => {
-    try {
-      await createProgram(programForm);
-      toast.success("Program created successfully");
-      setProgramDialogOpen(false);
-      setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false });
-      setCategoryInput("");
-    } catch (error) {
-      toast.error("Failed to create program");
-    }
-  };
-
-  const handleUpdateProgram = async () => {
-    if (!editingProgram) return;
-    try {
-      await updateProgram({ id: editingProgram, ...programForm });
-      toast.success("Program updated successfully");
-      setProgramDialogOpen(false);
-      setEditingProgram(null);
-      setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false });
-      setCategoryInput("");
-    } catch (error) {
-      toast.error("Failed to update program");
-    }
-  };
-
-  const handleArchiveProgram = async (id: Id<"programs">) => {
-    try {
-      await updateProgram({ id, status: "archived" });
-      toast.success("Program archived");
-    } catch (error) {
-      toast.error("Failed to archive program");
-    }
-  };
-
-  const handleSaveKit = async (kitData: any) => {
-    try {
-      const { cstemVariant, ...rest } = kitData;
-      if (editingKit) {
-        await updateKit({
-          id: editingKit,
-          ...rest,
-          ...(cstemVariant ? { cstemVariant } : {}),
-        });
-        toast.success("Kit updated successfully");
-      } else {
-        await createKit(kitData);
-        toast.success("Kit created successfully");
-      }
-      setView("list");
-      setEditingKit(null);
-    } catch (error) {
-      toast.error(editingKit ? "Failed to update kit" : "Failed to create kit");
-    }
-  };
-
-  const handleCloneKit = async (id: Id<"kits">) => {
-    try {
-      await cloneKit({ id });
-      toast.success("Kit cloned successfully");
-    } catch (error) {
-      toast.error("Failed to clone kit");
-    }
-  };
-
-  const handleArchiveKit = async (id: Id<"kits">) => {
-    try {
-      await updateKit({ id, status: "archived" });
-      toast.success("Kit archived");
-    } catch (error) {
-      toast.error("Failed to archive kit");
-    }
-  };
-
-  const openEditProgram = (program: typeof programs[0]) => {
-    setEditingProgram(program._id);
-    const cats = program.categories || [];
-    setProgramForm({
-      name: program.name,
-      description: program.description || "",
-      tags: program.tags || [],
-      categories: cats,
-      usesVariants: program.usesVariants || false,
-    });
-    setCategoryInput(cats.join(", "));
-    setProgramDialogOpen(true);
-  };
-
-  const openEditKit = (kit: typeof kits[0]) => {
-    setEditingKit(kit._id);
-    setView("kit-builder");
-  };
-
-  const openNewKit = () => {
-    setEditingKit(null);
-    setView("kit-builder");
-  };
-
-  const calculateKitCost = (components: Array<{ inventoryItemId: Id<"inventory">; quantityPerKit: number }>) => {
-    let total = 0;
-    for (const comp of components) {
-      const item = inventory.find((i) => i._id === comp.inventoryItemId);
-      if (item) {
-        total += comp.quantityPerKit * 10; // Placeholder price
-      }
-    }
-    return total;
-  };
-
-  const calculateBuildableUnits = (components: Array<{ inventoryItemId: Id<"inventory">; quantityPerKit: number }>) => {
-    if (components.length === 0) return 0;
-    let min = Infinity;
-    for (const comp of components) {
-      const item = inventory.find((i) => i._id === comp.inventoryItemId);
-      if (item) {
-        const buildable = Math.floor(item.quantity / comp.quantityPerKit);
-        min = Math.min(min, buildable);
-      }
-    }
-    return min === Infinity ? 0 : min;
-  };
-
-  // Show Kit Builder view
-  if (view === "kit-builder") {
-    const editingKitData = editingKit ? kits.find((k) => k._id === editingKit) : null;
-    
+  // Program Management view
+  if (selectedProgramId === null) {
     return (
       <Layout>
-        <div className="p-8">
-          <KitBuilderForm
-            programs={programs}
-            inventory={inventory}
-            editingKit={editingKitData}
-            onSave={handleSaveKit}
-            onCancel={() => {
-              setView("list");
-              setEditingKit(null);
-            }}
-          />
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Research & Development</h1>
+              <p className="text-muted-foreground mt-2">Program Management and Kit Design Hub</p>
+            </div>
+            {isAdminOrManager && (
+              <Dialog open={isCreateProgramOpen} onOpenChange={setIsCreateProgramOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Program
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create New Program</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateProgram} className="space-y-4">
+                    <div>
+                      <Label htmlFor="programName">Program Name</Label>
+                      <Input
+                        id="programName"
+                        value={newProgramData.name}
+                        onChange={(e) => setNewProgramData({ ...newProgramData, name: e.target.value })}
+                        placeholder="e.g., Electronics, Mechanics"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="programDescription">Description (optional)</Label>
+                      <Textarea
+                        id="programDescription"
+                        value={newProgramData.description}
+                        onChange={(e) => setNewProgramData({ ...newProgramData, description: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="programCategories">Categories (optional)</Label>
+                      <Input
+                        id="programCategories"
+                        value={newProgramData.categories}
+                        onChange={(e) => setNewProgramData({ ...newProgramData, categories: e.target.value })}
+                        placeholder="e.g., Explorer, Discoverer"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Comma-separated list of categories for this program</p>
+                    </div>
+                    <div className="flex justify-end space-x-2 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setIsCreateProgramOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">Create Program</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(programs ?? []).map((program, index) => {
+              const stats = { total: programStats[String(program._id)] ?? 0 };
+              return (
+                <motion.div
+                  key={program._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card
+                    className="cursor-pointer hover:shadow-lg transition-all hover:border-primary"
+                    onClick={() => {
+                      setSelectedProgramId(program._id as Id<"programs">);
+                      setCategoryFilter("all");
+                      setKitSearchQuery("");
+                    }}
+                  >
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="flex items-center gap-2">
+                          <Box className="h-6 w-6" />
+                          {program.name}
+                        </CardTitle>
+                        {isAdminOrManager && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditProgram(program);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteProgram(program._id as Id<"programs">, program.name);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      {program.description && <p className="text-xs text-muted-foreground">{program.description}</p>}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Kits</p>
+                          <p className="text-2xl font-bold">{stats.total}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <Dialog open={isEditProgramOpen} onOpenChange={setIsEditProgramOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit Program</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleUpdateProgram} className="space-y-4">
+                <div>
+                  <Label htmlFor="editProgramName">Program Name</Label>
+                  <Input
+                    id="editProgramName"
+                    value={editProgramData.name}
+                    onChange={(e) => setEditProgramData({ ...editProgramData, name: e.target.value })}
+                    placeholder="e.g., Electronics, Mechanics"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editProgramDescription">Description (optional)</Label>
+                  <Textarea
+                    id="editProgramDescription"
+                    value={editProgramData.description}
+                    onChange={(e) => setEditProgramData({ ...editProgramData, description: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editProgramCategories">Categories (optional)</Label>
+                  <Input
+                    id="editProgramCategories"
+                    value={editProgramData.categories}
+                    onChange={(e) => setEditProgramData({ ...editProgramData, categories: e.target.value })}
+                    placeholder="e.g., Explorer, Discoverer"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Comma-separated list of categories for this program
+                  </p>
+                </div>
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsEditProgramOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Update Program</Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </Layout>
     );
   }
 
-  // Show List view
+  // Kit Design view
   return (
     <Layout>
-      <div className="p-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedProgramId(null);
+                setCategoryFilter("all");
+                setKitSearchQuery("");
+              }}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Programs
+            </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Research & Development</h1>
-              <p className="text-muted-foreground mt-2">Manage programs, kits, and bill of materials</p>
-            </div>
-            <div className="flex gap-2">
-              <Dialog open={programDialogOpen} onOpenChange={setProgramDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => { 
-                    setEditingProgram(null); 
-                    setProgramForm({ name: "", description: "", tags: [], categories: [], usesVariants: false }); 
-                    setCategoryInput("");
-                  }}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Program
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editingProgram ? "Edit Program" : "Create Program"}</DialogTitle>
-                    <DialogDescription>Define a thematic umbrella for grouping related kits</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Name</Label>
-                      <Input value={programForm.name} onChange={(e) => setProgramForm({ ...programForm, name: e.target.value })} placeholder="e.g., Physics Experiments" />
-                    </div>
-                    <div>
-                      <Label>Description</Label>
-                      <Textarea value={programForm.description} onChange={(e) => setProgramForm({ ...programForm, description: e.target.value })} placeholder="Brief overview of the program" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="checkbox" 
-                        id="usesVariants"
-                        checked={programForm.usesVariants}
-                        onChange={(e) => setProgramForm({ ...programForm, usesVariants: e.target.checked })}
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="usesVariants">Uses CSTEM Variants (Explorer/Discoverer)</Label>
-                    </div>
-                    <div>
-                      <Label>Categories (comma-separated)</Label>
-                      <Input 
-                        value={categoryInput} 
-                        onChange={(e) => setCategoryInput(e.target.value)} 
-                        onBlur={(e) => setProgramForm({
-                          ...programForm,
-                          categories: e.target.value.split(",").map(c => c.trim()).filter(c => c.length > 0)
-                        })}
-                        placeholder="e.g., Beginner, Intermediate, Advanced" 
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">Define category options for kits in this program</p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setProgramDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={editingProgram ? handleUpdateProgram : handleCreateProgram}>
-                      {editingProgram ? "Update" : "Create"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {selectedProgram?.name || "Program"} - Kit Design
+              </h1>
+              <p className="text-muted-foreground mt-2">Manage kit blueprints and design assets</p>
 
-              <Button variant="outline" onClick={openNewKit}>
-                <Package className="mr-2 h-4 w-4" />
-                New Kit
-              </Button>
-            </div>
-          </div>
-
-          {/* Programs Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Beaker className="h-5 w-5" />
-                Programs
-              </CardTitle>
-              <CardDescription>Thematic umbrellas for organizing kits</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
-                {activePrograms.map((program) => (
-                  <Card key={program._id} className={`cursor-pointer transition-colors ${selectedProgram === program._id ? "border-foreground" : ""}`} onClick={() => setSelectedProgram(selectedProgram === program._id ? null : program._id)}>
-                    <CardHeader>
-                      <CardTitle className="text-base">{program.name}</CardTitle>
-                      <CardDescription className="text-sm">{program.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex gap-2">
-                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); openEditProgram(program); }}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleArchiveProgram(program._id); }}>
-                        <Archive className="h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Kits Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="h-5 w-5" />
-                    Kits
-                  </CardTitle>
-                  <CardDescription>Product specifications and bill of materials</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search kits..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 w-64" />
-                  </div>
-                  <Select value={tagFilter} onValueChange={setTagFilter}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Tags</SelectItem>
-                      {allTags.map((tag) => (
-                        <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {availableCategories.length > 0 && (
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger className="w-40">
-                        <SelectValue placeholder="Category" />
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {selectedProgram?.categories && selectedProgram.categories.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Category</Label>
+                    <Select value={categoryFilter} onValueChange={(v: string) => setCategoryFilter(v)}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All categories" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Categories</SelectItem>
-                        {availableCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        {selectedProgram.categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  )}
+                  </div>
+                )}
+                <div>
+                  <Label className="text-xs">Search Kits</Label>
+                  <Input
+                    placeholder="Search by kit name..."
+                    value={kitSearchQuery}
+                    onChange={(e) => setKitSearchQuery(e.target.value)}
+                    className="h-9"
+                  />
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredKits.map((kit) => {
-                  const program = programs.find((p) => p._id === kit.programId);
-                  const buildable = calculateBuildableUnits(kit.components || []);
-                  const cost = calculateKitCost(kit.components || []);
+            </div>
+          </div>
 
+          <div className="flex gap-2">
+            {isAdminOrManager && (
+              <>
+                <Button onClick={() => navigate("/kit-sheet-maker")} variant="outline">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Kit Builder
+                </Button>
+
+                <Dialog
+                  open={isCreateSimpleKitOpen}
+                  onOpenChange={(open) => {
+                    setIsCreateSimpleKitOpen(open);
+                    if (!open) {
+                      setEditingKit(null);
+                      setSimpleKitFormData({ name: "", serialNumber: "", category: undefined, description: "" });
+                    }
+                  }}
+                >
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Simple Kit
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{editingKit ? "Edit Kit" : "Create Simple Kit"}</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleCreateSimpleKit} className="space-y-4">
+                      <div>
+                        <Label htmlFor="kitName">Kit Name</Label>
+                        <Input
+                          id="kitName"
+                          value={simpleKitFormData.name}
+                          onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="serialNumber">Serial Number (optional)</Label>
+                        <Input
+                          id="serialNumber"
+                          value={simpleKitFormData.serialNumber}
+                          onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, serialNumber: e.target.value })}
+                        />
+                      </div>
+                      {selectedProgram?.categories && selectedProgram.categories.length > 0 && (
+                        <div>
+                          <Label htmlFor="category">Category</Label>
+                          <Select
+                            value={simpleKitFormData.category || ""}
+                            onValueChange={(value: string) =>
+                              setSimpleKitFormData({ ...simpleKitFormData, category: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {selectedProgram.categories.map((cat) => (
+                                <SelectItem key={cat} value={cat}>
+                                  {cat}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div>
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea
+                          id="description"
+                          value={simpleKitFormData.description}
+                          onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, description: e.target.value })}
+                          rows={3}
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setIsCreateSimpleKitOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit">{editingKit ? "Update" : "Create"} Kit</Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-md border">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Serial No.</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Kit Name</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Category</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredKits.map((kit, index) => {
+                  const isExpanded = expandedKitId === kit._id;
                   return (
-                    <Card key={kit._id}>
-                      <CardHeader>
-                        <CardTitle className="text-base">{kit.name}</CardTitle>
-                        <CardDescription className="text-sm">{program?.name}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm">
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span>₹{cost.toFixed(2)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Box className="h-4 w-4 text-muted-foreground" />
-                          <span>{buildable} buildable</span>
-                          {buildable < 10 && <Badge variant="destructive" className="text-xs">Low</Badge>}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => openEditKit(kit)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleCloneKit(kit._id)}>
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleArchiveKit(kit._id)}>
-                            <Archive className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <tbody key={kit._id}>
+                      <motion.tr
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: index * 0.02 }}
+                        className="border-b hover:bg-muted/30 transition-colors cursor-pointer"
+                        onClick={() => setExpandedKitId(isExpanded ? null : kit._id)}
+                      >
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{kit.serialNumber || "-"}</td>
+                        <td className="px-4 py-3 text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            {kit.name}
+                            {typeof kit.lowStockThreshold === "number" && kit.stockCount <= kit.lowStockThreshold && (
+                              <AlertTriangle className="h-4 w-4 text-red-600" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="text-xs">
+                            {kit.category ? kit.category.toUpperCase() : "UNCATEGORIZED"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex space-x-1">
+                            {isAdminOrManager && (
+                              <>
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" title="Upload Files">
+                                      <Upload className="h-4 w-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-sm">
+                                    <DialogHeader>
+                                      <DialogTitle>Upload Files for '{kit.name}'</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="space-y-2">
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "image" })}
+                                      >
+                                        <ImageIcon className="h-4 w-4 mr-2" />
+                                        Kit Image
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "laser" })}
+                                      >
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Laser Files
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "component" })}
+                                      >
+                                        <ImageIcon className="h-4 w-4 mr-2" />
+                                        Component Pictures
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "workbook" })}
+                                      >
+                                        <FileText className="h-4 w-4 mr-2" />
+                                        Workbooks & Misc
+                                      </Button>
+                                    </div>
+                                  </DialogContent>
+                                </Dialog>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenKitSheet(kit._id)}
+                                  title="Open Kit Sheet"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+
+                                <Button variant="ghost" size="sm" onClick={() => handleEditKit(kit)} title="Edit Kit">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteKit(kit._id)}
+                                  title="Delete Kit"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+
+                      {isExpanded && (
+                        <tr className="bg-muted/20">
+                          <td colSpan={7} className="px-4 py-4">
+                            <div className="space-y-4">
+                              {kit.description && (
+                                <div>
+                                  <span className="text-xs font-medium text-muted-foreground">Description:</span>
+                                  <p className="text-sm mt-1">{kit.description}</p>
+                                </div>
+                              )}
+
+                              <div>
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {kit.isStructured ? "Pouches & Packets" : "Materials (unstructured)"}
+                                </span>
+                                {kit.isStructured ? (
+                                  <StructuredMaterials packingRequirements={kit.packingRequirements} />
+                                ) : kit.packingRequirements && kit.packingRequirements.trim().length > 0 ? (
+                                  <ul className="list-disc pl-5 space-y-1 text-sm mt-2">
+                                    {kit.packingRequirements
+                                      .split(",")
+                                      .map((s: string) => s.trim())
+                                      .filter((s: string) => s.length > 0)
+                                      .map((item: string, idx: number) => (
+                                        <li key={idx}>{item}</li>
+                                      ))}
+                                  </ul>
+                                ) : (
+                                  <div className="text-sm text-muted-foreground mt-2">No materials specified.</div>
+                                )}
+                              </div>
+
+                              {kit.spareKits && kit.spareKits.length > 0 && (
+                                <div>
+                                  <div className="text-sm font-semibold mb-2 text-primary">Spare Kits</div>
+                                  <div className="space-y-2">
+                                    {kit.spareKits.map((spare: any, idx: number) => (
+                                      <div key={idx} className="border rounded p-3 bg-background">
+                                        <div className="font-medium text-sm">{spare.name}</div>
+                                        <div className="text-xs text-muted-foreground mt-1">Quantity: {spare.quantity}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {kit.bulkMaterials && kit.bulkMaterials.length > 0 && (
+                                <div>
+                                  <div className="text-sm font-semibold mb-2 text-primary">Bulk Materials</div>
+                                  <div className="space-y-2">
+                                    {kit.bulkMaterials.map((bulk: any, idx: number) => (
+                                      <div key={idx} className="border rounded p-3 bg-background">
+                                        <div className="font-medium text-sm">{bulk.name}</div>
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                          Quantity: {bulk.quantity} {bulk.unit}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {kit.miscellaneous && kit.miscellaneous.length > 0 && (
+                                <div>
+                                  <div className="text-sm font-semibold mb-2 text-primary">Miscellaneous Items</div>
+                                  <div className="space-y-2">
+                                    {kit.miscellaneous.map((misc: any, idx: number) => (
+                                      <div key={idx} className="border rounded p-3 bg-background">
+                                        <div className="font-medium text-sm">{misc.name}</div>
+                                        {misc.notes && (
+                                          <div className="text-xs text-muted-foreground mt-1 italic">{misc.notes}</div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
                   );
                 })}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {filteredKits.length === 0 && (
+          <div className="text-center py-12">
+            <Box className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium">No kits found</h3>
+            <p className="text-muted-foreground">Create your first kit blueprint to get started.</p>
+          </div>
+        )}
       </div>
+
+      {fileManager && (
+        <ResearchFileManager
+          kitId={fileManager.kitId}
+          fileType={fileManager.fileType}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setFileManager(null);
+          }}
+          currentFiles={(kits.find((k) => k._id === fileManager.kitId)?.images as string[]) || []}
+          currentFileIds={(kits.find((k) => k._id === fileManager.kitId)?.fileIds as Id<"_storage">[]) || []}
+        />
+      )}
     </Layout>
   );
 }
