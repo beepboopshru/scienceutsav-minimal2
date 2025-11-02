@@ -12,6 +12,9 @@ import Landing from "./pages/Landing.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import PendingApproval from "./pages/PendingApproval.tsx";
+import Inventory from "./pages/Inventory.tsx";
+import ProcessingJobs from "./pages/ProcessingJobs.tsx";
+import BillRecords from "./pages/BillRecords.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -54,6 +57,9 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
+            <Route path="/inventory/bill-records" element={<BillRecords />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

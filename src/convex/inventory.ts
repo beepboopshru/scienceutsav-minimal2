@@ -31,12 +31,63 @@ export const create = mutation({
     location: v.optional(v.string()),
     notes: v.optional(v.string()),
     vendorId: v.optional(v.id("vendors")),
+    subcategory: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
     return await ctx.db.insert("inventory", args);
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("inventory"),
+    name: v.optional(v.string()),
+    type: v.optional(
+      v.union(
+        v.literal("raw"),
+        v.literal("pre_processed"),
+        v.literal("finished"),
+        v.literal("sealed_packet")
+      )
+    ),
+    quantity: v.optional(v.number()),
+    unit: v.optional(v.string()),
+    minStockLevel: v.optional(v.number()),
+    location: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    vendorId: v.optional(v.id("vendors")),
+    subcategory: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const { id, ...updates } = args;
+    await ctx.db.patch(id, updates);
+  },
+});
+
+export const adjustStock = mutation({
+  args: {
+    id: v.id("inventory"),
+    adjustment: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const item = await ctx.db.get(args.id);
+    if (!item) throw new Error("Item not found");
+
+    const newQuantity = item.quantity + args.adjustment;
+    if (newQuantity < 0) {
+      throw new Error("Insufficient stock");
+    }
+
+    await ctx.db.patch(args.id, { quantity: newQuantity });
   },
 });
 

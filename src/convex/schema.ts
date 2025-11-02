@@ -112,9 +112,23 @@ const schema = defineSchema(
       location: v.optional(v.string()),
       notes: v.optional(v.string()),
       vendorId: v.optional(v.id("vendors")),
+      subcategory: v.optional(v.string()),
     })
       .index("by_type", ["type"])
-      .index("by_vendor", ["vendorId"]),
+      .index("by_vendor", ["vendorId"])
+      .index("by_subcategory", ["subcategory"]),
+
+    // Inventory categories for organizing materials
+    inventoryCategories: defineTable({
+      name: v.string(),
+      value: v.string(),
+      categoryType: v.union(
+        v.literal("raw_material"),
+        v.literal("pre_processed")
+      ),
+    })
+      .index("by_value", ["value"])
+      .index("by_category_type", ["categoryType"]),
 
     // Material processing jobs
     processingJobs: defineTable({
@@ -128,16 +142,14 @@ const schema = defineSchema(
         })
       ),
       status: v.union(
-        v.literal("pending"),
         v.literal("in_progress"),
-        v.literal("completed"),
-        v.literal("cancelled")
+        v.literal("completed")
       ),
       processedBy: v.optional(v.string()),
-      processedByType: v.optional(v.union(v.literal("vendor"), v.literal("service"))),
+      processedByType: v.optional(v.union(v.literal("vendor"), v.literal("service"), v.literal("in_house"))),
       notes: v.optional(v.string()),
-      startedAt: v.optional(v.number()),
       completedAt: v.optional(v.number()),
+      completedBy: v.optional(v.id("users")),
       createdBy: v.id("users"),
     })
       .index("by_status", ["status"])
