@@ -421,6 +421,34 @@ export default function Research() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isAdminOrManager && (
+              <motion.div
+                key="add-program-card"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <Card
+                  className="cursor-pointer hover:shadow-lg transition-all hover:border-primary border-dashed"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsCreateProgramOpen(true);
+                  }}
+                  role="button"
+                  aria-label="Add Program"
+                >
+                  <CardHeader className="items-center text-center">
+                    <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                      <Plus className="h-5 w-5" />
+                      Add Program
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center text-sm text-muted-foreground">
+                    Create a new program to organize your kits.
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
             {(programs ?? []).map((program, index) => {
               const stats = { total: programStats[String(program._id)] ?? 0 };
               return (
