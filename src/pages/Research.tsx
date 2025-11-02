@@ -49,9 +49,20 @@ export default function Research() {
   const [kitForm, setKitForm] = useState({
     name: "",
     programId: "" as Id<"programs">,
+    serialNumber: "",
+    category: "",
+    cstemVariant: undefined as "explorer" | "discoverer" | undefined,
     description: "",
+    remarks: "",
     tags: [] as string[],
     notes: "",
+    stockCount: 0,
+    lowStockThreshold: 10,
+    isStructured: false,
+    packingRequirements: "",
+    spareKits: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
+    bulkMaterials: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
+    miscellaneous: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
     components: [] as Array<{
       inventoryItemId: Id<"inventory">;
       quantityPerKit: number;
@@ -125,15 +136,26 @@ export default function Research() {
 
   const handleCreateKit = async () => {
     try {
-      await createKit({ ...kitForm, stockLevel: 0 });
+      await createKit(kitForm);
       toast.success("Kit created successfully");
       setKitDialogOpen(false);
       setKitForm({
         name: "",
         programId: "" as Id<"programs">,
+        serialNumber: "",
+        category: "",
+        cstemVariant: undefined,
         description: "",
+        remarks: "",
         tags: [],
         notes: "",
+        stockCount: 0,
+        lowStockThreshold: 10,
+        isStructured: false,
+        packingRequirements: "",
+        spareKits: [],
+        bulkMaterials: [],
+        miscellaneous: [],
         components: [],
       });
     } catch (error) {
@@ -144,16 +166,32 @@ export default function Research() {
   const handleUpdateKit = async () => {
     if (!editingKit) return;
     try {
-      await updateKit({ id: editingKit, ...kitForm });
+      const { cstemVariant, ...rest } = kitForm;
+      await updateKit({
+        id: editingKit,
+        ...rest,
+        ...(cstemVariant ? { cstemVariant } : {}),
+      });
       toast.success("Kit updated successfully");
       setKitDialogOpen(false);
       setEditingKit(null);
       setKitForm({
         name: "",
         programId: "" as Id<"programs">,
+        serialNumber: "",
+        category: "",
+        cstemVariant: undefined,
         description: "",
+        remarks: "",
         tags: [],
         notes: "",
+        stockCount: 0,
+        lowStockThreshold: 10,
+        isStructured: false,
+        packingRequirements: "",
+        spareKits: [],
+        bulkMaterials: [],
+        miscellaneous: [],
         components: [],
       });
     } catch (error) {
@@ -194,9 +232,20 @@ export default function Research() {
     setKitForm({
       name: kit.name,
       programId: kit.programId,
+      serialNumber: kit.serialNumber || "",
+      category: kit.category || "",
+      cstemVariant: kit.cstemVariant,
       description: kit.description || "",
+      remarks: kit.remarks || "",
       tags: kit.tags || [],
       notes: kit.notes || "",
+      stockCount: kit.stockCount || 0,
+      lowStockThreshold: kit.lowStockThreshold || 10,
+      isStructured: kit.isStructured || false,
+      packingRequirements: kit.packingRequirements || "",
+      spareKits: kit.spareKits || [],
+      bulkMaterials: kit.bulkMaterials || [],
+      miscellaneous: kit.miscellaneous || [],
       components: kit.components || [],
     });
     setKitDialogOpen(true);
@@ -299,7 +348,28 @@ export default function Research() {
 
               <Dialog open={kitDialogOpen} onOpenChange={setKitDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" onClick={() => { setEditingKit(null); setKitForm({ name: "", programId: "" as Id<"programs">, description: "", tags: [], notes: "", components: [] }); }}>
+                  <Button variant="outline" onClick={() => { 
+                    setEditingKit(null); 
+                    setKitForm({ 
+                      name: "", 
+                      programId: "" as Id<"programs">, 
+                      serialNumber: "",
+                      category: "",
+                      cstemVariant: undefined,
+                      description: "", 
+                      remarks: "",
+                      tags: [], 
+                      notes: "", 
+                      stockCount: 0,
+                      lowStockThreshold: 10,
+                      isStructured: false,
+                      packingRequirements: "",
+                      spareKits: [],
+                      bulkMaterials: [],
+                      miscellaneous: [],
+                      components: [] 
+                    }); 
+                  }}>
                     <Package className="mr-2 h-4 w-4" />
                     New Kit
                   </Button>

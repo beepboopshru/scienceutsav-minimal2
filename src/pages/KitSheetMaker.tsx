@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
+import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 
 export default function KitSheetMaker() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -61,24 +62,58 @@ export default function KitSheetMaker() {
   const selectedProgram = selectedKit ? programs.find((p) => p._id === selectedKit.programId) : null;
 
   const calculateTotals = () => {
-    if (!selectedKit || !selectedKit.components) return [];
+    if (!selectedKit) return [];
 
-    return selectedKit.components.map((comp) => {
-      const item = inventory.find((i) => i._id === comp.inventoryItemId);
-      const totalQty = comp.quantityPerKit * quantity;
-      const hasShortage = item ? item.quantity < totalQty : true;
+    // If structured, parse packing requirements
+    if (selectedKit.isStructured && selectedKit.packingRequirements) {
+      const structure = parsePackingRequirements(selectedKit.packingRequirements);
+      const materials = calculateTotalMaterials(structure);
 
-      return {
-        ...comp,
-        item,
-        totalQty,
-        hasShortage,
-      };
-    });
+      return materials.map((material) => {
+        const item = inventory.find((i) => i.name === material.name);
+        const totalQty = material.quantity * quantity;
+        const hasShortage = item ? item.quantity < totalQty : true;
+
+        return {
+          name: material.name,
+          unit: material.unit,
+          quantityPerKit: material.quantity,
+          totalQty,
+          hasShortage,
+          item,
+          notes: material.notes,
+        };
+      });
+    }
+
+    // Legacy: use components array
+    if (selectedKit.components) {
+      return selectedKit.components.map((comp) => {
+        const item = inventory.find((i) => i._id === comp.inventoryItemId);
+        const totalQty = comp.quantityPerKit * quantity;
+        const hasShortage = item ? item.quantity < totalQty : true;
+
+        return {
+          name: item?.name || "Unknown Item",
+          unit: comp.unit,
+          quantityPerKit: comp.quantityPerKit,
+          totalQty,
+          hasShortage,
+          item,
+          notes: comp.wastageNotes || comp.comments,
+        };
+      });
+    }
+
+    return [];
   };
 
   const totals = calculateTotals();
   const hasAnyShortage = totals.some((t) => t.hasShortage);
+
+  const packingStructure = selectedKit?.isStructured && selectedKit.packingRequirements
+    ? parsePackingRequirements(selectedKit.packingRequirements)
+    : null;
 
   const handlePrint = () => {
     window.print();
@@ -227,43 +262,213 @@ export default function KitSheetMaker() {
                   </Alert>
                 )}
 
-                {/* BOM Table */}
-                <div>
-                  <h4 className="text-lg font-semibold mb-4">Bill of Materials</h4>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Item Name</TableHead>
-                        <TableHead>Unit</TableHead>
-                        <TableHead className="text-right">Per Kit</TableHead>
-                        <TableHead className="text-right">Total Qty</TableHead>
-                        <TableHead className="text-right">Available</TableHead>
-                        <TableHead>Notes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {totals.map((total, idx) => (
-                        <TableRow key={idx} className={total.hasShortage ? "bg-destructive/10" : ""}>
-                          <TableCell className="font-medium">
-                            {total.item?.name || "Unknown Item"}
-                            {total.hasShortage && (
-                              <Badge variant="destructive" className="ml-2 text-xs">
-                                Short
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>{total.unit}</TableCell>
-                          <TableCell className="text-right">{total.quantityPerKit}</TableCell>
-                          <TableCell className="text-right font-semibold">{total.totalQty}</TableCell>
-                          <TableCell className="text-right">{total.item?.quantity || 0}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {total.wastageNotes || total.comments || "-"}
-                          </TableCell>
+                {/* BOM Table - Structured or Legacy */}
+                {packingStructure ? (
+                  <div className="space-y-6">
+                    {/* Pouches */}
+                    {packingStructure.pouches.length > 0 && (
+                      <div>
+                        <h4 className="text-lg font-semibold mb-4">Pouches</h4>
+                        {packingStructure.pouches.map((pouch, pouchIdx) => (
+                          <div key={pouchIdx} className="mb-6">
+                            <h5 className="font-medium mb-2">{pouch.name}</h5>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Item Name</TableHead>
+                                  <TableHead>Unit</TableHead>
+                                  <TableHead className="text-right">Per Kit</TableHead>
+                                  <TableHead className="text-right">Total Qty</TableHead>
+                                  <TableHead className="text-right">Available</TableHead>
+                                  <TableHead>Notes</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {pouch.materials.map((material, matIdx) => {
+                                  const item = inventory.find((i) => i.name === material.name);
+                                  const totalQty = material.quantity * quantity;
+                                  const hasShortage = item ? item.quantity < totalQty : true;
+                                  return (
+                                    <TableRow key={matIdx} className={hasShortage ? "bg-destructive/10" : ""}>
+                                      <TableCell className="font-medium">
+                                        {material.name}
+                                        {hasShortage && (
+                                          <Badge variant="destructive" className="ml-2 text-xs">
+                                            Short
+                                          </Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>{material.unit}</TableCell>
+                                      <TableCell className="text-right">{material.quantity}</TableCell>
+                                      <TableCell className="text-right font-semibold">{totalQty}</TableCell>
+                                      <TableCell className="text-right">{item?.quantity || 0}</TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {material.notes || "-"}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Packets */}
+                    {packingStructure.packets.length > 0 && (
+                      <div>
+                        <h4 className="text-lg font-semibold mb-4">Packets (Pre-sealed)</h4>
+                        {packingStructure.packets.map((packet, packetIdx) => (
+                          <div key={packetIdx} className="mb-6">
+                            <h5 className="font-medium mb-2">{packet.name}</h5>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Item Name</TableHead>
+                                  <TableHead>Unit</TableHead>
+                                  <TableHead className="text-right">Per Kit</TableHead>
+                                  <TableHead className="text-right">Total Qty</TableHead>
+                                  <TableHead className="text-right">Available</TableHead>
+                                  <TableHead>Notes</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {packet.materials.map((material, matIdx) => {
+                                  const item = inventory.find((i) => i.name === material.name);
+                                  const totalQty = material.quantity * quantity;
+                                  const hasShortage = item ? item.quantity < totalQty : true;
+                                  return (
+                                    <TableRow key={matIdx} className={hasShortage ? "bg-destructive/10" : ""}>
+                                      <TableCell className="font-medium">
+                                        {material.name}
+                                        {hasShortage && (
+                                          <Badge variant="destructive" className="ml-2 text-xs">
+                                            Short
+                                          </Badge>
+                                        )}
+                                      </TableCell>
+                                      <TableCell>{material.unit}</TableCell>
+                                      <TableCell className="text-right">{material.quantity}</TableCell>
+                                      <TableCell className="text-right font-semibold">{totalQty}</TableCell>
+                                      <TableCell className="text-right">{item?.quantity || 0}</TableCell>
+                                      <TableCell className="text-sm text-muted-foreground">
+                                        {material.notes || "-"}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <h4 className="text-lg font-semibold mb-4">Bill of Materials</h4>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Item Name</TableHead>
+                          <TableHead>Unit</TableHead>
+                          <TableHead className="text-right">Per Kit</TableHead>
+                          <TableHead className="text-right">Total Qty</TableHead>
+                          <TableHead className="text-right">Available</TableHead>
+                          <TableHead>Notes</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {totals.map((total, idx) => (
+                          <TableRow key={idx} className={total.hasShortage ? "bg-destructive/10" : ""}>
+                            <TableCell className="font-medium">
+                              {total.name}
+                              {total.hasShortage && (
+                                <Badge variant="destructive" className="ml-2 text-xs">
+                                  Short
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>{total.unit}</TableCell>
+                            <TableCell className="text-right">{total.quantityPerKit}</TableCell>
+                            <TableCell className="text-right font-semibold">{total.totalQty}</TableCell>
+                            <TableCell className="text-right">{total.item?.quantity || 0}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {total.notes || "-"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Spare Kits */}
+                {selectedKit.spareKits && selectedKit.spareKits.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-lg font-semibold mb-4">Spare Kits</h4>
+                      <Table>
+                        <TableBody>
+                          {selectedKit.spareKits.map((spare, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{spare.name}</TableCell>
+                              <TableCell>{spare.unit}</TableCell>
+                              <TableCell className="text-right">{spare.quantity * quantity}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{spare.notes || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+
+                {/* Bulk Materials */}
+                {selectedKit.bulkMaterials && selectedKit.bulkMaterials.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-lg font-semibold mb-4">Bulk Materials</h4>
+                      <Table>
+                        <TableBody>
+                          {selectedKit.bulkMaterials.map((bulk, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{bulk.name}</TableCell>
+                              <TableCell>{bulk.unit}</TableCell>
+                              <TableCell className="text-right">{bulk.quantity * quantity}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{bulk.notes || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
+
+                {/* Miscellaneous */}
+                {selectedKit.miscellaneous && selectedKit.miscellaneous.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-lg font-semibold mb-4">Miscellaneous</h4>
+                      <Table>
+                        <TableBody>
+                          {selectedKit.miscellaneous.map((misc, idx) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{misc.name}</TableCell>
+                              <TableCell>{misc.unit}</TableCell>
+                              <TableCell className="text-right">{misc.quantity * quantity}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{misc.notes || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </>
+                )}
 
                 {/* Assembly Notes */}
                 {selectedKit.notes && (

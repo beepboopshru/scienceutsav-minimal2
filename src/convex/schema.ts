@@ -49,14 +49,47 @@ const schema = defineSchema(
     kits: defineTable({
       name: v.string(),
       programId: v.id("programs"),
+      serialNumber: v.optional(v.string()),
+      serialNumbers: v.optional(v.array(v.string())),
+      type: v.optional(v.string()),
+      cstemVariant: v.optional(v.union(v.literal("explorer"), v.literal("discoverer"))),
+      category: v.optional(v.string()),
       description: v.optional(v.string()),
+      remarks: v.optional(v.string()),
       imageUrl: v.optional(v.string()),
       images: v.optional(v.array(v.string())),
       fileIds: v.optional(v.array(v.id("_storage"))),
-      stockLevel: v.number(),
-      status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
+      stockCount: v.number(),
+      lowStockThreshold: v.optional(v.number()),
+      status: v.optional(v.union(
+        v.literal("active"), 
+        v.literal("archived"),
+        v.literal("in_stock"),
+        v.literal("assigned"),
+        v.literal("to_be_made")
+      )),
       tags: v.optional(v.array(v.string())),
       notes: v.optional(v.string()),
+      isStructured: v.optional(v.boolean()),
+      packingRequirements: v.optional(v.string()),
+      spareKits: v.optional(v.array(v.object({
+        name: v.string(),
+        quantity: v.number(),
+        unit: v.string(),
+        notes: v.optional(v.string()),
+      }))),
+      bulkMaterials: v.optional(v.array(v.object({
+        name: v.string(),
+        quantity: v.number(),
+        unit: v.string(),
+        notes: v.optional(v.string()),
+      }))),
+      miscellaneous: v.optional(v.array(v.object({
+        name: v.string(),
+        quantity: v.number(),
+        unit: v.string(),
+        notes: v.optional(v.string()),
+      }))),
       components: v.optional(
         v.array(
           v.object({
@@ -68,11 +101,13 @@ const schema = defineSchema(
           })
         )
       ),
-      createdBy: v.id("users"),
+      createdBy: v.optional(v.id("users")),
     })
       .index("by_program", ["programId"])
       .index("by_created_by", ["createdBy"])
-      .index("by_status", ["status"]),
+      .index("by_status", ["status"])
+      .index("by_type", ["type"])
+      .index("by_category", ["category"]),
 
     // Kit components (packets, spare materials, bulk materials, misc)
     kitComponents: defineTable({

@@ -20,13 +20,40 @@ export const create = mutation({
   args: {
     name: v.string(),
     programId: v.id("programs"),
+    serialNumber: v.optional(v.string()),
+    serialNumbers: v.optional(v.array(v.string())),
+    type: v.optional(v.string()),
+    cstemVariant: v.optional(v.union(v.literal("explorer"), v.literal("discoverer"))),
+    category: v.optional(v.string()),
     description: v.optional(v.string()),
+    remarks: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     images: v.optional(v.array(v.string())),
     fileIds: v.optional(v.array(v.id("_storage"))),
-    stockLevel: v.number(),
+    stockCount: v.number(),
+    lowStockThreshold: v.optional(v.number()),
     tags: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
+    isStructured: v.optional(v.boolean()),
+    packingRequirements: v.optional(v.string()),
+    spareKits: v.optional(v.array(v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+      notes: v.optional(v.string()),
+    }))),
+    bulkMaterials: v.optional(v.array(v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+      notes: v.optional(v.string()),
+    }))),
+    miscellaneous: v.optional(v.array(v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+      notes: v.optional(v.string()),
+    }))),
     components: v.optional(
       v.array(
         v.object({
@@ -55,14 +82,47 @@ export const update = mutation({
   args: {
     id: v.id("kits"),
     name: v.optional(v.string()),
+    serialNumber: v.optional(v.string()),
+    serialNumbers: v.optional(v.array(v.string())),
+    type: v.optional(v.string()),
+    cstemVariant: v.optional(v.union(v.literal("explorer"), v.literal("discoverer"))),
+    category: v.optional(v.string()),
     description: v.optional(v.string()),
+    remarks: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
     images: v.optional(v.array(v.string())),
     fileIds: v.optional(v.array(v.id("_storage"))),
-    stockLevel: v.optional(v.number()),
-    status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
+    stockCount: v.optional(v.number()),
+    lowStockThreshold: v.optional(v.number()),
+    status: v.optional(v.union(
+      v.literal("active"), 
+      v.literal("archived"),
+      v.literal("in_stock"),
+      v.literal("assigned"),
+      v.literal("to_be_made")
+    )),
     tags: v.optional(v.array(v.string())),
     notes: v.optional(v.string()),
+    isStructured: v.optional(v.boolean()),
+    packingRequirements: v.optional(v.string()),
+    spareKits: v.optional(v.array(v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+      notes: v.optional(v.string()),
+    }))),
+    bulkMaterials: v.optional(v.array(v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+      notes: v.optional(v.string()),
+    }))),
+    miscellaneous: v.optional(v.array(v.object({
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.string(),
+      notes: v.optional(v.string()),
+    }))),
     components: v.optional(
       v.array(
         v.object({
