@@ -28,7 +28,6 @@ import {
   Contact,
   Wrench,
   Scissors,
-  FileText,
   Settings,
   UserCog,
   LogOut,

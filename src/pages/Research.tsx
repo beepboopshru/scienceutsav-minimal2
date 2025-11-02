@@ -318,17 +318,18 @@ export default function Research() {
 
   const handleEditKit = (kit: any) => {
     if (kit.isStructured) {
-      toast("Editing structured kits is unavailable.");
+      toast("Kit Sheet Maker is disabled");
       return;
+    } else {
+      setEditingKit(kit);
+      setSimpleKitFormData({
+        name: kit.name || "",
+        serialNumber: kit.serialNumber || "",
+        category: kit.category,
+        description: kit.description || "",
+      });
+      setIsCreateSimpleKitOpen(true);
     }
-    setEditingKit(kit);
-    setSimpleKitFormData({
-      name: kit.name || "",
-      serialNumber: kit.serialNumber || "",
-      category: kit.category,
-      description: kit.description || "",
-    });
-    setIsCreateSimpleKitOpen(true);
   };
 
   const handleDeleteKit = async (kitId: Id<"kits">) => {
@@ -342,6 +343,10 @@ export default function Research() {
         });
       }
     }
+  };
+
+  const handleOpenKitSheet = (kitId: Id<"kits">) => {
+    navigate(`/kit-sheet-maker?edit=${kitId}`);
   };
 
   if (isLoading || !kits || !programs) {
@@ -619,6 +624,8 @@ export default function Research() {
           <div className="flex gap-2">
             {isAdminOrManager && (
               <>
+                {/* Kit Sheet Maker removed */}
+
                 <Dialog
                   open={isCreateSimpleKitOpen}
                   onOpenChange={(open) => {
@@ -794,6 +801,8 @@ export default function Research() {
                                     </div>
                                   </DialogContent>
                                 </Dialog>
+
+                                {/* Open Kit Sheet action removed */}
 
                                 <Button variant="ghost" size="sm" onClick={() => handleEditKit(kit)} title="Edit Kit">
                                   <Edit className="h-4 w-4" />
