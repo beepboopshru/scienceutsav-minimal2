@@ -23,6 +23,7 @@ export default function KitBuilder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editKitId = searchParams.get("edit") as Id<"kits"> | null;
+  const programIdFromUrl = searchParams.get("program") as Id<"programs"> | null;
 
   const programs = useQuery(api.programs.list);
   const kits = useQuery(api.kits.list);
@@ -72,8 +73,10 @@ export default function KitBuilder() {
         bulkMaterials: editingKit.bulkMaterials || [],
         miscellaneous: editingKit.miscellaneous || [],
       });
+    } else if (programIdFromUrl && !kitForm.programId) {
+      setKitForm({ ...kitForm, programId: programIdFromUrl });
     }
-  }, [editingKit]);
+  }, [editingKit, programIdFromUrl]);
 
   if (isLoading || !user || !programs || !kits || !inventory) {
     return (
@@ -208,7 +211,7 @@ export default function KitBuilder() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-bold tracking-tight">Edit Kit Sheet</h1>
+                <h1 className="text-2xl font-bold tracking-tight">{editKitId ? "Edit Kit Sheet" : "Create New Kit"}</h1>
                 <p className="text-sm text-muted-foreground">Define your kit components with live preview</p>
               </div>
             </div>
@@ -218,7 +221,7 @@ export default function KitBuilder() {
               </Button>
               <Button onClick={handleSave} disabled={!canEdit}>
                 <Save className="mr-2 h-4 w-4" />
-                Update Kit
+                {editKitId ? "Update Kit" : "Create Kit"}
               </Button>
             </div>
           </div>

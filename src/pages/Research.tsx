@@ -602,7 +602,10 @@ export default function Research() {
           <div className="flex gap-2">
             {isAdminOrManager && (
               <>
-                {/* Kit Sheet Maker removed */}
+                <Button onClick={() => navigate(`/kit-builder?program=${selectedProgramId}`)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Kit Builder
+                </Button>
 
                 <Dialog
                   open={isCreateSimpleKitOpen}
