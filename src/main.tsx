@@ -19,6 +19,7 @@ import BillRecords from "./pages/BillRecords.tsx";
 import VendorContacts from "./pages/VendorContacts.tsx";
 import Services from "./pages/Services.tsx";
 import KitSheetMaker from "./pages/KitSheetMaker.tsx";
+import KitBuilder from "./pages/KitBuilder.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -62,6 +63,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
             <Route path="/research" element={<Research />} />
+            <Route path="/kit-builder" element={<KitBuilder />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
             <Route path="/inventory/bill-records" element={<BillRecords />} />
