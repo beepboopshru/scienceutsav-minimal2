@@ -63,6 +63,7 @@ export default function Kits() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingKit, setEditingKit] = useState<any | null>(null);
+  const [newMaterial, setNewMaterial] = useState("");
   const [formData, setFormData] = useState<KitForm>({
     name: "",
     programId: "" as Id<"programs">,
@@ -183,7 +184,6 @@ export default function Kits() {
     }
   };
 
-  const [newMaterial, setNewMaterial] = useState("");
   const handleAddMaterial = async (kit: any) => {
     const item = newMaterial.trim();
     if (!item) return;
