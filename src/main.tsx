@@ -20,6 +20,12 @@ import VendorContacts from "./pages/VendorContacts.tsx";
 import Services from "./pages/Services.tsx";
 import KitSheetMaker from "./pages/KitSheetMaker.tsx";
 import KitBuilder from "./pages/KitBuilder.tsx";
+import Clients from "@/pages/Clients.tsx";
+import Assignments from "@/pages/Assignments.tsx";
+import Kits from "@/pages/Kits.tsx";
+import LaserFiles from "@/pages/LaserFiles.tsx";
+import UserManagement from "@/pages/UserManagement.tsx";
+import AdminZone from "@/pages/AdminZone.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -64,6 +70,12 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/pending-approval" element={<PendingApproval />} />
             <Route path="/research" element={<Research />} />
             <Route path="/kit-builder" element={<KitBuilder />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/assignments" element={<Assignments />} />
+            <Route path="/kits" element={<Kits />} />
+            <Route path="/laser-files" element={<LaserFiles />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/admin-zone" element={<AdminZone />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
             <Route path="/inventory/bill-records" element={<BillRecords />} />
