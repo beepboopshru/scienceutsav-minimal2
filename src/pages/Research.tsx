@@ -318,9 +318,10 @@ export default function Research() {
 
   const handleEditKit = (kit: any) => {
     if (kit.isStructured) {
-      toast("Kit Sheet Maker is disabled");
-      return;
+      // Navigate to Kit Builder for structured kits
+      navigate(`/kit-builder?edit=${kit._id}`);
     } else {
+      // Open simple kit dialog for unstructured kits
       setEditingKit(kit);
       setSimpleKitFormData({
         name: kit.name || "",
