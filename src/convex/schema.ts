@@ -2,42 +2,184 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { Infer, v } from "convex/values";
 
-// default user roles. can add / remove based on the project as needed
+// User roles for the system
 export const ROLES = {
   ADMIN: "admin",
-  USER: "user",
-  MEMBER: "member",
+  CONTENT: "content",
+  RESEARCH_DEVELOPMENT: "research_development",
+  OPERATIONS: "operations",
+  INVENTORY: "inventory",
 } as const;
 
 export const roleValidator = v.union(
   v.literal(ROLES.ADMIN),
-  v.literal(ROLES.USER),
-  v.literal(ROLES.MEMBER),
+  v.literal(ROLES.CONTENT),
+  v.literal(ROLES.RESEARCH_DEVELOPMENT),
+  v.literal(ROLES.OPERATIONS),
+  v.literal(ROLES.INVENTORY),
 );
 export type Role = Infer<typeof roleValidator>;
 
 const schema = defineSchema(
   {
-    // default auth tables using convex auth.
-    ...authTables, // do not remove or modify
+    ...authTables,
 
-    // the users table is the default users table that is brought in by the authTables
     users: defineTable({
-      name: v.optional(v.string()), // name of the user. do not remove
-      image: v.optional(v.string()), // image of the user. do not remove
-      email: v.optional(v.string()), // email of the user. do not remove
-      emailVerificationTime: v.optional(v.number()), // email verification time. do not remove
-      isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
+      name: v.optional(v.string()),
+      image: v.optional(v.string()),
+      email: v.optional(v.string()),
+      emailVerificationTime: v.optional(v.number()),
+      isAnonymous: v.optional(v.boolean()),
+      role: v.optional(roleValidator),
+      isApproved: v.optional(v.boolean()),
+    }).index("email", ["email"]),
 
-      role: v.optional(roleValidator), // role of the user. do not remove
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    // Educational programs
+    programs: defineTable({
+      name: v.string(),
+      description: v.optional(v.string()),
+      createdBy: v.id("users"),
+    }).index("by_created_by", ["createdBy"]),
 
-    // add other tables here
+    // Kit specifications
+    kits: defineTable({
+      name: v.string(),
+      programId: v.id("programs"),
+      description: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      stockLevel: v.number(),
+      createdBy: v.id("users"),
+    })
+      .index("by_program", ["programId"])
+      .index("by_created_by", ["createdBy"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // Kit components (packets, spare materials, bulk materials, misc)
+    kitComponents: defineTable({
+      kitId: v.id("kits"),
+      type: v.union(
+        v.literal("packet"),
+        v.literal("spare"),
+        v.literal("bulk"),
+        v.literal("miscellaneous")
+      ),
+      name: v.string(),
+      quantity: v.number(),
+      unit: v.optional(v.string()),
+      notes: v.optional(v.string()),
+    }).index("by_kit", ["kitId"]),
+
+    // Clients database
+    clients: defineTable({
+      name: v.string(),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      address: v.optional(v.string()),
+      organization: v.optional(v.string()),
+      createdBy: v.id("users"),
+    }).index("by_created_by", ["createdBy"]),
+
+    // Kit assignments to clients
+    assignments: defineTable({
+      clientId: v.id("clients"),
+      kitId: v.id("kits"),
+      quantity: v.number(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("fulfilled"),
+        v.literal("cancelled")
+      ),
+      notes: v.optional(v.string()),
+      createdBy: v.id("users"),
+      fulfilledAt: v.optional(v.number()),
+    })
+      .index("by_client", ["clientId"])
+      .index("by_kit", ["kitId"])
+      .index("by_status", ["status"])
+      .index("by_created_by", ["createdBy"]),
+
+    // Inventory materials
+    inventory: defineTable({
+      name: v.string(),
+      type: v.union(
+        v.literal("raw"),
+        v.literal("pre_processed"),
+        v.literal("finished"),
+        v.literal("sealed_packet")
+      ),
+      quantity: v.number(),
+      unit: v.string(),
+      minStockLevel: v.optional(v.number()),
+      location: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      vendorId: v.optional(v.id("vendors")),
+    })
+      .index("by_type", ["type"])
+      .index("by_vendor", ["vendorId"]),
+
+    // Material processing jobs
+    processingJobs: defineTable({
+      name: v.string(),
+      inputMaterialId: v.id("inventory"),
+      outputMaterialId: v.id("inventory"),
+      inputQuantity: v.number(),
+      outputQuantity: v.number(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("in_progress"),
+        v.literal("completed"),
+        v.literal("cancelled")
+      ),
+      serviceId: v.optional(v.id("services")),
+      startedAt: v.optional(v.number()),
+      completedAt: v.optional(v.number()),
+      createdBy: v.id("users"),
+    })
+      .index("by_status", ["status"])
+      .index("by_input_material", ["inputMaterialId"])
+      .index("by_output_material", ["outputMaterialId"])
+      .index("by_created_by", ["createdBy"]),
+
+    // Vendor purchase bills
+    billRecords: defineTable({
+      vendorId: v.id("vendors"),
+      billNumber: v.string(),
+      billDate: v.number(),
+      totalAmount: v.number(),
+      items: v.array(
+        v.object({
+          materialId: v.id("inventory"),
+          quantity: v.number(),
+          unitPrice: v.number(),
+        })
+      ),
+      billFileUrl: v.optional(v.string()),
+      createdBy: v.id("users"),
+    })
+      .index("by_vendor", ["vendorId"])
+      .index("by_created_by", ["createdBy"]),
+
+    // Vendor contacts
+    vendors: defineTable({
+      name: v.string(),
+      contactPerson: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      address: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      createdBy: v.id("users"),
+    }).index("by_created_by", ["createdBy"]),
+
+    // Service providers
+    services: defineTable({
+      name: v.string(),
+      serviceType: v.string(),
+      contactPerson: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      address: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      createdBy: v.id("users"),
+    }).index("by_created_by", ["createdBy"]),
   },
   {
     schemaValidation: false,
