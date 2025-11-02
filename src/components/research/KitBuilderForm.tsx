@@ -186,7 +186,7 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Serial Number</Label>
               <Input
@@ -226,50 +226,6 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
                     onChange={(e) => setKitForm({ ...kitForm, category: e.target.value })}
                     placeholder="e.g., Physics"
                   />
-                );
-              })()}
-            </div>
-            <div>
-              <Label>CSTEM Variant</Label>
-              {(() => {
-                const selectedProgram = programs.find(p => p._id === kitForm.programId);
-                const usesVariants = selectedProgram?.usesVariants || false;
-                
-                if (!usesVariants) {
-                  return (
-                    <Select value="none" disabled>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Not applicable" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Not applicable</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  );
-                }
-                
-                return (
-                  <Select
-                    value={kitForm.cstemVariant || "none"}
-                    onValueChange={(value) =>
-                      setKitForm({ ...kitForm, cstemVariant: value === "none" ? undefined : (value as "explorer" | "discoverer") })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="explorer">Explorer</SelectItem>
-                      <SelectItem value="discoverer">Discoverer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                );
-              })()}
-              {(() => {
-                const selectedProgram = programs.find(p => p._id === kitForm.programId);
-                return selectedProgram?.usesVariants && (
-                  <p className="text-xs text-muted-foreground mt-1">This program uses CSTEM variants</p>
                 );
               })()}
             </div>
