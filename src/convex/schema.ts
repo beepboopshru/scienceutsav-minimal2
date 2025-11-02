@@ -38,8 +38,12 @@ const schema = defineSchema(
     programs: defineTable({
       name: v.string(),
       description: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
       createdBy: v.id("users"),
-    }).index("by_created_by", ["createdBy"]),
+    })
+      .index("by_created_by", ["createdBy"])
+      .index("by_status", ["status"]),
 
     // Kit specifications
     kits: defineTable({
@@ -47,11 +51,28 @@ const schema = defineSchema(
       programId: v.id("programs"),
       description: v.optional(v.string()),
       imageUrl: v.optional(v.string()),
+      images: v.optional(v.array(v.string())),
+      fileIds: v.optional(v.array(v.id("_storage"))),
       stockLevel: v.number(),
+      status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
+      tags: v.optional(v.array(v.string())),
+      notes: v.optional(v.string()),
+      components: v.optional(
+        v.array(
+          v.object({
+            inventoryItemId: v.id("inventory"),
+            quantityPerKit: v.number(),
+            unit: v.string(),
+            wastageNotes: v.optional(v.string()),
+            comments: v.optional(v.string()),
+          })
+        )
+      ),
       createdBy: v.id("users"),
     })
       .index("by_program", ["programId"])
-      .index("by_created_by", ["createdBy"]),
+      .index("by_created_by", ["createdBy"])
+      .index("by_status", ["status"]),
 
     // Kit components (packets, spare materials, bulk materials, misc)
     kitComponents: defineTable({

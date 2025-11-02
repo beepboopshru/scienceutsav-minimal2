@@ -22,7 +22,22 @@ export const create = mutation({
     programId: v.id("programs"),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    images: v.optional(v.array(v.string())),
+    fileIds: v.optional(v.array(v.id("_storage"))),
     stockLevel: v.number(),
+    tags: v.optional(v.array(v.string())),
+    notes: v.optional(v.string()),
+    components: v.optional(
+      v.array(
+        v.object({
+          inventoryItemId: v.id("inventory"),
+          quantityPerKit: v.number(),
+          unit: v.string(),
+          wastageNotes: v.optional(v.string()),
+          comments: v.optional(v.string()),
+        })
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -30,6 +45,7 @@ export const create = mutation({
 
     return await ctx.db.insert("kits", {
       ...args,
+      status: "active",
       createdBy: userId,
     });
   },
@@ -41,7 +57,23 @@ export const update = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    images: v.optional(v.array(v.string())),
+    fileIds: v.optional(v.array(v.id("_storage"))),
     stockLevel: v.optional(v.number()),
+    status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
+    tags: v.optional(v.array(v.string())),
+    notes: v.optional(v.string()),
+    components: v.optional(
+      v.array(
+        v.object({
+          inventoryItemId: v.id("inventory"),
+          quantityPerKit: v.number(),
+          unit: v.string(),
+          wastageNotes: v.optional(v.string()),
+          comments: v.optional(v.string()),
+        })
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -49,6 +81,41 @@ export const update = mutation({
 
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
+  },
+});
+
+export const clone = mutation({
+  args: { id: v.id("kits") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const original = await ctx.db.get(args.id);
+    if (!original) throw new Error("Kit not found");
+
+    return await ctx.db.insert("kits", {
+      ...original,
+      name: `${original.name} (Copy)`,
+      createdBy: userId,
+    });
+  },
+});
+
+export const getWithInventory = query({
+  args: { id: v.id("kits") },
+  handler: async (ctx, args) => {
+    const kit = await ctx.db.get(args.id);
+    if (!kit) return null;
+
+    const components = kit.components || [];
+    const inventoryItems = await Promise.all(
+      components.map(async (comp) => {
+        const item = await ctx.db.get(comp.inventoryItemId);
+        return { ...comp, inventoryItem: item };
+      })
+    );
+
+    return { ...kit, componentsWithInventory: inventoryItems };
   },
 });
 

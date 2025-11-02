@@ -20,6 +20,7 @@ export const create = mutation({
   args: {
     name: v.string(),
     description: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -28,6 +29,8 @@ export const create = mutation({
     return await ctx.db.insert("programs", {
       name: args.name,
       description: args.description,
+      tags: args.tags,
+      status: "active",
       createdBy: userId,
     });
   },
@@ -38,6 +41,8 @@ export const update = mutation({
     id: v.id("programs"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    status: v.optional(v.union(v.literal("active"), v.literal("archived"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

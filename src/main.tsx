@@ -12,6 +12,7 @@ import Landing from "./pages/Landing.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import PendingApproval from "./pages/PendingApproval.tsx";
+import Research from "./pages/Research.tsx";
 import Inventory from "./pages/Inventory.tsx";
 import ProcessingJobs from "./pages/ProcessingJobs.tsx";
 import BillRecords from "./pages/BillRecords.tsx";
@@ -59,6 +60,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
+            <Route path="/research" element={<Research />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
             <Route path="/inventory/bill-records" element={<BillRecords />} />
