@@ -127,7 +127,7 @@ export default function Research() {
   const updateProgram = useMutation(api.programs.update);
   const deleteProgram = useMutation(api.programs.remove);
 
-  const isAdminOrManager = user?.role === "research_development";
+  const isAdminOrManager = user?.role === "research_development" || user?.role === "admin";
 
   // View state
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
