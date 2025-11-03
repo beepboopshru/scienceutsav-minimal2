@@ -390,7 +390,12 @@ export default function KitBuilder() {
                                 <SelectContent>
                                   {inventory.map((item) => (
                                     <SelectItem key={item._id} value={item.name}>
-                                      {item.name}
+                                      <div className="flex flex-col items-start">
+                                        <span>{item.name}</span>
+                                        {item.description && (
+                                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                                        )}
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -476,7 +481,12 @@ export default function KitBuilder() {
                                 <SelectContent>
                                   {inventory.map((item) => (
                                     <SelectItem key={item._id} value={item.name}>
-                                      {item.name}
+                                      <div className="flex flex-col items-start">
+                                        <span>{item.name}</span>
+                                        {item.description && (
+                                          <span className="text-xs text-muted-foreground">{item.description}</span>
+                                        )}
+                                      </div>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -527,17 +537,35 @@ export default function KitBuilder() {
                       </Button>
                       {kitForm.spareKits.map((spare, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <Input
+                          <Select
                             value={spare.name}
-                            onChange={(e) => {
+                            onValueChange={(value) => {
                               const updated = [...kitForm.spareKits];
-                              updated[idx].name = e.target.value;
+                              updated[idx].name = value;
+                              const item = inventory.find((i) => i.name === value);
+                              if (item) {
+                                updated[idx].unit = item.unit;
+                              }
                               setKitForm({ ...kitForm, spareKits: updated });
                             }}
-                            placeholder="Material name"
-                            className="flex-1"
                             disabled={!canEdit}
-                          />
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inventory.map((item) => (
+                                <SelectItem key={item._id} value={item.name}>
+                                  <div className="flex flex-col items-start">
+                                    <span>{item.name}</span>
+                                    {item.description && (
+                                      <span className="text-xs text-muted-foreground">{item.description}</span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Input
                             type="number"
                             value={spare.quantity}
@@ -551,13 +579,8 @@ export default function KitBuilder() {
                           />
                           <Input
                             value={spare.unit}
-                            onChange={(e) => {
-                              const updated = [...kitForm.spareKits];
-                              updated[idx].unit = e.target.value;
-                              setKitForm({ ...kitForm, spareKits: updated });
-                            }}
                             className="w-20"
-                            disabled={!canEdit}
+                            disabled
                           />
                           <Button size="sm" variant="ghost" onClick={() => removeSpareKit(idx)} disabled={!canEdit}>
                             <X className="h-4 w-4" />
@@ -574,17 +597,35 @@ export default function KitBuilder() {
                       </Button>
                       {kitForm.bulkMaterials.map((bulk, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <Input
+                          <Select
                             value={bulk.name}
-                            onChange={(e) => {
+                            onValueChange={(value) => {
                               const updated = [...kitForm.bulkMaterials];
-                              updated[idx].name = e.target.value;
+                              updated[idx].name = value;
+                              const item = inventory.find((i) => i.name === value);
+                              if (item) {
+                                updated[idx].unit = item.unit;
+                              }
                               setKitForm({ ...kitForm, bulkMaterials: updated });
                             }}
-                            placeholder="Material name"
-                            className="flex-1"
                             disabled={!canEdit}
-                          />
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inventory.map((item) => (
+                                <SelectItem key={item._id} value={item.name}>
+                                  <div className="flex flex-col items-start">
+                                    <span>{item.name}</span>
+                                    {item.description && (
+                                      <span className="text-xs text-muted-foreground">{item.description}</span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Input
                             type="number"
                             value={bulk.quantity}
@@ -598,13 +639,8 @@ export default function KitBuilder() {
                           />
                           <Input
                             value={bulk.unit}
-                            onChange={(e) => {
-                              const updated = [...kitForm.bulkMaterials];
-                              updated[idx].unit = e.target.value;
-                              setKitForm({ ...kitForm, bulkMaterials: updated });
-                            }}
                             className="w-20"
-                            disabled={!canEdit}
+                            disabled
                           />
                           <Button size="sm" variant="ghost" onClick={() => removeBulkMaterial(idx)} disabled={!canEdit}>
                             <X className="h-4 w-4" />
