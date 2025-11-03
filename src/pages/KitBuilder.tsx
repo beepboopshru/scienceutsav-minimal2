@@ -96,7 +96,15 @@ export default function KitBuilder() {
       if (editKitId) {
         await updateKit({
           id: editKitId,
-          ...kitForm,
+          name: kitForm.name,
+          serialNumber: kitForm.serialNumber || undefined,
+          category: kitForm.category || undefined,
+          description: kitForm.description || undefined,
+          isStructured: kitForm.isStructured,
+          packingRequirements: kitForm.packingRequirements || undefined,
+          spareKits: kitForm.spareKits.length > 0 ? kitForm.spareKits : undefined,
+          bulkMaterials: kitForm.bulkMaterials.length > 0 ? kitForm.bulkMaterials : undefined,
+          miscellaneous: kitForm.miscellaneous.length > 0 ? kitForm.miscellaneous : undefined,
         });
         toast.success("Kit updated successfully");
       } else {
@@ -110,6 +118,7 @@ export default function KitBuilder() {
       navigate("/research");
     } catch (error) {
       toast.error("Failed to save kit");
+      console.error("Save error:", error);
     }
   };
 
