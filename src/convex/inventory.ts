@@ -19,6 +19,7 @@ export const get = query({
 export const create = mutation({
   args: {
     name: v.string(),
+    description: v.optional(v.string()),
     type: v.union(
       v.literal("raw"),
       v.literal("pre_processed"),
@@ -45,6 +46,7 @@ export const update = mutation({
   args: {
     id: v.id("inventory"),
     name: v.optional(v.string()),
+    description: v.optional(v.string()),
     type: v.optional(
       v.union(
         v.literal("raw"),

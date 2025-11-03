@@ -69,6 +69,7 @@ export default function Inventory() {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [itemForm, setItemForm] = useState({
     name: "",
+    description: "",
     type: "raw" as "raw" | "pre_processed" | "finished" | "sealed_packet",
     quantity: 0,
     unit: "",
@@ -143,6 +144,7 @@ export default function Inventory() {
       setAddItemOpen(false);
       setItemForm({
         name: "",
+        description: "",
         type: "raw",
         quantity: 0,
         unit: "",
@@ -248,6 +250,7 @@ export default function Inventory() {
     setSelectedItem(item);
     setItemForm({
       name: item.name,
+      description: item.description || "",
       type: item.type,
       quantity: item.quantity,
       unit: item.unit,
@@ -302,14 +305,22 @@ export default function Inventory() {
                   <DialogDescription>Create a new inventory item</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Name</Label>
+                    <Input
+                      value={itemForm.name}
+                      onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Description</Label>
+                    <Input
+                      value={itemForm.description}
+                      onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                      placeholder="Brief description of the item"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Name</Label>
-                      <Input
-                        value={itemForm.name}
-                        onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-                      />
-                    </div>
                     <div className="space-y-2">
                       <Label>Type</Label>
                       <Select
@@ -852,7 +863,16 @@ export default function Inventory() {
                 <TableBody>
                   {filteredInventory.map((item) => (
                     <TableRow key={item._id}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="font-medium">
+                        <div>
+                          <div>{item.name}</div>
+                          {item.description && (
+                            <div className="text-sm text-muted-foreground mt-0.5">
+                              {item.description}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">
                           {item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : item.type === "finished" ? "Finished" : "Sealed Packet"}
@@ -930,14 +950,22 @@ export default function Inventory() {
                 <DialogTitle>Edit Inventory Item</DialogTitle>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Name</Label>
+                  <Input
+                    value={itemForm.name}
+                    onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={itemForm.description}
+                    onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                    placeholder="Brief description of the item"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Name</Label>
-                    <Input
-                      value={itemForm.name}
-                      onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label>Type</Label>
                     <Select

@@ -160,6 +160,7 @@ const schema = defineSchema(
     // Inventory materials
     inventory: defineTable({
       name: v.string(),
+      description: v.optional(v.string()),
       type: v.union(
         v.literal("raw"),
         v.literal("pre_processed"),
