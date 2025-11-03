@@ -1008,13 +1008,16 @@ export default function Research() {
       </Dialog>
 
       {fileManager && (() => {
-        const kit = kits.find((k) => k._id === fileManager.kitId);
+        const kit = kits?.find((k) => k._id === fileManager.kitId);
+        if (!kit) return null;
+        
         const fieldMap = {
-          kitImage: kit?.kitImageFiles,
-          laser: kit?.laserFiles,
-          component: kit?.componentFiles,
-          workbook: kit?.workbookFiles
+          kitImage: kit.kitImageFiles || [],
+          laser: kit.laserFiles || [],
+          component: kit.componentFiles || [],
+          workbook: kit.workbookFiles || []
         };
+        
         return (
           <ResearchFileManager
             kitId={fileManager.kitId}
@@ -1023,7 +1026,7 @@ export default function Research() {
             onOpenChange={(open) => {
               if (!open) setFileManager(null);
             }}
-            currentFiles={fieldMap[fileManager.fileType] || []}
+            currentFiles={fieldMap[fileManager.fileType]}
           />
         );
       })()}
