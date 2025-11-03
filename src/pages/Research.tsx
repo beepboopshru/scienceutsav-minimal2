@@ -171,7 +171,7 @@ export default function Research() {
   // File manager
   const [fileManager, setFileManager] = useState<{
     kitId: Id<"kits">;
-    fileType: "image" | "laser" | "component" | "workbook";
+    fileType: "kitImage" | "laser" | "component" | "workbook";
   } | null>(null);
 
   // Row expand
@@ -804,7 +804,7 @@ export default function Research() {
                                       <Button
                                         variant="outline"
                                         className="w-full justify-start"
-                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "image" })}
+                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "kitImage" })}
                                       >
                                         <ImageIcon className="h-4 w-4 mr-2" />
                                         Kit Image

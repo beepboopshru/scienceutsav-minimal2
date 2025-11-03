@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 interface ResearchFileManagerProps {
   kitId: Id<"kits">;
-  fileType: "image" | "laser" | "component" | "workbook";
+  fileType: "kitImage" | "laser" | "component" | "workbook";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentFiles?: string[];
@@ -28,16 +28,31 @@ export function ResearchFileManager({
   currentFileIds = []
 }: ResearchFileManagerProps) {
   const [externalLink, setExternalLink] = useState("");
+  const [externalLinkName, setExternalLinkName] = useState("");
   const [uploading, setUploading] = useState(false);
   
   const updateKit = useMutation(api.kits.update);
   const generateUploadUrl = useMutation(api.kits.generateUploadUrl);
 
   const fileTypeLabels = {
-    image: "Kit Image",
+    kitImage: "Kit Image",
     laser: "Laser Files",
     component: "Component Pictures",
     workbook: "Workbooks & Misc"
+  };
+
+  const fileTypeAccepts = {
+    kitImage: "image/*",
+    laser: ".dxf,.pdf,.cdr",
+    component: "image/*",
+    workbook: ".pdf,.doc,.docx,.xls,.xlsx"
+  };
+
+  const fileTypeDescriptions = {
+    kitImage: "Primary visual for the kit (PNG, JPG)",
+    laser: "DXF, PDF, CDR files for laser cutting",
+    component: "Photos of parts and assemblies",
+    workbook: "Instruction manuals, BOMs, spec sheets"
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,12 +83,16 @@ export function ResearchFileManager({
   };
 
   const handleAddExternalLink = async () => {
-    if (!externalLink.trim()) return;
+    if (!externalLink.trim() || !externalLinkName.trim()) {
+      toast.error("Please provide both file name and URL");
+      return;
+    }
     
     try {
-      const updatedFiles = [...currentFiles, externalLink];
+      const linkWithName = `${externalLinkName}|${externalLink}`;
+      const updatedFiles = [...currentFiles, linkWithName];
       
-      if (fileType === "image") {
+      if (fileType === "kitImage") {
         await updateKit({ id: kitId, images: updatedFiles });
       } else {
         await updateKit({ id: kitId, images: updatedFiles });
@@ -81,6 +100,7 @@ export function ResearchFileManager({
       
       toast.success("Link added successfully");
       setExternalLink("");
+      setExternalLinkName("");
     } catch (error) {
       toast.error("Failed to add link");
     }
@@ -106,7 +126,7 @@ export function ResearchFileManager({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Manage {fileTypeLabels[fileType]}</DialogTitle>
-          <DialogDescription>Upload files or add external links (Drive, Dropbox, etc.)</DialogDescription>
+          <DialogDescription>{fileTypeDescriptions[fileType]}</DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="upload" className="w-full">
@@ -124,17 +144,26 @@ export function ResearchFileManager({
                   id="file-upload"
                   type="file"
                   className="hidden"
+                  accept={fileTypeAccepts[fileType]}
                   onChange={handleFileUpload}
                   disabled={uploading}
                 />
               </Label>
               <p className="text-xs text-muted-foreground mt-2">
-                {uploading ? "Uploading..." : "PDF, PNG, JPG up to 10MB"}
+                {uploading ? "Uploading..." : fileTypeDescriptions[fileType]}
               </p>
             </div>
           </TabsContent>
 
           <TabsContent value="link" className="space-y-4">
+            <div className="space-y-2">
+              <Label>File Name</Label>
+              <Input
+                placeholder="e.g., Main Assembly Drawing"
+                value={externalLinkName}
+                onChange={(e) => setExternalLinkName(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label>External Link URL</Label>
               <div className="flex gap-2">
@@ -156,19 +185,22 @@ export function ResearchFileManager({
           <div className="space-y-2">
             <Label>Current Files</Label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {currentFiles.map((file, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 border rounded">
-                  <span className="text-sm truncate flex-1">{file}</span>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => window.open(file, "_blank")}>
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDeleteFile(idx, false)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              {currentFiles.map((file, idx) => {
+                const [name, url] = file.includes("|") ? file.split("|") : [file, file];
+                return (
+                  <div key={idx} className="flex items-center justify-between p-2 border rounded">
+                    <span className="text-sm truncate flex-1">{name}</span>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => window.open(url, "_blank")}>
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDeleteFile(idx, false)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {currentFileIds.map((fileId, idx) => (
                 <div key={fileId} className="flex items-center justify-between p-2 border rounded">
                   <span className="text-sm truncate flex-1">Uploaded file {idx + 1}</span>
