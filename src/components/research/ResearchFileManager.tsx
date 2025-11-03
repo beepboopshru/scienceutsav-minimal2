@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -7,16 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Link as LinkIcon, Download, Trash2, ExternalLink } from "lucide-react";
+import { Upload, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { FileListItem } from "./FileListItem";
+
+interface FileItem {
+  type: "storage" | "link";
+  storageId?: Id<"_storage">;
+  name?: string;
+  url?: string;
+}
 
 interface ResearchFileManagerProps {
   kitId: Id<"kits">;
   fileType: "kitImage" | "laser" | "component" | "workbook";
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentFiles?: string[];
-  currentFileIds?: Id<"_storage">[];
+  currentFiles?: FileItem[];
 }
 
 export function ResearchFileManager({ 
@@ -24,8 +31,7 @@ export function ResearchFileManager({
   fileType, 
   open, 
   onOpenChange,
-  currentFiles = [],
-  currentFileIds = []
+  currentFiles = []
 }: ResearchFileManagerProps) {
   const [externalLink, setExternalLink] = useState("");
   const [externalLinkName, setExternalLinkName] = useState("");
@@ -70,9 +76,18 @@ export function ResearchFileManager({
       
       const { storageId } = await result.json();
       
-      // Update kit with new file ID
-      const updatedFileIds = [...currentFileIds, storageId];
-      await updateKit({ id: kitId, fileIds: updatedFileIds });
+      // Update kit with new file in the appropriate field
+      const newFile = { type: "storage" as const, storageId };
+      const updatedFiles = [...currentFiles, newFile];
+      
+      const fieldMap = {
+        kitImage: "kitImageFiles",
+        laser: "laserFiles",
+        component: "componentFiles",
+        workbook: "workbookFiles"
+      };
+      
+      await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });
       
       toast.success("File uploaded successfully");
     } catch (error) {
@@ -89,14 +104,17 @@ export function ResearchFileManager({
     }
     
     try {
-      const linkWithName = `${externalLinkName}|${externalLink}`;
-      const updatedFiles = [...currentFiles, linkWithName];
+      const newFile = { type: "link" as const, name: externalLinkName, url: externalLink };
+      const updatedFiles = [...currentFiles, newFile];
       
-      if (fileType === "kitImage") {
-        await updateKit({ id: kitId, images: updatedFiles });
-      } else {
-        await updateKit({ id: kitId, images: updatedFiles });
-      }
+      const fieldMap = {
+        kitImage: "kitImageFiles",
+        laser: "laserFiles",
+        component: "componentFiles",
+        workbook: "workbookFiles"
+      };
+      
+      await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });
       
       toast.success("Link added successfully");
       setExternalLink("");
@@ -106,15 +124,18 @@ export function ResearchFileManager({
     }
   };
 
-  const handleDeleteFile = async (index: number, isStorageFile: boolean) => {
+  const handleDeleteFile = async (index: number) => {
     try {
-      if (isStorageFile) {
-        const updatedFileIds = currentFileIds.filter((_, i) => i !== index);
-        await updateKit({ id: kitId, fileIds: updatedFileIds });
-      } else {
-        const updatedFiles = currentFiles.filter((_, i) => i !== index);
-        await updateKit({ id: kitId, images: updatedFiles });
-      }
+      const updatedFiles = currentFiles.filter((_, i) => i !== index);
+      
+      const fieldMap = {
+        kitImage: "kitImageFiles",
+        laser: "laserFiles",
+        component: "componentFiles",
+        workbook: "workbookFiles"
+      };
+      
+      await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });
       toast.success("File removed");
     } catch (error) {
       toast.error("Failed to remove file");
@@ -181,38 +202,17 @@ export function ResearchFileManager({
         </Tabs>
 
         {/* Current Files List */}
-        {(currentFiles.length > 0 || currentFileIds.length > 0) && (
+        {currentFiles.length > 0 && (
           <div className="space-y-2">
             <Label>Current Files</Label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {currentFiles.map((file, idx) => {
-                const [name, url] = file.includes("|") ? file.split("|") : [file, file];
-                return (
-                  <div key={idx} className="flex items-center justify-between p-2 border rounded">
-                    <span className="text-sm truncate flex-1">{name}</span>
-                    <div className="flex gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => window.open(url, "_blank")}>
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleDeleteFile(idx, false)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-              {currentFileIds.map((fileId, idx) => (
-                <div key={fileId} className="flex items-center justify-between p-2 border rounded">
-                  <span className="text-sm truncate flex-1">Uploaded file {idx + 1}</span>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="ghost">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDeleteFile(idx, true)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+              {currentFiles.map((file, idx) => (
+                <FileListItem
+                  key={idx}
+                  file={file}
+                  index={idx}
+                  onDelete={handleDeleteFile}
+                />
               ))}
             </div>
           </div>

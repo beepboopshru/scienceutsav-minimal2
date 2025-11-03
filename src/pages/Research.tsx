@@ -1007,18 +1007,26 @@ export default function Research() {
         </DialogContent>
       </Dialog>
 
-      {fileManager && (
-        <ResearchFileManager
-          kitId={fileManager.kitId}
-          fileType={fileManager.fileType}
-          open={true}
-          onOpenChange={(open) => {
-            if (!open) setFileManager(null);
-          }}
-          currentFiles={(kits.find((k) => k._id === fileManager.kitId)?.images as string[]) || []}
-          currentFileIds={(kits.find((k) => k._id === fileManager.kitId)?.fileIds as Id<"_storage">[]) || []}
-        />
-      )}
+      {fileManager && (() => {
+        const kit = kits.find((k) => k._id === fileManager.kitId);
+        const fieldMap = {
+          kitImage: kit?.kitImageFiles,
+          laser: kit?.laserFiles,
+          component: kit?.componentFiles,
+          workbook: kit?.workbookFiles
+        };
+        return (
+          <ResearchFileManager
+            kitId={fileManager.kitId}
+            fileType={fileManager.fileType}
+            open={true}
+            onOpenChange={(open) => {
+              if (!open) setFileManager(null);
+            }}
+            currentFiles={fieldMap[fileManager.fileType] || []}
+          />
+        );
+      })()}
     </Layout>
   );
 }

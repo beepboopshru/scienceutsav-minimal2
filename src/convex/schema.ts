@@ -63,6 +63,22 @@ const schema = defineSchema(
       imageUrl: v.optional(v.string()),
       images: v.optional(v.array(v.string())),
       fileIds: v.optional(v.array(v.id("_storage"))),
+      kitImageFiles: v.optional(v.array(v.union(
+        v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
+        v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
+      ))),
+      laserFiles: v.optional(v.array(v.union(
+        v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
+        v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
+      ))),
+      componentFiles: v.optional(v.array(v.union(
+        v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
+        v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
+      ))),
+      workbookFiles: v.optional(v.array(v.union(
+        v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
+        v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
+      ))),
       stockCount: v.number(),
       lowStockThreshold: v.optional(v.number()),
       status: v.optional(v.union(
