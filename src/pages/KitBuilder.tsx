@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Loader2, Save, ArrowLeft, Plus, Trash2, X } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Plus, Trash2, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,10 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements, stringifyPackingRequirements } from "@/lib/kitPacking";
+import { cn } from "@/lib/utils";
 
 export default function KitBuilder() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -372,34 +375,53 @@ export default function KitBuilder() {
                           </div>
                           {pouch.materials.map((material, matIdx) => (
                             <div key={matIdx} className="flex items-center gap-2">
-                              <Select
-                                value={material.name}
-                                onValueChange={(value) => {
-                                  structure.pouches[pouchIdx].materials[matIdx].name = value;
-                                  const item = inventory.find((i) => i.name === value);
-                                  if (item) {
-                                    structure.pouches[pouchIdx].materials[matIdx].unit = item.unit;
-                                  }
-                                  setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                }}
-                                disabled={!canEdit}
-                              >
-                                <SelectTrigger className="flex-1">
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {inventory.map((item) => (
-                                    <SelectItem key={item._id} value={item.name}>
-                                      <div className="flex flex-col items-start">
-                                        <span>{item.name}</span>
-                                        {item.description && (
-                                          <span className="text-xs text-muted-foreground">{item.description}</span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    disabled={!canEdit}
+                                    className="flex-1 justify-between"
+                                  >
+                                    {material.name || "Select item"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Search inventory..." />
+                                    <CommandList>
+                                      <CommandEmpty>No item found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {inventory.map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={item.name}
+                                            onSelect={() => {
+                                              structure.pouches[pouchIdx].materials[matIdx].name = item.name;
+                                              structure.pouches[pouchIdx].materials[matIdx].unit = item.unit;
+                                              setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                material.name === item.name ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col items-start">
+                                              <span>{item.name}</span>
+                                              {item.description && (
+                                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                                              )}
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                               <Input
                                 type="number"
                                 value={material.quantity}
@@ -463,34 +485,53 @@ export default function KitBuilder() {
                           </div>
                           {packet.materials.map((material, matIdx) => (
                             <div key={matIdx} className="flex items-center gap-2">
-                              <Select
-                                value={material.name}
-                                onValueChange={(value) => {
-                                  structure.packets[packetIdx].materials[matIdx].name = value;
-                                  const item = inventory.find((i) => i.name === value);
-                                  if (item) {
-                                    structure.packets[packetIdx].materials[matIdx].unit = item.unit;
-                                  }
-                                  setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                }}
-                                disabled={!canEdit}
-                              >
-                                <SelectTrigger className="flex-1">
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {inventory.map((item) => (
-                                    <SelectItem key={item._id} value={item.name}>
-                                      <div className="flex flex-col items-start">
-                                        <span>{item.name}</span>
-                                        {item.description && (
-                                          <span className="text-xs text-muted-foreground">{item.description}</span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    disabled={!canEdit}
+                                    className="flex-1 justify-between"
+                                  >
+                                    {material.name || "Select item"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Search inventory..." />
+                                    <CommandList>
+                                      <CommandEmpty>No item found.</CommandEmpty>
+                                      <CommandGroup>
+                                        {inventory.map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={item.name}
+                                            onSelect={() => {
+                                              structure.packets[packetIdx].materials[matIdx].name = item.name;
+                                              structure.packets[packetIdx].materials[matIdx].unit = item.unit;
+                                              setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                material.name === item.name ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col items-start">
+                                              <span>{item.name}</span>
+                                              {item.description && (
+                                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                                              )}
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
                               <Input
                                 type="number"
                                 value={material.quantity}
@@ -537,35 +578,54 @@ export default function KitBuilder() {
                       </Button>
                       {kitForm.spareKits.map((spare, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <Select
-                            value={spare.name}
-                            onValueChange={(value) => {
-                              const updated = [...kitForm.spareKits];
-                              updated[idx].name = value;
-                              const item = inventory.find((i) => i.name === value);
-                              if (item) {
-                                updated[idx].unit = item.unit;
-                              }
-                              setKitForm({ ...kitForm, spareKits: updated });
-                            }}
-                            disabled={!canEdit}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select item" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {inventory.map((item) => (
-                                <SelectItem key={item._id} value={item.name}>
-                                  <div className="flex flex-col items-start">
-                                    <span>{item.name}</span>
-                                    {item.description && (
-                                      <span className="text-xs text-muted-foreground">{item.description}</span>
-                                    )}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={!canEdit}
+                                className="flex-1 justify-between"
+                              >
+                                {spare.name || "Select item"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." />
+                                <CommandList>
+                                  <CommandEmpty>No item found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {inventory.map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        value={item.name}
+                                        onSelect={() => {
+                                          const updated = [...kitForm.spareKits];
+                                          updated[idx].name = item.name;
+                                          updated[idx].unit = item.unit;
+                                          setKitForm({ ...kitForm, spareKits: updated });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            spare.name === item.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col items-start">
+                                          <span>{item.name}</span>
+                                          {item.description && (
+                                            <span className="text-xs text-muted-foreground">{item.description}</span>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <Input
                             type="number"
                             value={spare.quantity}
@@ -597,35 +657,54 @@ export default function KitBuilder() {
                       </Button>
                       {kitForm.bulkMaterials.map((bulk, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <Select
-                            value={bulk.name}
-                            onValueChange={(value) => {
-                              const updated = [...kitForm.bulkMaterials];
-                              updated[idx].name = value;
-                              const item = inventory.find((i) => i.name === value);
-                              if (item) {
-                                updated[idx].unit = item.unit;
-                              }
-                              setKitForm({ ...kitForm, bulkMaterials: updated });
-                            }}
-                            disabled={!canEdit}
-                          >
-                            <SelectTrigger className="flex-1">
-                              <SelectValue placeholder="Select item" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {inventory.map((item) => (
-                                <SelectItem key={item._id} value={item.name}>
-                                  <div className="flex flex-col items-start">
-                                    <span>{item.name}</span>
-                                    {item.description && (
-                                      <span className="text-xs text-muted-foreground">{item.description}</span>
-                                    )}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={!canEdit}
+                                className="flex-1 justify-between"
+                              >
+                                {bulk.name || "Select item"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." />
+                                <CommandList>
+                                  <CommandEmpty>No item found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {inventory.map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        value={item.name}
+                                        onSelect={() => {
+                                          const updated = [...kitForm.bulkMaterials];
+                                          updated[idx].name = item.name;
+                                          updated[idx].unit = item.unit;
+                                          setKitForm({ ...kitForm, bulkMaterials: updated });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            bulk.name === item.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col items-start">
+                                          <span>{item.name}</span>
+                                          {item.description && (
+                                            <span className="text-xs text-muted-foreground">{item.description}</span>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                           <Input
                             type="number"
                             value={bulk.quantity}
