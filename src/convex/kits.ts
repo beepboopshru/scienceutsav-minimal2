@@ -145,19 +145,46 @@ export const update = mutation({
 });
 
 export const clone = mutation({
-  args: { id: v.id("kits") },
+  args: {
+    id: v.id("kits"),
+    targetProgramId: v.id("programs"),
+    newName: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const original = await ctx.db.get(args.id);
-    if (!original) throw new Error("Kit not found");
+    const originalKit = await ctx.db.get(args.id);
+    if (!originalKit) throw new Error("Kit not found");
 
-    return await ctx.db.insert("kits", {
-      ...original,
-      name: `${original.name} (Copy)`,
+    // Create a new kit with all properties from the original
+    const newKit = {
+      name: args.newName || `${originalKit.name} (Copy)`,
+      programId: args.targetProgramId,
+      serialNumber: originalKit.serialNumber,
+      type: originalKit.type,
+      cstemVariant: originalKit.cstemVariant,
+      category: originalKit.category,
+      description: originalKit.description,
+      remarks: originalKit.remarks,
+      imageUrl: originalKit.imageUrl,
+      images: originalKit.images,
+      fileIds: originalKit.fileIds,
+      stockCount: 0,
+      lowStockThreshold: originalKit.lowStockThreshold || 5,
+      status: originalKit.status,
+      tags: originalKit.tags,
+      notes: originalKit.notes,
+      isStructured: originalKit.isStructured,
+      packingRequirements: originalKit.packingRequirements,
+      spareKits: originalKit.spareKits,
+      bulkMaterials: originalKit.bulkMaterials,
+      miscellaneous: originalKit.miscellaneous,
+      components: originalKit.components,
       createdBy: userId,
-    });
+    };
+
+    return await ctx.db.insert("kits", newKit);
   },
 });
 

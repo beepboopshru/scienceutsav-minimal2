@@ -11,7 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, ChevronDown, ChevronUp, Upload } from "lucide-react";
+import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, ChevronDown, ChevronUp, Upload, Copy } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -122,6 +122,7 @@ export default function Research() {
   const createKit = useMutation(api.kits.create);
   const updateKit = useMutation(api.kits.update);
   const deleteKit = useMutation(api.kits.remove);
+  const cloneKit = useMutation(api.kits.clone);
 
   const createProgram = useMutation(api.programs.create);
   const updateProgram = useMutation(api.programs.update);
@@ -148,6 +149,20 @@ export default function Research() {
     category?: string;
     description: string;
   }>({ name: "", serialNumber: "", category: undefined, description: "" });
+
+  // Clone kit dialog state
+  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+  const [cloneKitData, setCloneKitData] = useState<{
+    kitId: Id<"kits"> | null;
+    kitName: string;
+    newName: string;
+    targetProgramId: string;
+  }>({
+    kitId: null,
+    kitName: "",
+    newName: "",
+    targetProgramId: "",
+  });
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -343,6 +358,44 @@ export default function Research() {
           description: error instanceof Error ? error.message : "Unknown error",
         });
       }
+    }
+  };
+
+  const handleCloneKit = (kit: any) => {
+    setCloneKitData({
+      kitId: kit._id,
+      kitName: kit.name,
+      newName: `${kit.name} (Copy)`,
+      targetProgramId: "",
+    });
+    setIsCloneDialogOpen(true);
+  };
+
+  const handleSubmitClone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cloneKitData.kitId || !cloneKitData.targetProgramId) {
+      toast.error("Please select a target program");
+      return;
+    }
+
+    try {
+      await cloneKit({
+        id: cloneKitData.kitId,
+        targetProgramId: cloneKitData.targetProgramId as Id<"programs">,
+        newName: cloneKitData.newName || undefined,
+      });
+      toast.success("Kit cloned successfully");
+      setIsCloneDialogOpen(false);
+      setCloneKitData({
+        kitId: null,
+        kitName: "",
+        newName: "",
+        targetProgramId: "",
+      });
+    } catch (error) {
+      toast.error("Error cloning kit", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   };
 
@@ -784,7 +837,14 @@ export default function Research() {
                                   </DialogContent>
                                 </Dialog>
 
-                                {/* Open Kit Sheet action removed */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleCloneKit(kit)}
+                                  title="Clone Kit"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
 
                                 <Button variant="ghost" size="sm" onClick={() => handleEditKit(kit)} title="Edit Kit">
                                   <Edit className="h-4 w-4" />
@@ -901,6 +961,51 @@ export default function Research() {
           </div>
         )}
       </div>
+
+      {/* Clone Kit Dialog */}
+      <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Clone Kit: {cloneKitData.kitName}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmitClone} className="space-y-4">
+            <div>
+              <Label htmlFor="cloneNewName">New Kit Name</Label>
+              <Input
+                id="cloneNewName"
+                value={cloneKitData.newName}
+                onChange={(e) => setCloneKitData({ ...cloneKitData, newName: e.target.value })}
+                placeholder="Enter new kit name"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="cloneTargetProgram">Target Program</Label>
+              <Select
+                value={cloneKitData.targetProgramId}
+                onValueChange={(value) => setCloneKitData({ ...cloneKitData, targetProgramId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select target program" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(programs ?? []).map((program) => (
+                    <SelectItem key={program._id} value={program._id}>
+                      {program.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsCloneDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Clone Kit</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {fileManager && (
         <ResearchFileManager

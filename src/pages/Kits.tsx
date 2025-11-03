@@ -64,6 +64,18 @@ export default function Kits() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingKit, setEditingKit] = useState<any | null>(null);
   const [newMaterial, setNewMaterial] = useState("");
+  const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+  const [cloneKitData, setCloneKitData] = useState<{
+    kitId: Id<"kits"> | null;
+    kitName: string;
+    newName: string;
+    targetProgramId: string;
+  }>({
+    kitId: null,
+    kitName: "",
+    newName: "",
+    targetProgramId: "",
+  });
   const [formData, setFormData] = useState<KitForm>({
     name: "",
     programId: "" as Id<"programs">,
@@ -175,10 +187,37 @@ export default function Kits() {
     }
   };
 
-  const handleClone = async (kitId: string) => {
+  const handleClone = (kit: any) => {
+    setCloneKitData({
+      kitId: kit._id,
+      kitName: kit.name,
+      newName: `${kit.name} (Copy)`,
+      targetProgramId: "",
+    });
+    setIsCloneDialogOpen(true);
+  };
+
+  const handleSubmitClone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cloneKitData.kitId || !cloneKitData.targetProgramId) {
+      toast("Please select a target program");
+      return;
+    }
+
     try {
-      await cloneKit({ id: kitId as any });
-      toast("Kit cloned");
+      await cloneKit({
+        id: cloneKitData.kitId,
+        targetProgramId: cloneKitData.targetProgramId as Id<"programs">,
+        newName: cloneKitData.newName || undefined,
+      });
+      toast("Kit cloned successfully");
+      setIsCloneDialogOpen(false);
+      setCloneKitData({
+        kitId: null,
+        kitName: "",
+        newName: "",
+        targetProgramId: "",
+      });
     } catch (err) {
       toast("Failed to clone kit", { description: err instanceof Error ? err.message : "Unknown error" });
     }
@@ -478,7 +517,7 @@ export default function Kits() {
                           </td>
                           <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                             <div className="flex space-x-1">
-                              <Button variant="ghost" size="sm" onClick={() => handleClone(kit._id)}>
+                              <Button variant="ghost" size="sm" onClick={() => handleClone(kit)}>
                                 <Copy className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(kit)}>
@@ -642,6 +681,51 @@ export default function Kits() {
             )}
           </CardContent>
         </Card>
+
+        {/* Clone Kit Dialog */}
+        <Dialog open={isCloneDialogOpen} onOpenChange={setIsCloneDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Clone Kit: {cloneKitData.kitName}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmitClone} className="space-y-4">
+              <div>
+                <Label htmlFor="cloneNewName">New Kit Name</Label>
+                <Input
+                  id="cloneNewName"
+                  value={cloneKitData.newName}
+                  onChange={(e) => setCloneKitData({ ...cloneKitData, newName: e.target.value })}
+                  placeholder="Enter new kit name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="cloneTargetProgram">Target Program</Label>
+                <Select
+                  value={cloneKitData.targetProgramId}
+                  onValueChange={(value) => setCloneKitData({ ...cloneKitData, targetProgramId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target program" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(programs ?? []).map((program) => (
+                      <SelectItem key={program._id} value={program._id}>
+                        {program.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsCloneDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Clone Kit</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
