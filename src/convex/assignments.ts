@@ -21,6 +21,10 @@ export const create = mutation({
     clientId: v.id("clients"),
     kitId: v.id("kits"),
     quantity: v.number(),
+    grade: v.optional(v.union(
+      v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+      v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+    )),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -54,6 +58,26 @@ export const updateStatus = mutation({
     }
 
     await ctx.db.patch(args.id, updates);
+  },
+});
+
+export const getByClient = query({
+  args: { clientId: v.id("clients") },
+  handler: async (ctx, args) => {
+    const assignments = await ctx.db
+      .query("assignments")
+      .withIndex("by_client", (q) => q.eq("clientId", args.clientId))
+      .collect();
+
+    // Fetch kit details for each assignment
+    const assignmentsWithKits = await Promise.all(
+      assignments.map(async (assignment) => {
+        const kit = await ctx.db.get(assignment.kitId);
+        return { ...assignment, kit };
+      })
+    );
+
+    return assignmentsWithKits;
   },
 });
 

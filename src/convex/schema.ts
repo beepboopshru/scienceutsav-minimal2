@@ -148,9 +148,10 @@ const schema = defineSchema(
     clients: defineTable({
       name: v.string(),
       email: v.optional(v.string()),
-      phone: v.optional(v.string()),
-      address: v.optional(v.string()),
+      contact: v.optional(v.string()),
       organization: v.optional(v.string()),
+      type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
+      notes: v.optional(v.string()),
       createdBy: v.id("users"),
     }).index("by_created_by", ["createdBy"]),
 
@@ -159,6 +160,10 @@ const schema = defineSchema(
       clientId: v.id("clients"),
       kitId: v.id("kits"),
       quantity: v.number(),
+      grade: v.optional(v.union(
+        v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+        v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+      )),
       status: v.union(
         v.literal("pending"),
         v.literal("fulfilled"),
@@ -167,6 +172,7 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
       createdBy: v.id("users"),
       fulfilledAt: v.optional(v.number()),
+      dispatchedAt: v.optional(v.number()),
     })
       .index("by_client", ["clientId"])
       .index("by_kit", ["kitId"])

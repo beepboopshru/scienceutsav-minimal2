@@ -20,9 +20,10 @@ export const create = mutation({
   args: {
     name: v.string(),
     email: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    address: v.optional(v.string()),
+    contact: v.optional(v.string()),
     organization: v.optional(v.string()),
+    type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -40,9 +41,10 @@ export const update = mutation({
     id: v.id("clients"),
     name: v.optional(v.string()),
     email: v.optional(v.string()),
-    phone: v.optional(v.string()),
-    address: v.optional(v.string()),
+    contact: v.optional(v.string()),
     organization: v.optional(v.string()),
+    type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
