@@ -102,6 +102,7 @@ export default function Operations() {
   const monthOptions = generateMonthOptions();
 
   // Auto-select the most recent month if current selection is not in the list
+  // This effect must run on every render to comply with React hooks rules
   useEffect(() => {
     if (selectedProgramId && monthOptions.length > 0) {
       const currentMonthExists = monthOptions.some((opt: any) => opt.value === selectedMonth);
@@ -428,7 +429,7 @@ export default function Operations() {
                 <TabsTrigger value="month">Month-wise View</TabsTrigger>
                 <TabsTrigger value="kit">Kit-wise View</TabsTrigger>
               </TabsList>
-              {viewMode === "month" && (
+              <div className={viewMode === "month" ? "" : "invisible"}>
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger className="w-[200px]">
                     <Calendar className="mr-2 h-4 w-4" />
@@ -442,7 +443,7 @@ export default function Operations() {
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+              </div>
             </div>
 
             {/* Month-wise View */}
