@@ -73,6 +73,11 @@ export default function Operations() {
     );
   }
 
+  // Filter assignments by selected program
+  const programAssignments = selectedProgramId
+    ? assignments.filter((a) => a.kit?.programId === selectedProgramId)
+    : [];
+
   // Generate month options based on actual assignments
   const generateMonthOptions = () => {
     if (!selectedProgramId) return [];
@@ -99,17 +104,12 @@ export default function Operations() {
   // Auto-select the most recent month if current selection is not in the list
   useEffect(() => {
     if (selectedProgramId && monthOptions.length > 0) {
-      const currentMonthExists = monthOptions.some(opt => opt.value === selectedMonth);
+      const currentMonthExists = monthOptions.some((opt: any) => opt.value === selectedMonth);
       if (!currentMonthExists) {
         setSelectedMonth(monthOptions[monthOptions.length - 1].value);
       }
     }
-  }, [selectedProgramId, monthOptions.length]);
-
-  // Filter assignments by selected program
-  const programAssignments = selectedProgramId
-    ? assignments.filter((a) => a.kit?.programId === selectedProgramId)
-    : [];
+  }, [selectedProgramId, monthOptions.length, selectedMonth]);
 
   // Filter by selected month for month-wise view
   const monthAssignments = programAssignments.filter((a) => {
