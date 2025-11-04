@@ -73,20 +73,38 @@ export default function Operations() {
     );
   }
 
-  // Generate month options (last 12 months + next 6 months)
+  // Generate month options based on actual assignments
   const generateMonthOptions = () => {
-    const options = [];
-    const now = new Date();
-    for (let i = -12; i <= 6; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-      const value = date.toISOString().slice(0, 7);
-      const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
-    }
+    if (!selectedProgramId) return [];
+    
+    const monthSet = new Set<string>();
+    programAssignments.forEach((assignment) => {
+      const monthValue = new Date(assignment._creationTime).toISOString().slice(0, 7);
+      monthSet.add(monthValue);
+    });
+
+    const options = Array.from(monthSet)
+      .sort()
+      .map((value) => {
+        const date = new Date(value + "-01");
+        const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        return { value, label };
+      });
+
     return options;
   };
 
   const monthOptions = generateMonthOptions();
+
+  // Auto-select the most recent month if current selection is not in the list
+  useEffect(() => {
+    if (selectedProgramId && monthOptions.length > 0) {
+      const currentMonthExists = monthOptions.some(opt => opt.value === selectedMonth);
+      if (!currentMonthExists) {
+        setSelectedMonth(monthOptions[monthOptions.length - 1].value);
+      }
+    }
+  }, [selectedProgramId, monthOptions.length]);
 
   // Filter assignments by selected program
   const programAssignments = selectedProgramId
