@@ -300,23 +300,43 @@ export const calculateKitWiseShortages = query({
       if (kit.bulkMaterials) processMaterials(kit.bulkMaterials);
       if (kit.miscellaneous) processMaterials(kit.miscellaneous);
 
-      // Update kit's material shortages
-      kitData.materialShortages = Array.from(materialMap.values()).map(mat => {
-        const invItem = inventoryMap.get(mat.name.toLowerCase());
-        const available = invItem?.quantity || 0;
-        const shortage = Math.max(0, mat.required - available);
+      // Accumulate material requirements into kit's material shortages
+      materialMap.forEach((mat) => {
+        const existingMaterial = kitData.materialShortages.find(
+          (m) => m.name.toLowerCase() === mat.name.toLowerCase()
+        );
 
-        return {
-          name: mat.name,
-          totalRequired: mat.required,
-          available,
-          shortage,
-          unit: mat.unit,
-        };
+        if (existingMaterial) {
+          existingMaterial.totalRequired += mat.required;
+        } else {
+          kitData.materialShortages.push({
+            name: mat.name,
+            totalRequired: mat.required,
+            available: 0, // Will be set after all assignments are processed
+            shortage: 0,  // Will be calculated after all assignments are processed
+            unit: mat.unit,
+          });
+        }
       });
     }
 
-    return Array.from(kitShortages.values());
+    // Calculate final shortages after all assignments are processed
+    const result = Array.from(kitShortages.values()).map((kitData) => {
+      kitData.materialShortages = kitData.materialShortages.map((mat) => {
+        const invItem = inventoryMap.get(mat.name.toLowerCase());
+        const available = invItem?.quantity || 0;
+        const shortage = Math.max(0, mat.totalRequired - available);
+
+        return {
+          ...mat,
+          available,
+          shortage,
+        };
+      });
+      return kitData;
+    });
+
+    return result;
   },
 });
 
