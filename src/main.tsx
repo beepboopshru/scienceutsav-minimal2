@@ -25,6 +25,7 @@ import Operations from "@/pages/Operations.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
 import AdminZone from "@/pages/AdminZone.tsx";
+import Procurement from "@/pages/Procurement.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -72,6 +73,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/clients" element={<Clients />} />
             <Route path="/assignments" element={<Assignments />} />
             <Route path="/operations" element={<Operations />} />
+            <Route path="/procurement" element={<Procurement />} />
             <Route path="/laser-files" element={<LaserFiles />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/admin-zone" element={<AdminZone />} />

@@ -105,6 +105,7 @@ export function Layout({ children }: LayoutProps) {
       subItems: [
         { title: "Processing Jobs", path: "/inventory/processing-jobs" },
         { title: "Bill Records", path: "/inventory/bill-records" },
+        { title: "Procurement", path: "/procurement" },
       ],
     },
     {
