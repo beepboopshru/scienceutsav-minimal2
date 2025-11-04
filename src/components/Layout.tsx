@@ -33,6 +33,7 @@ import {
   LogOut,
   ChevronDown,
   Beaker,
+  TrendingUp,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode } from "react";
@@ -74,6 +75,12 @@ export function Layout({ children }: LayoutProps) {
       icon: Beaker,
       path: "/research",
       roles: ["admin", "research_development"],
+    },
+    {
+      title: "Operations",
+      icon: ClipboardList,
+      path: "/operations",
+      roles: ["admin", "manager", "operations"],
     },
     {
       title: "Clients",

@@ -21,6 +21,7 @@ import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as inventoryCategories from "../inventoryCategories.js";
 import type * as kits from "../kits.js";
+import type * as operations from "../operations.js";
 import type * as processingJobs from "../processingJobs.js";
 import type * as programs from "../programs.js";
 import type * as services from "../services.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   inventory: typeof inventory;
   inventoryCategories: typeof inventoryCategories;
   kits: typeof kits;
+  operations: typeof operations;
   processingJobs: typeof processingJobs;
   programs: typeof programs;
   services: typeof services;
