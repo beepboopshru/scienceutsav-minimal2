@@ -233,6 +233,43 @@ export const deleteUser = mutation({
       await ctx.db.delete(permission._id);
     }
 
+    // 11. Delete auth-related records (accounts, sessions, verification codes, refresh tokens)
+    const authAccounts = await ctx.db
+      .query("authAccounts")
+      .collect();
+    for (const account of authAccounts) {
+      if (account.userId === args.userId) {
+        await ctx.db.delete(account._id);
+      }
+    }
+
+    const authSessions = await ctx.db
+      .query("authSessions")
+      .collect();
+    for (const session of authSessions) {
+      if (session.userId === args.userId) {
+        await ctx.db.delete(session._id);
+      }
+    }
+
+    const authVerificationCodes = await ctx.db
+      .query("authVerificationCodes")
+      .collect();
+    for (const code of authVerificationCodes) {
+      if (code.accountId && authAccounts.some(acc => acc._id === code.accountId && acc.userId === args.userId)) {
+        await ctx.db.delete(code._id);
+      }
+    }
+
+    const authRefreshTokens = await ctx.db
+      .query("authRefreshTokens")
+      .collect();
+    for (const token of authRefreshTokens) {
+      if (token.sessionId && authSessions.some(sess => sess._id === token.sessionId && sess.userId === args.userId)) {
+        await ctx.db.delete(token._id);
+      }
+    }
+
     // Finally, delete the user
     await ctx.db.delete(args.userId);
 
