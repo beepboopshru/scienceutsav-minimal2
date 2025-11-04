@@ -25,7 +25,6 @@ import Operations from "@/pages/Operations.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
 import AdminZone from "@/pages/AdminZone.tsx";
-import Operations from "@/pages/Operations.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
