@@ -5,7 +5,25 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("assignments").collect();
+    const assignments = await ctx.db.query("assignments").collect();
+    
+    // Fetch related data for each assignment
+    const assignmentsWithDetails = await Promise.all(
+      assignments.map(async (assignment) => {
+        const kit = await ctx.db.get(assignment.kitId);
+        const client = await ctx.db.get(assignment.clientId);
+        const program = kit ? await ctx.db.get(kit.programId) : null;
+        
+        return {
+          ...assignment,
+          kit,
+          client,
+          program,
+        };
+      })
+    );
+    
+    return assignmentsWithDetails;
   },
 });
 
@@ -26,16 +44,39 @@ export const create = mutation({
       v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
     )),
     notes: v.optional(v.string()),
+    dispatchedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    return await ctx.db.insert("assignments", {
+    // Get the kit to update stock
+    const kit = await ctx.db.get(args.kitId);
+    if (!kit) throw new Error("Kit not found");
+
+    // Create assignment
+    const assignmentId = await ctx.db.insert("assignments", {
       ...args,
-      status: "pending",
+      status: "assigned",
       createdBy: userId,
     });
+
+    // Update kit stock
+    const newStockCount = kit.stockCount - args.quantity;
+    let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
+    
+    if (newStockCount === 0) {
+      newStatus = "assigned";
+    } else if (newStockCount < 0) {
+      newStatus = "to_be_made";
+    }
+
+    await ctx.db.patch(args.kitId, {
+      stockCount: newStockCount,
+      status: newStatus,
+    });
+
+    return assignmentId;
   },
 });
 
@@ -43,21 +84,119 @@ export const updateStatus = mutation({
   args: {
     id: v.id("assignments"),
     status: v.union(
-      v.literal("pending"),
-      v.literal("fulfilled"),
-      v.literal("cancelled")
+      v.literal("assigned"),
+      v.literal("packed"),
+      v.literal("dispatched")
     ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const updates: Record<string, unknown> = { status: args.status };
-    if (args.status === "fulfilled") {
-      updates.fulfilledAt = Date.now();
+    const assignment = await ctx.db.get(args.id);
+    if (!assignment) throw new Error("Assignment not found");
+
+    const updates: Record<string, unknown> = { 
+      status: args.status,
+    };
+
+    // If dispatching, set dispatch timestamp and deduct inventory
+    if (args.status === "dispatched") {
+      updates.dispatchedAt = Date.now();
+
+      // Deduct inventory materials for structured kits
+      const kit = await ctx.db.get(assignment.kitId);
+      if (kit?.isStructured && kit.packingRequirements) {
+        try {
+          const packingData = JSON.parse(kit.packingRequirements);
+          const materials: Array<{ name: string; quantity: number }> = [];
+
+          // Extract materials from all pouches/packets
+          if (packingData.pouches) {
+            for (const pouch of packingData.pouches) {
+              if (pouch.items) {
+                for (const item of pouch.items) {
+                  materials.push({
+                    name: item.name,
+                    quantity: item.quantity * assignment.quantity,
+                  });
+                }
+              }
+            }
+          }
+
+          // Deduct materials from inventory
+          for (const material of materials) {
+            const inventoryItems = await ctx.db.query("inventory").collect();
+            const matchingItem = inventoryItems.find(
+              (item) => item.name.toLowerCase() === material.name.toLowerCase()
+            );
+
+            if (matchingItem) {
+              const newQuantity = Math.max(0, matchingItem.quantity - material.quantity);
+              if (newQuantity === 0 && matchingItem.quantity > 0) {
+                console.warn(`Material ${material.name} depleted to 0`);
+              }
+              await ctx.db.patch(matchingItem._id, { quantity: newQuantity });
+            } else {
+              console.warn(`Material ${material.name} not found in inventory`);
+            }
+          }
+        } catch (error) {
+          console.error("Error deducting inventory:", error);
+        }
+      }
     }
 
     await ctx.db.patch(args.id, updates);
+  },
+});
+
+export const updateNotes = mutation({
+  args: {
+    id: v.id("assignments"),
+    notes: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    await ctx.db.patch(args.id, {
+      notes: args.notes,
+    });
+  },
+});
+
+export const deleteAssignment = mutation({
+  args: { id: v.id("assignments") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const assignment = await ctx.db.get(args.id);
+    if (!assignment) throw new Error("Assignment not found");
+
+    // Restore stock if not dispatched
+    if (assignment.status !== "dispatched") {
+      const kit = await ctx.db.get(assignment.kitId);
+      if (kit) {
+        const newStockCount = kit.stockCount + assignment.quantity;
+        let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
+        
+        if (newStockCount === 0) {
+          newStatus = "assigned";
+        } else if (newStockCount < 0) {
+          newStatus = "to_be_made";
+        }
+
+        await ctx.db.patch(assignment.kitId, {
+          stockCount: newStockCount,
+          status: newStatus,
+        });
+      }
+    }
+
+    await ctx.db.delete(args.id);
   },
 });
 
@@ -69,7 +208,6 @@ export const getByClient = query({
       .withIndex("by_client", (q) => q.eq("clientId", args.clientId))
       .collect();
 
-    // Fetch kit details for each assignment
     const assignmentsWithKits = await Promise.all(
       assignments.map(async (assignment) => {
         const kit = await ctx.db.get(assignment.kitId);

@@ -165,13 +165,12 @@ const schema = defineSchema(
         v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
       )),
       status: v.union(
-        v.literal("pending"),
-        v.literal("fulfilled"),
-        v.literal("cancelled")
+        v.literal("assigned"),
+        v.literal("packed"),
+        v.literal("dispatched")
       ),
       notes: v.optional(v.string()),
       createdBy: v.id("users"),
-      fulfilledAt: v.optional(v.number()),
       dispatchedAt: v.optional(v.number()),
     })
       .index("by_client", ["clientId"])
