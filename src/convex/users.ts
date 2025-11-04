@@ -234,38 +234,46 @@ export const deleteUser = mutation({
     }
 
     // 11. Delete auth-related records (accounts, sessions, verification codes, refresh tokens)
+    // First, collect account IDs for this user
     const authAccounts = await ctx.db
       .query("authAccounts")
       .collect();
+    const userAccountIds: Array<any> = [];
     for (const account of authAccounts) {
       if (account.userId === args.userId) {
+        userAccountIds.push(account._id);
         await ctx.db.delete(account._id);
       }
     }
 
+    // Delete sessions for this user
     const authSessions = await ctx.db
       .query("authSessions")
       .collect();
+    const userSessionIds: Array<any> = [];
     for (const session of authSessions) {
       if (session.userId === args.userId) {
+        userSessionIds.push(session._id);
         await ctx.db.delete(session._id);
       }
     }
 
+    // Delete verification codes linked to user's accounts
     const authVerificationCodes = await ctx.db
       .query("authVerificationCodes")
       .collect();
     for (const code of authVerificationCodes) {
-      if (code.accountId && authAccounts.some(acc => acc._id === code.accountId && acc.userId === args.userId)) {
+      if (code.accountId && userAccountIds.some(accId => accId === code.accountId)) {
         await ctx.db.delete(code._id);
       }
     }
 
+    // Delete refresh tokens linked to user's sessions
     const authRefreshTokens = await ctx.db
       .query("authRefreshTokens")
       .collect();
     for (const token of authRefreshTokens) {
-      if (token.sessionId && authSessions.some(sess => sess._id === token.sessionId && sess.userId === args.userId)) {
+      if (token.sessionId && userSessionIds.some(sessId => sessId === token.sessionId)) {
         await ctx.db.delete(token._id);
       }
     }
