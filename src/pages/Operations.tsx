@@ -25,6 +25,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Operations() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -253,32 +255,64 @@ export default function Operations() {
 
   const procurementList = procurementDialogOpen ? generateProcurementList() : [];
 
-  // Export to CSV
-  const exportToCSV = () => {
-    const headers = ["Material", "Required", "Available", "Shortage", "Unit", "Category", "Used In Kits"];
-    const rows = procurementList.map((item) => [
+  // Export to PDF
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text("Procurement List", 14, 20);
+    
+    // Add program and scope info
+    doc.setFontSize(11);
+    doc.text(`Program: ${selectedProgram?.name || "Unknown"}`, 14, 30);
+    doc.text(`Scope: ${procurementScope === "month" ? `Month - ${monthOptions.find((m) => m.value === selectedMonth)?.label}` : "All Assignments"}`, 14, 37);
+    doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 44);
+    
+    // Prepare table data
+    const tableData = procurementList.map((item) => [
       item.name,
-      item.required,
-      item.available,
-      item.shortage,
-      item.unit,
       item.category,
-      item.kits.join("; "),
+      `${item.required} ${item.unit}`,
+      `${item.available} ${item.unit}`,
+      item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
+      item.kits.join(", "),
     ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `procurement-list-${selectedMonth}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Procurement list exported");
+    
+    // Add table
+    autoTable(doc, {
+      head: [["Material", "Category", "Required", "Available", "Shortage", "Used In Kits"]],
+      body: tableData,
+      startY: 50,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [71, 85, 105], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 55 },
+      },
+      didParseCell: (data) => {
+        // Highlight shortage cells in red if there's a shortage
+        if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
+          data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+    
+    // Add summary at the bottom
+    const finalY = (doc as any).lastAutoTable.finalY || 50;
+    doc.setFontSize(10);
+    doc.text(`Total Materials: ${procurementList.length}`, 14, finalY + 10);
+    doc.text(`Materials with Shortage: ${procurementList.filter(item => item.shortage > 0).length}`, 14, finalY + 17);
+    
+    // Save the PDF
+    const fileName = `procurement-list-${selectedProgram?.name.replace(/\s+/g, "-")}-${procurementScope === "month" ? selectedMonth : "all"}.pdf`;
+    doc.save(fileName);
+    toast.success("Procurement list exported as PDF");
   };
 
   // Program Selection View
@@ -684,9 +718,9 @@ export default function Operations() {
                       <SelectItem value="total">All Assignments</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button onClick={exportToCSV}>
+                  <Button onClick={exportToPDF}>
                     <Download className="mr-2 h-4 w-4" />
-                    Export CSV
+                    Export PDF
                   </Button>
                 </div>
                 <Separator />
