@@ -181,6 +181,145 @@ export const calculateShortages = query({
   },
 });
 
+export const calculateKitWiseShortages = query({
+  args: { 
+    programId: v.id("programs"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Get all kits for this program
+    const kits = await ctx.db
+      .query("kits")
+      .filter((q) => q.eq(q.field("programId"), args.programId))
+      .collect();
+
+    const kitIds = kits.map(k => k._id);
+
+    // Get all assignments for these kits
+    let assignments = await ctx.db.query("assignments").collect();
+    assignments = assignments.filter(a => kitIds.includes(a.kitId));
+
+    const inventory = await ctx.db.query("inventory").collect();
+    const inventoryMap = new Map(inventory.map(item => [item.name.toLowerCase(), item]));
+
+    // Calculate shortages per kit
+    const kitShortages = new Map<string, {
+      kitId: string;
+      kitName: string;
+      category: string;
+      totalQuantity: number;
+      pendingQuantity: number;
+      dispatchedQuantity: number;
+      materialShortages: Array<{
+        name: string;
+        totalRequired: number;
+        available: number;
+        shortage: number;
+        unit: string;
+      }>;
+    }>();
+
+    for (const assignment of assignments) {
+      const kit = kits.find(k => k._id === assignment.kitId);
+      if (!kit) continue;
+
+      const kitKey = kit._id;
+
+      // Initialize kit entry if not exists
+      if (!kitShortages.has(kitKey)) {
+        kitShortages.set(kitKey, {
+          kitId: kit._id,
+          kitName: kit.name,
+          category: kit.category || "-",
+          totalQuantity: 0,
+          pendingQuantity: 0,
+          dispatchedQuantity: 0,
+          materialShortages: [],
+        });
+      }
+
+      const kitData = kitShortages.get(kitKey)!;
+      kitData.totalQuantity += assignment.quantity;
+      
+      if (assignment.status === "dispatched") {
+        kitData.dispatchedQuantity += assignment.quantity;
+      } else {
+        kitData.pendingQuantity += assignment.quantity;
+      }
+
+      // Calculate material requirements
+      const materialMap = new Map<string, { name: string; required: number; unit: string }>();
+
+      const processMaterials = (materials: Array<{name: string; quantity: number; unit: string}>) => {
+        materials.forEach(material => {
+          const key = material.name.toLowerCase();
+          const required = material.quantity * assignment.quantity;
+
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key)!;
+            existing.required += required;
+          } else {
+            materialMap.set(key, {
+              name: material.name,
+              required,
+              unit: material.unit,
+            });
+          }
+        });
+      };
+
+      // Process structured kits
+      if (kit.isStructured && kit.packingRequirements) {
+        try {
+          const packingData = JSON.parse(kit.packingRequirements);
+          
+          if (packingData.pouches) {
+            packingData.pouches.forEach((pouch: any) => {
+              if (pouch.materials) {
+                processMaterials(pouch.materials);
+              }
+            });
+          }
+
+          if (packingData.packets) {
+            packingData.packets.forEach((packet: any) => {
+              if (packet.materials) {
+                processMaterials(packet.materials);
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing packing requirements:", error);
+        }
+      }
+
+      // Process other materials
+      if (kit.spareKits) processMaterials(kit.spareKits);
+      if (kit.bulkMaterials) processMaterials(kit.bulkMaterials);
+      if (kit.miscellaneous) processMaterials(kit.miscellaneous);
+
+      // Update kit's material shortages
+      kitData.materialShortages = Array.from(materialMap.values()).map(mat => {
+        const invItem = inventoryMap.get(mat.name.toLowerCase());
+        const available = invItem?.quantity || 0;
+        const shortage = Math.max(0, mat.required - available);
+
+        return {
+          name: mat.name,
+          totalRequired: mat.required,
+          available,
+          shortage,
+          unit: mat.unit,
+        };
+      });
+    }
+
+    return Array.from(kitShortages.values());
+  },
+});
+
 export const generateProcurementList = query({
   args: { 
     programId: v.id("programs"),

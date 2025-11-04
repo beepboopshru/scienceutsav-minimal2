@@ -40,7 +40,15 @@ export default function Operations() {
   const [shortageDialogOpen, setShortageDialogOpen] = useState(false);
   const [procurementDialogOpen, setProcurementDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [selectedKitShortage, setSelectedKitShortage] = useState<any>(null);
+  const [kitShortageDialogOpen, setKitShortageDialogOpen] = useState(false);
   const [procurementScope, setProcurementScope] = useState<"month" | "total">("month");
+
+  // Fetch kit-wise shortages when a program is selected
+  const kitWiseShortages = useQuery(
+    selectedProgramId ? api.operations.calculateKitWiseShortages : undefined,
+    selectedProgramId ? { programId: selectedProgramId } : "skip"
+  );
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -478,24 +486,47 @@ export default function Operations() {
                         <TableHead>Total Quantity</TableHead>
                         <TableHead>Pending</TableHead>
                         <TableHead>Dispatched</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {kitAggregationArray.map((item) => (
-                        <TableRow key={item.kit?._id}>
-                          <TableCell className="font-medium">
-                            {item.kit?.name || "Unknown"}
-                          </TableCell>
-                          <TableCell>{item.kit?.category || "-"}</TableCell>
-                          <TableCell>{item.totalQuantity}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.pendingQuantity}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{item.dispatchedQuantity}</Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {kitWiseShortages?.map((item) => {
+                        const hasShortages = item.materialShortages.some((m: any) => m.shortage > 0);
+                        return (
+                          <TableRow key={item.kitId}>
+                            <TableCell className="font-medium">
+                              {item.kitName}
+                            </TableCell>
+                            <TableCell>{item.category}</TableCell>
+                            <TableCell>{item.totalQuantity}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{item.pendingQuantity}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{item.dispatchedQuantity}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant={hasShortages ? "destructive" : "outline"}
+                                onClick={() => {
+                                  setSelectedKitShortage(item);
+                                  setKitShortageDialogOpen(true);
+                                }}
+                              >
+                                {hasShortages ? (
+                                  <>
+                                    <AlertTriangle className="mr-2 h-4 w-4" />
+                                    Shortage
+                                  </>
+                                ) : (
+                                  "View Materials"
+                                )}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -572,6 +603,62 @@ export default function Operations() {
                       </>
                     );
                   })()}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Kit-wise Shortage Dialog */}
+          <Dialog open={kitShortageDialogOpen} onOpenChange={setKitShortageDialogOpen}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Material Requirements - {selectedKitShortage?.kitName}</DialogTitle>
+                <DialogDescription>
+                  Total requirements across {selectedKitShortage?.totalQuantity} units ({selectedKitShortage?.pendingQuantity} pending, {selectedKitShortage?.dispatchedQuantity} dispatched)
+                </DialogDescription>
+              </DialogHeader>
+              {selectedKitShortage && (
+                <div className="space-y-4">
+                  {selectedKitShortage.materialShortages.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No materials defined for this kit</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Total Required</TableHead>
+                          <TableHead>Available</TableHead>
+                          <TableHead>Shortage</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {selectedKitShortage.materialShortages.map((item: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>
+                              {item.totalRequired} {item.unit}
+                            </TableCell>
+                            <TableCell>
+                              {item.available} {item.unit}
+                            </TableCell>
+                            <TableCell>
+                              {item.shortage > 0 ? (
+                                <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {item.shortage} {item.unit}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">In Stock</Badge>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
                 </div>
               )}
             </DialogContent>
