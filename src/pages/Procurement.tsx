@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { motion } from "framer-motion";
-import { Download, Calendar, Package } from "lucide-react";
+import { Download, Calendar, Package, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,7 @@ export default function Procurement() {
   const [procurementScope, setProcurementScope] = useState<"month" | "total">(
     (searchParams.get("scope") as "month" | "total") || "month"
   );
+  const [showCompleteList, setShowCompleteList] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -196,6 +197,134 @@ export default function Procurement() {
 
     return shortages;
   };
+
+  // Generate complete procurement list across all programs
+  const generateCompleteProcurementList = () => {
+    const materialMap = new Map<string, any>();
+
+    assignments?.forEach((assignment) => {
+      const kit = assignment.kit;
+      if (!kit || !inventory) return;
+
+      const requiredQty = assignment.quantity;
+
+      // Process structured packing requirements
+      if (kit.isStructured && kit.packingRequirements) {
+        const structure = parsePackingRequirements(kit.packingRequirements);
+        const totalMaterials = calculateTotalMaterials(structure);
+        
+        totalMaterials.forEach((material) => {
+          const required = material.quantity * requiredQty;
+          const key = material.name.toLowerCase();
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            existing.programs.add(assignment.program?.name || "Unknown");
+            existing.kits.add(kit.name);
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: material.name,
+              required,
+              available: invItem?.quantity || 0,
+              unit: material.unit,
+              category: "Main Component",
+              programs: new Set([assignment.program?.name || "Unknown"]),
+              kits: new Set([kit.name]),
+            });
+          }
+        });
+      }
+
+      // Process spare kits
+      if (kit.spareKits) {
+        kit.spareKits.forEach((spare: any) => {
+          const required = spare.quantity * requiredQty;
+          const key = spare.name.toLowerCase();
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            existing.programs.add(assignment.program?.name || "Unknown");
+            existing.kits.add(kit.name);
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: spare.name,
+              required,
+              available: invItem?.quantity || 0,
+              unit: spare.unit,
+              category: "Spare Kit",
+              programs: new Set([assignment.program?.name || "Unknown"]),
+              kits: new Set([kit.name]),
+            });
+          }
+        });
+      }
+
+      // Process bulk materials
+      if (kit.bulkMaterials) {
+        kit.bulkMaterials.forEach((bulk: any) => {
+          const required = bulk.quantity * requiredQty;
+          const key = bulk.name.toLowerCase();
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            existing.programs.add(assignment.program?.name || "Unknown");
+            existing.kits.add(kit.name);
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: bulk.name,
+              required,
+              available: invItem?.quantity || 0,
+              unit: bulk.unit,
+              category: "Bulk Material",
+              programs: new Set([assignment.program?.name || "Unknown"]),
+              kits: new Set([kit.name]),
+            });
+          }
+        });
+      }
+
+      // Process miscellaneous
+      if (kit.miscellaneous) {
+        kit.miscellaneous.forEach((misc: any) => {
+          const required = misc.quantity * requiredQty;
+          const key = misc.name.toLowerCase();
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            existing.programs.add(assignment.program?.name || "Unknown");
+            existing.kits.add(kit.name);
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: misc.name,
+              required,
+              available: invItem?.quantity || 0,
+              unit: misc.unit,
+              category: "Miscellaneous",
+              programs: new Set([assignment.program?.name || "Unknown"]),
+              kits: new Set([kit.name]),
+            });
+          }
+        });
+      }
+    });
+
+    return Array.from(materialMap.values()).map((item) => ({
+      ...item,
+      shortage: Math.max(0, item.required - item.available),
+      programs: Array.from(item.programs),
+      kits: Array.from(item.kits),
+    }));
+  };
+
+  const completeProcurementList = showCompleteList ? generateCompleteProcurementList() : [];
 
   // Generate procurement list with proper shortage calculation
   const generateProcurementList = () => {
@@ -401,7 +530,7 @@ export default function Procurement() {
   };
 
   // Program Selection View
-  if (!selectedProgramId) {
+  if (!selectedProgramId && !showCompleteList) {
     return (
       <Layout>
         <div className="p-8">
@@ -410,11 +539,17 @@ export default function Procurement() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Procurement Lists</h1>
-              <p className="text-muted-foreground mt-2">
-                Select a program to view material procurement requirements
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Procurement Lists</h1>
+                <p className="text-muted-foreground mt-2">
+                  Select a program to view material procurement requirements
+                </p>
+              </div>
+              <Button onClick={() => setShowCompleteList(true)} variant="default">
+                <Package className="mr-2 h-4 w-4" />
+                Complete Procurement List
+              </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -445,6 +580,93 @@ export default function Procurement() {
                   </Card>
                 </motion.div>
               ))}
+            </div>
+          </motion.div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Complete Procurement List View
+  if (showCompleteList) {
+    return (
+      <Layout>
+        <div className="p-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Complete Procurement List
+                </h1>
+                <p className="text-muted-foreground mt-2">
+                  Material requirements across all programs
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => setShowCompleteList(false)}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Programs
+              </Button>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold">All Materials Summary</h3>
+              <p className="text-sm text-muted-foreground">
+                Aggregated material requirements across all programs and assignments
+              </p>
+              <Card>
+                <CardContent className="pt-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Required</TableHead>
+                        <TableHead>Available</TableHead>
+                        <TableHead>Shortage</TableHead>
+                        <TableHead>Used In Programs</TableHead>
+                        <TableHead>Used In Kits</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {completeProcurementList.map((item, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{item.category}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {item.required} {item.unit}
+                          </TableCell>
+                          <TableCell>
+                            {item.available} {item.unit}
+                          </TableCell>
+                          <TableCell>
+                            {item.shortage > 0 ? (
+                              <Badge variant="destructive">
+                                {item.shortage} {item.unit}
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">In Stock</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {item.programs.join(", ")}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {item.kits.join(", ")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </div>
           </motion.div>
         </div>
