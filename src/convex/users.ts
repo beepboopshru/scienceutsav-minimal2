@@ -131,13 +131,116 @@ export const deleteUser = mutation({
 
     const user = await ctx.db.get(args.userId);
     
+    // Delete all user-created data
+    // 1. Delete assignments created by user
+    const assignments = await ctx.db
+      .query("assignments")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const assignment of assignments) {
+      // Restore stock if not dispatched
+      if (assignment.status !== "dispatched") {
+        const kit = await ctx.db.get(assignment.kitId);
+        if (kit) {
+          const newStockCount = kit.stockCount + assignment.quantity;
+          await ctx.db.patch(assignment.kitId, {
+            stockCount: newStockCount,
+            status: newStockCount > 0 ? "in_stock" : "to_be_made",
+          });
+        }
+      }
+      await ctx.db.delete(assignment._id);
+    }
+
+    // 2. Delete kits created by user
+    const kits = await ctx.db
+      .query("kits")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const kit of kits) {
+      await ctx.db.delete(kit._id);
+    }
+
+    // 3. Delete programs created by user
+    const programs = await ctx.db
+      .query("programs")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const program of programs) {
+      await ctx.db.delete(program._id);
+    }
+
+    // 4. Delete clients created by user
+    const clients = await ctx.db
+      .query("clients")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const client of clients) {
+      await ctx.db.delete(client._id);
+    }
+
+    // 5. Delete vendors created by user
+    const vendors = await ctx.db
+      .query("vendors")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const vendor of vendors) {
+      await ctx.db.delete(vendor._id);
+    }
+
+    // 6. Delete services created by user
+    const services = await ctx.db
+      .query("services")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const service of services) {
+      await ctx.db.delete(service._id);
+    }
+
+    // 7. Delete processing jobs created by user
+    const processingJobs = await ctx.db
+      .query("processingJobs")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const job of processingJobs) {
+      await ctx.db.delete(job._id);
+    }
+
+    // 8. Delete vendor imports created by user
+    const vendorImports = await ctx.db
+      .query("vendorImports")
+      .withIndex("by_created_by", (q) => q.eq("createdBy", args.userId))
+      .collect();
+    for (const vendorImport of vendorImports) {
+      await ctx.db.delete(vendorImport._id);
+    }
+
+    // 9. Delete activity logs related to user
+    const activityLogs = await ctx.db
+      .query("activityLogs")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    for (const log of activityLogs) {
+      await ctx.db.delete(log._id);
+    }
+
+    // 10. Delete user permissions
+    const userPermissions = await ctx.db
+      .query("userPermissions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    for (const permission of userPermissions) {
+      await ctx.db.delete(permission._id);
+    }
+
+    // Finally, delete the user
     await ctx.db.delete(args.userId);
 
     // Log the activity
     await ctx.db.insert("activityLogs", {
       userId: adminId,
       actionType: "user_deleted",
-      details: `Deleted user: ${user?.email || user?.name || "Unknown"}`,
+      details: `Deleted user and all associated data: ${user?.email || user?.name || "Unknown"}`,
       performedBy: adminId,
     });
   },
