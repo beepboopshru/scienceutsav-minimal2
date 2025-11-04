@@ -100,10 +100,12 @@ export default function Procurement() {
   const monthOptions = generateMonthOptions();
 
   // Filter by selected month for month-wise view
-  const monthAssignments = programAssignments.filter((a) => {
-    const assignmentDate = new Date(a._creationTime).toISOString().slice(0, 7);
-    return assignmentDate === selectedMonth;
-  });
+  const monthAssignments = procurementScope === "month" 
+    ? programAssignments.filter((a) => {
+        const assignmentDate = new Date(a._creationTime).toISOString().slice(0, 7);
+        return assignmentDate === selectedMonth;
+      })
+    : programAssignments;
 
   // Calculate material shortages for an assignment
   const calculateShortages = (assignment: any) => {
@@ -713,18 +715,24 @@ export default function Procurement() {
                 <SelectItem value="total">All Assignments</SelectItem>
               </SelectContent>
             </Select>
-            {procurementScope === "month" && monthOptions.length > 0 && (
+            {procurementScope === "month" && (
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-[200px]">
                   <Calendar className="mr-2 h-4 w-4" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {monthOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
+                  {monthOptions.length > 0 ? (
+                    monthOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-data" disabled>
+                      No months available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             )}
