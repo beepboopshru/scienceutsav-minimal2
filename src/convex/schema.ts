@@ -309,6 +309,87 @@ const schema = defineSchema(
     })
       .index("by_vendor", ["vendorId"])
       .index("by_created_by", ["createdBy"]),
+
+    // Activity logs for audit trail
+    activityLogs: defineTable({
+      userId: v.id("users"),
+      actionType: v.string(),
+      details: v.string(),
+      performedBy: v.optional(v.id("users")),
+    })
+      .index("by_user", ["userId"])
+      .index("by_action_type", ["actionType"]),
+
+    // User permissions for granular access control
+    userPermissions: defineTable({
+      userId: v.id("users"),
+      permissions: v.object({
+        dashboard: v.optional(v.object({ view: v.boolean() })),
+        kits: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+          editStock: v.boolean(),
+          uploadImages: v.boolean(),
+        })),
+        clients: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+        })),
+        assignments: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+          pack: v.boolean(),
+          dispatch: v.boolean(),
+        })),
+        inventory: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+          editStock: v.boolean(),
+          createCategories: v.boolean(),
+          importData: v.boolean(),
+        })),
+        vendors: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+        })),
+        services: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+        })),
+        laserFiles: v.optional(v.object({
+          view: v.boolean(),
+          upload: v.boolean(),
+          delete: v.boolean(),
+        })),
+        reports: v.optional(v.object({
+          view: v.boolean(),
+          download: v.boolean(),
+        })),
+        adminZone: v.optional(v.object({
+          view: v.boolean(),
+          manageUsers: v.boolean(),
+          manageRoles: v.boolean(),
+          managePermissions: v.boolean(),
+          approveUsers: v.boolean(),
+          deleteUsers: v.boolean(),
+          clearAssignments: v.boolean(),
+          viewActivityLogs: v.boolean(),
+          deleteActivityLogs: v.boolean(),
+        })),
+      }),
+    }).index("by_user", ["userId"]),
   },
   {
     schemaValidation: false,

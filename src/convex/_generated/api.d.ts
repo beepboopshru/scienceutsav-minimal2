@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as activityLogs from "../activityLogs.js";
 import type * as assignments from "../assignments.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
@@ -25,6 +26,7 @@ import type * as operations from "../operations.js";
 import type * as processingJobs from "../processingJobs.js";
 import type * as programs from "../programs.js";
 import type * as services from "../services.js";
+import type * as userPermissions from "../userPermissions.js";
 import type * as users from "../users.js";
 import type * as vendorImports from "../vendorImports.js";
 import type * as vendors from "../vendors.js";
@@ -38,6 +40,7 @@ import type * as vendors from "../vendors.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  activityLogs: typeof activityLogs;
   assignments: typeof assignments;
   "auth/emailOtp": typeof auth_emailOtp;
   auth: typeof auth;
@@ -50,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   processingJobs: typeof processingJobs;
   programs: typeof programs;
   services: typeof services;
+  userPermissions: typeof userPermissions;
   users: typeof users;
   vendorImports: typeof vendorImports;
   vendors: typeof vendors;
