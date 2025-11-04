@@ -430,7 +430,7 @@ export default function Procurement() {
     
     doc.setFontSize(11);
     doc.text(`Program: ${selectedProgram.name}`, 14, 30);
-    doc.text(`Scope: ${procurementScope === "month" ? `Month - ${monthOptions.find((m) => m.value === selectedMonth)?.label}` : "All Assignments"}`, 14, 37);
+    doc.text(`Scope: ${procurementScope === "month" ? `Monthwise - ${monthOptions.find((m) => m.value === selectedMonth)?.label}` : "All Assignments"}`, 14, 37);
     doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 44);
     
     doc.setFontSize(14);
@@ -709,7 +709,7 @@ export default function Procurement() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="month">This Month Only</SelectItem>
+                <SelectItem value="month">Monthwise</SelectItem>
                 <SelectItem value="total">All Assignments</SelectItem>
               </SelectContent>
             </Select>
