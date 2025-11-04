@@ -46,7 +46,7 @@ export default function Operations() {
 
   // Fetch kit-wise shortages when a program is selected
   const kitWiseShortages = useQuery(
-    selectedProgramId ? api.operations.calculateKitWiseShortages : undefined,
+    api.operations.calculateKitWiseShortages,
     selectedProgramId ? { programId: selectedProgramId } : "skip"
   );
 
@@ -490,7 +490,7 @@ export default function Operations() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {kitWiseShortages?.map((item) => {
+                      {kitWiseShortages?.map((item: any) => {
                         const hasShortages = item.materialShortages.some((m: any) => m.shortage > 0);
                         return (
                           <TableRow key={item.kitId}>
