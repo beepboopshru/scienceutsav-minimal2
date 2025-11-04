@@ -229,7 +229,7 @@ export default function Operations() {
     return shortages;
   };
 
-  // Generate procurement list
+  // Generate procurement list with proper shortage calculation
   const generateProcurementList = () => {
     const relevantAssignments = procurementScope === "month" ? monthAssignments : programAssignments;
     const materialMap = new Map<string, any>();
@@ -242,14 +242,13 @@ export default function Operations() {
         if (materialMap.has(key)) {
           const existing = materialMap.get(key);
           existing.required += item.required;
-          existing.shortage += item.shortage;
           existing.kits.add(assignment.kit?.name || "Unknown");
         } else {
           materialMap.set(key, {
             name: item.name,
             required: item.required,
             available: item.available,
-            shortage: item.shortage,
+            shortage: 0, // Will be calculated after aggregation
             unit: item.unit,
             category: item.category || "Main Component",
             kits: new Set([assignment.kit?.name || "Unknown"]),
@@ -258,13 +257,70 @@ export default function Operations() {
       });
     });
 
+    // Recalculate shortage after aggregating all requirements
     return Array.from(materialMap.values()).map((item) => ({
       ...item,
+      shortage: Math.max(0, item.required - item.available),
       kits: Array.from(item.kits),
     }));
   };
 
+  // Generate kit-wise procurement breakdown
+  const generateKitWiseProcurement = () => {
+    const relevantAssignments = procurementScope === "month" ? monthAssignments : programAssignments;
+    const kitMap = new Map<string, any>();
+
+    relevantAssignments.forEach((assignment) => {
+      const kitName = assignment.kit?.name || "Unknown";
+      const shortages = calculateShortages(assignment);
+      
+      if (!kitMap.has(kitName)) {
+        kitMap.set(kitName, {
+          kitName,
+          category: assignment.kit?.category || "-",
+          totalQuantity: 0,
+          materials: new Map<string, any>(),
+        });
+      }
+
+      const kitData = kitMap.get(kitName)!;
+      kitData.totalQuantity += assignment.quantity;
+
+      shortages.direct.forEach((item: any) => {
+        const key = item.name.toLowerCase();
+        if (kitData.materials.has(key)) {
+          const existing = kitData.materials.get(key);
+          existing.required += item.required;
+        } else {
+          kitData.materials.set(key, {
+            name: item.name,
+            required: item.required,
+            available: item.available,
+            unit: item.unit,
+            category: item.category || "Main Component",
+          });
+        }
+      });
+    });
+
+    // Convert to array and calculate shortages
+    return Array.from(kitMap.values()).map((kit) => ({
+      kitName: kit.kitName,
+      category: kit.category,
+      totalQuantity: kit.totalQuantity,
+      materials: Array.from(kit.materials.values()).map((mat: any) => ({
+        name: mat.name,
+        required: mat.required,
+        available: mat.available,
+        unit: mat.unit,
+        category: mat.category,
+        shortage: Math.max(0, mat.required - mat.available),
+      })),
+    }));
+  };
+
   const procurementList = procurementDialogOpen ? generateProcurementList() : [];
+  const kitWiseProcurement = procurementDialogOpen ? generateKitWiseProcurement() : [];
 
   // Export to PDF
   const exportToPDF = () => {
@@ -280,8 +336,11 @@ export default function Operations() {
     doc.text(`Scope: ${procurementScope === "month" ? `Month - ${monthOptions.find((m) => m.value === selectedMonth)?.label}` : "All Assignments"}`, 14, 37);
     doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 44);
     
-    // Prepare table data
-    const tableData = procurementList.map((item) => [
+    // Material Summary Section
+    doc.setFontSize(14);
+    doc.text("Material Summary", 14, 54);
+    
+    const summaryData = procurementList.map((item) => [
       item.name,
       item.category,
       `${item.required} ${item.unit}`,
@@ -290,23 +349,21 @@ export default function Operations() {
       item.kits.join(", "),
     ]);
     
-    // Add table
     autoTable(doc, {
       head: [["Material", "Category", "Required", "Available", "Shortage", "Used In Kits"]],
-      body: tableData,
-      startY: 50,
-      styles: { fontSize: 9, cellPadding: 3 },
+      body: summaryData,
+      startY: 60,
+      styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [71, 85, 105], textColor: 255 },
       columnStyles: {
-        0: { cellWidth: 35 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 25 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 55 },
+        0: { cellWidth: 30 },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 52 },
       },
       didParseCell: (data) => {
-        // Highlight shortage cells in red if there's a shortage
         if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
           data.cell.styles.textColor = [220, 38, 38];
           data.cell.styles.fontStyle = "bold";
@@ -314,11 +371,65 @@ export default function Operations() {
       },
     });
     
-    // Add summary at the bottom
-    const finalY = (doc as any).lastAutoTable.finalY || 50;
+    let currentY = (doc as any).lastAutoTable.finalY + 15;
+    
+    // Kit-wise Breakdown Section
+    doc.setFontSize(14);
+    doc.text("Kit-wise Breakdown", 14, currentY);
+    currentY += 8;
+    
+    kitWiseProcurement.forEach((kit, idx) => {
+      // Check if we need a new page
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 20;
+      }
+      
+      doc.setFontSize(11);
+      doc.text(`${kit.kitName} (${kit.category}) - ${kit.totalQuantity} units`, 14, currentY);
+      currentY += 2;
+      
+      const kitData = kit.materials.map((mat: any) => [
+        mat.name,
+        mat.category,
+        `${mat.required} ${mat.unit}`,
+        `${mat.available} ${mat.unit}`,
+        mat.shortage > 0 ? `${mat.shortage} ${mat.unit}` : "In Stock",
+      ]);
+      
+      autoTable(doc, {
+        head: [["Material", "Category", "Required", "Available", "Shortage"]],
+        body: kitData,
+        startY: currentY,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [100, 116, 139], textColor: 255, fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 30 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 30 },
+        },
+        didParseCell: (data) => {
+          if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
+            data.cell.styles.textColor = [220, 38, 38];
+            data.cell.styles.fontStyle = "bold";
+          }
+        },
+      });
+      
+      currentY = (doc as any).lastAutoTable.finalY + 10;
+    });
+    
+    // Add summary at the end
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 20;
+    }
     doc.setFontSize(10);
-    doc.text(`Total Materials: ${procurementList.length}`, 14, finalY + 10);
-    doc.text(`Materials with Shortage: ${procurementList.filter(item => item.shortage > 0).length}`, 14, finalY + 17);
+    doc.text(`Total Unique Materials: ${procurementList.length}`, 14, currentY);
+    doc.text(`Materials with Shortage: ${procurementList.filter(item => item.shortage > 0).length}`, 14, currentY + 7);
+    doc.text(`Total Kits: ${kitWiseProcurement.length}`, 14, currentY + 14);
     
     // Save the PDF
     const fileName = `procurement-list-${selectedProgram?.name.replace(/\s+/g, "-")}-${procurementScope === "month" ? selectedMonth : "all"}.pdf`;
@@ -711,14 +822,14 @@ export default function Operations() {
 
           {/* Procurement List Dialog */}
           <Dialog open={procurementDialogOpen} onOpenChange={setProcurementDialogOpen}>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Procurement List</DialogTitle>
                 <DialogDescription>
                   Materials needed for {selectedProgram?.name}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <Select value={procurementScope} onValueChange={(v: any) => setProcurementScope(v)}>
                     <SelectTrigger className="w-[200px]">
@@ -734,47 +845,118 @@ export default function Operations() {
                     Export PDF
                   </Button>
                 </div>
+                
                 <Separator />
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Required</TableHead>
-                      <TableHead>Available</TableHead>
-                      <TableHead>Shortage</TableHead>
-                      <TableHead>Used In</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {procurementList.map((item, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{item.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{item.category}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {item.required} {item.unit}
-                        </TableCell>
-                        <TableCell>
-                          {item.available} {item.unit}
-                        </TableCell>
-                        <TableCell>
-                          {item.shortage > 0 ? (
-                            <Badge variant="destructive">
-                              {item.shortage} {item.unit}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">In Stock</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {item.kits.join(", ")}
-                        </TableCell>
+                
+                {/* Month-wise/Overall Material Summary */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold">Material Summary</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Aggregated material requirements across all kits
+                  </p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Required</TableHead>
+                        <TableHead>Available</TableHead>
+                        <TableHead>Shortage</TableHead>
+                        <TableHead>Used In Kits</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {procurementList.map((item, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{item.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{item.category}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {item.required} {item.unit}
+                          </TableCell>
+                          <TableCell>
+                            {item.available} {item.unit}
+                          </TableCell>
+                          <TableCell>
+                            {item.shortage > 0 ? (
+                              <Badge variant="destructive">
+                                {item.shortage} {item.unit}
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">In Stock</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {item.kits.join(", ")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <Separator />
+
+                {/* Kit-wise Breakdown */}
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold">Kit-wise Breakdown</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Material requirements organized by kit
+                  </p>
+                  {kitWiseProcurement.map((kit, kitIdx) => (
+                    <Card key={kitIdx} className="mt-4">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base">{kit.kitName}</CardTitle>
+                            <CardDescription>
+                              {kit.category} • {kit.totalQuantity} units
+                            </CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Material</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead>Required</TableHead>
+                              <TableHead>Available</TableHead>
+                              <TableHead>Shortage</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {kit.materials.map((mat: any, matIdx: number) => (
+                              <TableRow key={matIdx}>
+                                <TableCell className="font-medium">{mat.name}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">{mat.category}</Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {mat.required} {mat.unit}
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  {mat.available} {mat.unit}
+                                </TableCell>
+                                <TableCell>
+                                  {mat.shortage > 0 ? (
+                                    <Badge variant="destructive" className="text-xs">
+                                      {mat.shortage} {mat.unit}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="text-xs">In Stock</Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </DialogContent>
           </Dialog>
