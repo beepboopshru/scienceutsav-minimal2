@@ -52,6 +52,7 @@ export default function Operations() {
     selectedProgramId ? { programId: selectedProgramId } : "skip"
   );
 
+  // Auto-select the most recent month if current selection is not in the list
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
@@ -65,16 +66,8 @@ export default function Operations() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (isLoading || !user || !programs || !assignments || !inventory) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-      </div>
-    );
-  }
-
   // Filter assignments by selected program
-  const programAssignments = selectedProgramId
+  const programAssignments = selectedProgramId && assignments
     ? assignments.filter((a) => a.kit?.programId === selectedProgramId)
     : [];
 
@@ -101,8 +94,7 @@ export default function Operations() {
 
   const monthOptions = generateMonthOptions();
 
-  // Auto-select the most recent month if current selection is not in the list
-  // This effect must run on every render to comply with React hooks rules
+  // Auto-select the most recent month when program changes
   useEffect(() => {
     if (selectedProgramId && monthOptions.length > 0) {
       const currentMonthExists = monthOptions.some((opt: any) => opt.value === selectedMonth);
@@ -143,7 +135,7 @@ export default function Operations() {
   // Calculate material shortages for an assignment
   const calculateShortages = (assignment: any) => {
     const kit = assignment.kit;
-    if (!kit) return { direct: [], packets: [] };
+    if (!kit || !inventory) return { direct: [], packets: [] };
 
     const shortages: any = { direct: [], packets: [] };
     const requiredQty = assignment.quantity;
@@ -352,7 +344,7 @@ export default function Operations() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {programs.map((program) => (
+              {programs?.map((program) => (
                 <motion.div
                   key={program._id}
                   whileHover={{ scale: 1.02 }}
@@ -372,7 +364,7 @@ export default function Operations() {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Package className="h-4 w-4" />
                         <span>
-                          {assignments.filter((a) => a.kit?.programId === program._id).length} assignments
+                          {assignments?.filter((a) => a.kit?.programId === program._id).length || 0} assignments
                         </span>
                       </div>
                     </CardContent>
@@ -386,7 +378,7 @@ export default function Operations() {
     );
   }
 
-  const selectedProgram = programs.find((p) => p._id === selectedProgramId);
+  const selectedProgram = programs?.find((p) => p._id === selectedProgramId);
 
   // Kit Operations View
   return (
