@@ -129,6 +129,12 @@ export function Layout({ children }: LayoutProps) {
       path: "/laser-files",
       roles: ["admin", "laser_operator"],
     },
+    {
+      title: "View Kit Files",
+      icon: Home,
+      path: "/view-kit-files",
+      roles: ["admin", "research_development", "operations"],
+    },
   ];
 
   const adminSection: NavItem[] = [

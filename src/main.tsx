@@ -23,6 +23,7 @@ import Clients from "@/pages/Clients.tsx";
 import Assignments from "@/pages/Assignments.tsx";
 import Operations from "@/pages/Operations.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
+import ViewKitFiles from "@/pages/ViewKitFiles.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
 import AdminZone from "@/pages/AdminZone.tsx";
 import Procurement from "@/pages/Procurement.tsx";
@@ -75,6 +76,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/operations" element={<Operations />} />
             <Route path="/procurement" element={<Procurement />} />
             <Route path="/laser-files" element={<LaserFiles />} />
+            <Route path="/view-kit-files" element={<ViewKitFiles />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/admin-zone" element={<AdminZone />} />
             <Route path="/inventory" element={<Inventory />} />

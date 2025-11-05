@@ -47,7 +47,7 @@ export default function LaserFiles() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [filterType, setFilterType] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("laser");
   const [uploadType, setUploadType] = useState<"storage" | "link">("storage");
 
   const laserFilesData = useQuery(api.laserFiles.listWithKitDetails, {
@@ -63,18 +63,16 @@ export default function LaserFiles() {
 
     // Extract files from kit fields
     for (const kit of kits) {
+      // Only include laser files from kits
       const fileFields = [
-        { field: kit.kitImageFiles, type: "kitImage" },
         { field: kit.laserFiles, type: "laser" },
-        { field: kit.componentFiles, type: "component" },
-        { field: kit.workbookFiles, type: "workbook" },
       ];
 
       for (const { field, type } of fileFields) {
         if (field && Array.isArray(field)) {
           for (let i = 0; i < field.length; i++) {
             const file = field[i];
-            if (filterType === "all" || filterType === type) {
+            if (filterType === "laser") {
               aggregatedFiles.push({
                 _id: `${kit._id}-${type}-${i}`,
                 fileName: file.type === "link" ? file.name : `${type} file ${i + 1}`,
@@ -307,43 +305,6 @@ export default function LaserFiles() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant={filterType === "all" ? "default" : "outline"}
-            onClick={() => setFilterType("all")}
-          >
-            All Files
-          </Button>
-          <Button
-            variant={filterType === "laser" ? "default" : "outline"}
-            onClick={() => setFilterType("laser")}
-          >
-            <Scissors className="mr-2 h-4 w-4" />
-            Laser
-          </Button>
-          <Button
-            variant={filterType === "component" ? "default" : "outline"}
-            onClick={() => setFilterType("component")}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Component
-          </Button>
-          <Button
-            variant={filterType === "workbook" ? "default" : "outline"}
-            onClick={() => setFilterType("workbook")}
-          >
-            <BookOpen className="mr-2 h-4 w-4" />
-            Workbook
-          </Button>
-          <Button
-            variant={filterType === "kitImage" ? "default" : "outline"}
-            onClick={() => setFilterType("kitImage")}
-          >
-            <ImageIcon className="mr-2 h-4 w-4" />
-            Images
-          </Button>
         </div>
 
         <div className="border rounded-lg">
