@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "convex/react";
 import { Calendar } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 interface ClientMonthwiseViewProps {
   clientId: Id<"clients">;
@@ -41,10 +41,12 @@ export function ClientMonthwiseView({ clientId }: ClientMonthwiseViewProps) {
     return { months, data: grouped };
   }, [assignments]);
 
-  // Set initial month
-  if (selectedMonth === "" && monthlyData.months.length > 0) {
-    setSelectedMonth(monthlyData.months[0]);
-  }
+  // Set initial month when data is available
+  useEffect(() => {
+    if (selectedMonth === "" && monthlyData.months.length > 0) {
+      setSelectedMonth(monthlyData.months[0]);
+    }
+  }, [monthlyData.months, selectedMonth]);
 
   if (!assignments) {
     return <div className="text-sm text-muted-foreground">Loading...</div>;
