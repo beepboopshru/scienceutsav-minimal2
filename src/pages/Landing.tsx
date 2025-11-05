@@ -32,28 +32,6 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation */}
-      <motion.nav 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="border-b border-border"
-      >
-        <div className="max-w-6xl mx-auto px-8 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <img src="./logo.svg" alt="ScienceUtsav" className="h-8 w-8" />
-            <span className="text-lg font-medium tracking-tight">ScienceUtsav</span>
-          </div>
-          <Button 
-            onClick={() => navigate(isAuthenticated ? "/dashboard" : "/auth")}
-            variant="ghost"
-            className="font-medium"
-          >
-            {isAuthenticated ? "Dashboard" : "Sign In"}
-          </Button>
-        </div>
-      </motion.nav>
-
       {/* Hero Section */}
       <motion.section 
         initial="initial"
