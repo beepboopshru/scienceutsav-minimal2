@@ -310,6 +310,26 @@ const schema = defineSchema(
       .index("by_vendor", ["vendorId"])
       .index("by_created_by", ["createdBy"]),
 
+    // Laser files for kits
+    laserFiles: defineTable({
+      kitId: v.id("kits"),
+      fileName: v.string(),
+      fileType: v.union(
+        v.literal("laser"),
+        v.literal("component"),
+        v.literal("workbook"),
+        v.literal("kitImage")
+      ),
+      storageId: v.optional(v.id("_storage")),
+      externalLink: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      uploadedBy: v.id("users"),
+      uploadedAt: v.number(),
+    })
+      .index("by_kit", ["kitId"])
+      .index("by_file_type", ["fileType"])
+      .index("by_uploaded_by", ["uploadedBy"]),
+
     // Activity logs for audit trail
     activityLogs: defineTable({
       userId: v.id("users"),
