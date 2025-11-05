@@ -421,6 +421,69 @@ export default function Procurement() {
 
   const selectedProgram = programs?.find((p) => p._id === selectedProgramId);
 
+  // Export Complete Procurement List to PDF
+  const exportCompleteProcurementToPDF = () => {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(18);
+    doc.text("Complete Procurement List", 14, 20);
+    
+    doc.setFontSize(11);
+    doc.text("Material requirements across all programs", 14, 30);
+    doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, 37);
+    
+    doc.setFontSize(14);
+    doc.text("All Materials Summary", 14, 47);
+    
+    const summaryData = completeProcurementList.map((item) => [
+      item.name,
+      item.category,
+      `${item.required} ${item.unit}`,
+      `${item.available} ${item.unit}`,
+      item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
+      item.programs.join(", "),
+      item.kits.join(", "),
+    ]);
+    
+    autoTable(doc, {
+      head: [["Material", "Category", "Required", "Available", "Shortage", "Programs", "Kits"]],
+      body: summaryData,
+      startY: 53,
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [71, 85, 105], textColor: 255 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 20 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 40 },
+        6: { cellWidth: 40 },
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
+          data.cell.styles.textColor = [220, 38, 38];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+    
+    let currentY = (doc as any).lastAutoTable.finalY + 15;
+    
+    if (currentY > 250) {
+      doc.addPage();
+      currentY = 20;
+    }
+    doc.setFontSize(10);
+    doc.text(`Total Unique Materials: ${completeProcurementList.length}`, 14, currentY);
+    doc.text(`Materials with Shortage: ${completeProcurementList.filter(item => item.shortage > 0).length}`, 14, currentY + 7);
+    doc.text(`Total Programs: ${programs?.length || 0}`, 14, currentY + 14);
+    
+    const fileName = `complete-procurement-list-${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(fileName);
+    toast.success("Complete procurement list exported as PDF");
+  };
+
   // Export to PDF
   const exportToPDF = () => {
     if (!selectedProgram) return;
@@ -608,10 +671,16 @@ export default function Procurement() {
                   Material requirements across all programs
                 </p>
               </div>
-              <Button variant="outline" onClick={() => setShowCompleteList(false)}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Programs
-              </Button>
+              <div className="flex items-center gap-4">
+                <Button onClick={exportCompleteProcurementToPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+                <Button variant="outline" onClick={() => setShowCompleteList(false)}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Programs
+                </Button>
+              </div>
             </div>
 
             <Separator />
