@@ -414,12 +414,12 @@ export default function Assignments() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{assignment.client?.name || "Unknown"}</div>
                         {assignment.client?.organization && (
                           <div className="text-sm text-muted-foreground">
                             {assignment.client.organization}
                           </div>
                         )}
+                        <div className="font-medium">{assignment.client?.name || "Unknown"}</div>
                       </div>
                     </TableCell>
                     <TableCell>{assignment.quantity}</TableCell>
@@ -575,8 +575,8 @@ export default function Assignments() {
                   <SelectContent>
                     {clients.map((client) => (
                       <SelectItem key={client._id} value={client._id}>
+                        {client.organization && `${client.organization} - `}
                         {client.name}
-                        {client.organization && ` - ${client.organization}`}
                       </SelectItem>
                     ))}
                   </SelectContent>
