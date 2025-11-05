@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { cn } from "@/lib/utils";
 
 export default function ProcessingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -41,6 +44,10 @@ export default function ProcessingJobs() {
     processedByType: "in_house" as "vendor" | "service" | "in_house",
     notes: "",
   });
+
+  // Combobox open states
+  const [sourceComboboxOpen, setSourceComboboxOpen] = useState<Record<number, boolean>>({});
+  const [targetComboboxOpen, setTargetComboboxOpen] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -128,6 +135,8 @@ export default function ProcessingJobs() {
         processedByType: "in_house",
         notes: "",
       });
+      setSourceComboboxOpen({});
+      setTargetComboboxOpen({});
     } catch (error: any) {
       toast.error(error.message || "Failed to create processing job");
     }
@@ -234,7 +243,7 @@ export default function ProcessingJobs() {
                     Start Pre-Processing
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create Processing Job</DialogTitle>
                     <DialogDescription>Transform raw materials into pre-processed items</DialogDescription>
@@ -252,25 +261,57 @@ export default function ProcessingJobs() {
                     {processingForm.sources.map((source, index) => (
                       <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
                         <div className="space-y-2">
-                          <Select
-                            value={source.sourceItemId}
-                            onValueChange={(value: any) => {
-                              const newSources = [...processingForm.sources];
-                              newSources[index].sourceItemId = value;
-                              setProcessingForm({ ...processingForm, sources: newSources });
-                            }}
+                          <Popover 
+                            open={sourceComboboxOpen[index]} 
+                            onOpenChange={(open) => setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: open })}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select source" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {inventory?.filter((item) => item.type === "raw").map((item) => (
-                                <SelectItem key={item._id} value={item._id}>
-                                  {item.name} ({item.quantity} {item.unit})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={sourceComboboxOpen[index]}
+                                className="w-full justify-between"
+                              >
+                                {source.sourceItemId
+                                  ? (() => {
+                                      const item = inventory.find((i) => i._id === source.sourceItemId);
+                                      return item ? `${item.name} (${item.quantity} ${item.unit})` : "Select source";
+                                    })()
+                                  : "Select source"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." />
+                                <CommandList>
+                                  <CommandEmpty>No inventory item found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {inventory?.filter((item) => item.type === "raw").map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        value={`${item.name} ${item._id}`}
+                                        onSelect={() => {
+                                          const newSources = [...processingForm.sources];
+                                          newSources[index].sourceItemId = item._id;
+                                          setProcessingForm({ ...processingForm, sources: newSources });
+                                          setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: false });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            source.sourceItemId === item._id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {item.name} ({item.quantity} {item.unit})
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div className="space-y-2">
                           <Input
@@ -318,25 +359,57 @@ export default function ProcessingJobs() {
                     {processingForm.targets.map((target, index) => (
                       <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
                         <div className="space-y-2">
-                          <Select
-                            value={target.targetItemId}
-                            onValueChange={(value: any) => {
-                              const newTargets = [...processingForm.targets];
-                              newTargets[index].targetItemId = value;
-                              setProcessingForm({ ...processingForm, targets: newTargets });
-                            }}
+                          <Popover 
+                            open={targetComboboxOpen[index]} 
+                            onOpenChange={(open) => setTargetComboboxOpen({ ...targetComboboxOpen, [index]: open })}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select target" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {inventory?.filter((item) => item.type === "pre_processed").map((item) => (
-                                <SelectItem key={item._id} value={item._id}>
-                                  {item.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={targetComboboxOpen[index]}
+                                className="w-full justify-between"
+                              >
+                                {target.targetItemId
+                                  ? (() => {
+                                      const item = inventory.find((i) => i._id === target.targetItemId);
+                                      return item ? item.name : "Select target";
+                                    })()
+                                  : "Select target"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." />
+                                <CommandList>
+                                  <CommandEmpty>No inventory item found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {inventory?.filter((item) => item.type === "pre_processed").map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        value={`${item.name} ${item._id}`}
+                                        onSelect={() => {
+                                          const newTargets = [...processingForm.targets];
+                                          newTargets[index].targetItemId = item._id;
+                                          setProcessingForm({ ...processingForm, targets: newTargets });
+                                          setTargetComboboxOpen({ ...targetComboboxOpen, [index]: false });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            target.targetItemId === item._id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {item.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div className="space-y-2">
                           <Input
