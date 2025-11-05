@@ -197,7 +197,7 @@ export default function Clients() {
                     <div className="flex items-center gap-4 flex-1">
                       <div className="text-left flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-lg">{client.name}</span>
+                          <span className="font-bold text-lg">{client.organization || client.name}</span>
                           <Badge variant={client.type === "monthly" ? "default" : "secondary"}>
                             {client.type === "monthly" ? "Monthly" : "One Time"}
                           </Badge>
@@ -206,7 +206,7 @@ export default function Clients() {
                           {client.organization && (
                             <span className="flex items-center gap-1">
                               <Building2 className="h-3 w-3" />
-                              {client.organization}
+                              {client.name}
                             </span>
                           )}
                           {client.contact && (
