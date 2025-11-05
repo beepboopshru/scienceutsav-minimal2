@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Loader2, Upload, Download, ExternalLink, MoreVertical, Trash2, Edit, FileText, Scissors, BookOpen, Image as ImageIcon, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -50,10 +50,50 @@ export default function LaserFiles() {
   const [filterType, setFilterType] = useState<string>("all");
   const [uploadType, setUploadType] = useState<"storage" | "link">("storage");
 
-  const files = useQuery(api.laserFiles.listWithKitDetails, {
+  const laserFilesData = useQuery(api.laserFiles.listWithKitDetails, {
     fileType: filterType === "all" ? undefined : filterType as any,
   });
   const kits = useQuery(api.kits.list);
+
+  // Aggregate files from both laserFiles table and kit fields
+  const files = useMemo(() => {
+    if (!laserFilesData || !kits) return undefined;
+
+    const aggregatedFiles: any[] = [...laserFilesData];
+
+    // Extract files from kit fields
+    for (const kit of kits) {
+      const fileFields = [
+        { field: kit.kitImageFiles, type: "kitImage" },
+        { field: kit.laserFiles, type: "laser" },
+        { field: kit.componentFiles, type: "component" },
+        { field: kit.workbookFiles, type: "workbook" },
+      ];
+
+      for (const { field, type } of fileFields) {
+        if (field && Array.isArray(field)) {
+          for (let i = 0; i < field.length; i++) {
+            const file = field[i];
+            if (filterType === "all" || filterType === type) {
+              aggregatedFiles.push({
+                _id: `${kit._id}-${type}-${i}`,
+                fileName: file.type === "link" ? file.name : `${type} file ${i + 1}`,
+                fileType: type,
+                kitName: kit.name,
+                uploaderName: "Research Team",
+                uploadedAt: kit._creationTime,
+                storageId: file.type === "storage" ? file.storageId : undefined,
+                externalLink: file.type === "link" ? file.url : undefined,
+                isFromKitField: true,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return aggregatedFiles;
+  }, [laserFilesData, kits, filterType]);
   
   const createFile = useMutation(api.laserFiles.create);
   const removeFile = useMutation(api.laserFiles.remove);
@@ -380,13 +420,15 @@ export default function LaserFiles() {
                               Download
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleDelete(file._id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
+                          {!file.isFromKitField && (
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(file._id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
