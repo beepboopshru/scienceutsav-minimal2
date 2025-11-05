@@ -1,23 +1,25 @@
 import { Layout } from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
-import { AlertTriangle, Edit, Plus, Trash2, ArrowLeft, Box, FileText, Image as ImageIcon, ChevronDown, ChevronUp, Upload, Copy } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
+import { AlertTriangle, ArrowLeft, Box, ChevronDown, ChevronUp } from "lucide-react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { ResearchFileManager } from "@/components/research/ResearchFileManager";
 import { parsePackingRequirements } from "@/lib/kitPacking";
+import { Download, Upload, Edit, Trash2, Plus, Package, Loader2, FileText, Image as ImageIcon, Wrench, BookOpen, Copy } from "lucide-react";
 
 // Helper to render structured materials (pouches/packets)
 function StructuredMaterials({ packingRequirements }: { packingRequirements?: string }) {
@@ -127,6 +129,13 @@ export default function Research() {
   const createProgram = useMutation(api.programs.create);
   const updateProgram = useMutation(api.programs.update);
   const deleteProgram = useMutation(api.programs.remove);
+
+  const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
+
+  // File manager state
+  const [selectedKit, setSelectedKit] = useState<any>(null);
+  const [fileType, setFileType] = useState<"kitImage" | "laser" | "component" | "workbook">("kitImage");
+  const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
   const isAdminOrManager = user?.role === "research_development" || user?.role === "admin";
 
@@ -401,6 +410,31 @@ export default function Research() {
 
   const handleOpenKitSheet = (kitId: Id<"kits">) => {
     navigate(`/kit-sheet-maker?edit=${kitId}`);
+  };
+
+  const handleDownloadKitSheet = async (kitId: Id<"kits">) => {
+    try {
+      toast.info("Generating kit sheet...");
+      const result = await downloadKitSheet({ kitId });
+      
+      // Create a blob from the HTML and trigger download
+      const blob = new Blob([result.html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Kit sheet downloaded successfully");
+    } catch (error) {
+      console.error("Failed to download kit sheet:", error);
+      toast.error("Failed to generate kit sheet", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   };
 
   if (isLoading || !kits || !programs) {
@@ -744,6 +778,110 @@ export default function Research() {
           </div>
         </div>
 
+        {/* Kit Design Section */}
+        {selectedProgram && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6 px-4 sm:px-6 lg:px-8"
+          >
+            {/* Kit Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 xl:gap-10">
+              {filteredKits.map((kit) => (
+                <motion.div
+                  key={kit._id}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Card className="h-full flex flex-col">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-lg break-words">{kit.name}</CardTitle>
+                          {kit.category && (
+                            <Badge variant="outline" className="mt-2">
+                              {kit.category}
+                            </Badge>
+                          )}
+                        </div>
+                        {isAdminOrManager && (
+                          <div className="flex gap-1 flex-shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditKit(kit)}
+                              className="h-8 w-8 p-0"
+                              title="Edit Kit"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteKit(kit._id)}
+                              className="h-8 w-8 p-0"
+                              title="Delete Kit"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                      {kit.description && (
+                        <CardDescription className="mt-3 break-words">
+                          {kit.description}
+                        </CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="flex-1 space-y-4">
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Stock:</span>
+                          <span className="font-medium">{kit.stockCount}</span>
+                        </div>
+                        {kit.serialNumber && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Serial:</span>
+                            <span className="font-medium">{kit.serialNumber}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setSelectedKit(kit);
+                            setFileType("kitImage");
+                            setIsFileManagerOpen(true);
+                          }}
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Files
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleDownloadKitSheet(kit._id)}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download Kit Sheet
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Table View */}
         <div className="rounded-md border">
           <div className="overflow-x-auto">
             <table className="w-full">
