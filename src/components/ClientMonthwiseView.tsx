@@ -14,6 +14,7 @@ export function ClientMonthwiseView({ clientId }: ClientMonthwiseViewProps) {
   const assignments = useQuery(api.assignments.getByClient, { clientId });
   const [selectedMonth, setSelectedMonth] = useState<string>("");
 
+  // Calculate monthly data - MUST be before any conditional returns
   const monthlyData = useMemo(() => {
     if (!assignments) return { months: [], data: {} };
 
@@ -48,21 +49,9 @@ export function ClientMonthwiseView({ clientId }: ClientMonthwiseViewProps) {
     }
   }, [monthlyData.months, selectedMonth]);
 
-  if (!assignments) {
-    return <div className="text-sm text-muted-foreground">Loading...</div>;
-  }
-
-  if (monthlyData.months.length === 0) {
-    return (
-      <div className="text-sm text-muted-foreground">
-        No dispatched assignments for this client yet.
-      </div>
-    );
-  }
-
+  // Calculate current month assignments and grade groups - MUST be before conditional returns
   const currentMonthAssignments = selectedMonth ? monthlyData.data[selectedMonth] : [];
 
-  // Group by grade
   const gradeGroups = useMemo(() => {
     const groups: Record<string, typeof currentMonthAssignments> = {};
     currentMonthAssignments.forEach((assignment) => {
@@ -81,8 +70,21 @@ export function ClientMonthwiseView({ clientId }: ClientMonthwiseViewProps) {
     return sortedGrades.map((grade) => ({ grade, assignments: groups[grade] }));
   }, [currentMonthAssignments]);
 
-  // Calculate total quantity for selected month
+  // Calculate total quantity
   const totalQuantity = currentMonthAssignments.reduce((sum, a) => sum + a.quantity, 0);
+
+  // NOW we can do conditional returns after all hooks are called
+  if (!assignments) {
+    return <div className="text-sm text-muted-foreground">Loading...</div>;
+  }
+
+  if (monthlyData.months.length === 0) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        No dispatched assignments for this client yet.
+      </div>
+    );
+  }
 
   const formatMonth = (monthKey: string) => {
     const [year, month] = monthKey.split("-");
