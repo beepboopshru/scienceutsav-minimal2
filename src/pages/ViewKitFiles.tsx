@@ -1,6 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, Download, ExternalLink, MoreVertical, FileText, BookOpen, Image as ImageIcon } from "lucide-react";
+import { Loader2, Download, ExternalLink, MoreVertical, FileText, BookOpen, Image as ImageIcon, Search } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
@@ -26,6 +27,7 @@ export default function ViewKitFiles() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const laserFilesData = useQuery(api.laserFiles.listWithKitDetails, {
     fileType: filterType === "all" ? undefined : filterType as any,
@@ -77,6 +79,18 @@ export default function ViewKitFiles() {
 
     return aggregatedFiles;
   }, [laserFilesData, kits, filterType]);
+
+  // Filter files based on search query
+  const filteredFiles = useMemo(() => {
+    if (!files) return undefined;
+    if (!searchQuery.trim()) return files;
+
+    const query = searchQuery.toLowerCase();
+    return files.filter(file => 
+      file.fileName.toLowerCase().includes(query) ||
+      file.kitName.toLowerCase().includes(query)
+    );
+  }, [files, searchQuery]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -151,6 +165,19 @@ export default function ViewKitFiles() {
           </Button>
         </div>
 
+        {/* Search Bar */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by kit name or file name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
         <div className="border rounded-lg">
           <Table>
             <TableHeader>
@@ -164,20 +191,20 @@ export default function ViewKitFiles() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {!files ? (
+              {!filteredFiles ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ) : files.length === 0 ? (
+              ) : filteredFiles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No files found
+                    {searchQuery ? "No files match your search" : "No files found"}
                   </TableCell>
                 </TableRow>
               ) : (
-                files.map((file) => (
+                filteredFiles.map((file) => (
                   <TableRow key={file._id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
