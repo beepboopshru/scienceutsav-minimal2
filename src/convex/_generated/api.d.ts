@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as activityLogs from "../activityLogs.js";
+import type * as ai from "../ai.js";
 import type * as assignments from "../assignments.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
@@ -43,6 +44,7 @@ import type * as vendors from "../vendors.js";
  */
 declare const fullApi: ApiFromModules<{
   activityLogs: typeof activityLogs;
+  ai: typeof ai;
   assignments: typeof assignments;
   "auth/emailOtp": typeof auth_emailOtp;
   auth: typeof auth;

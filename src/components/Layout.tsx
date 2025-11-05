@@ -34,9 +34,18 @@ import {
   ChevronDown,
   Beaker,
   TrendingUp,
+  MessageSquare,
+  X,
+  Send,
+  Trash2,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect, useRef } from "react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface LayoutProps {
   children: ReactNode;
@@ -53,10 +62,117 @@ interface NavItem {
   }[];
 }
 
+const CHAT_STORAGE_KEY = "science_utsav_chat_history";
+const CHAT_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface StoredChat {
+  messages: ChatMessage[];
+  timestamp: number;
+}
+
 export function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const sendChat = useAction(api.ai.chat);
+
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (stored) {
+        const parsed: StoredChat = JSON.parse(stored);
+        const now = Date.now();
+        
+        // Check if chat has expired (older than 24 hours)
+        if (now - parsed.timestamp < CHAT_EXPIRY_MS) {
+          setMessages(parsed.messages);
+        } else {
+          // Clear expired chat
+          localStorage.removeItem(CHAT_STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading chat history:", error);
+    }
+  }, []);
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        const toStore: StoredChat = {
+          messages,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+      } catch (error) {
+        console.error("Error saving chat history:", error);
+      }
+    }
+  }, [messages]);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: inputMessage.trim(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputMessage("");
+    setIsLoading(true);
+
+    try {
+      const result = await sendChat({
+        messages: [...messages, userMessage].map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      });
+
+      if (result.success && result.response) {
+        const assistantMessage: ChatMessage = {
+          role: "assistant",
+          content: result.response,
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        toast.error(result.error || "Failed to get AI response");
+        // Remove the user message if AI failed
+        setMessages((prev) => prev.slice(0, -1));
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast.error("Failed to send message. Please try again.");
+      // Remove the user message if request failed
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleClearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+    toast.success("Chat history cleared");
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -342,6 +458,114 @@ export function Layout({ children }: LayoutProps) {
           </header>
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
+
+        {/* AI Chat Button */}
+        <Button
+          onClick={() => setChatOpen(true)}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-40"
+          size="icon"
+        >
+          <MessageSquare className="h-6 w-6" />
+        </Button>
+
+        {/* AI Chat Panel */}
+        {chatOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setChatOpen(false)}
+            />
+
+            {/* Chat Panel */}
+            <div className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-background border-l shadow-xl z-50 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  <h2 className="font-semibold">Chat with AI</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClearChat}
+                    disabled={messages.length === 0}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setChatOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-4">
+                  {messages.length === 0 && (
+                    <div className="text-center text-muted-foreground py-8">
+                      <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm">
+                        Ask me about kits, inventory, stock levels, or assignments!
+                      </p>
+                    </div>
+                  )}
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-lg px-4 py-2">
+                        <p className="text-sm text-muted-foreground">Thinking...</p>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              </ScrollArea>
+
+              {/* Input */}
+              <div className="p-4 border-t">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                  className="flex gap-2"
+                >
+                  <Input
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder="Ask about kits, inventory..."
+                    disabled={isLoading}
+                    className="flex-1"
+                  />
+                  <Button type="submit" size="icon" disabled={isLoading || !inputMessage.trim()}>
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </SidebarProvider>
   );
