@@ -863,15 +863,6 @@ export default function Research() {
                           <Upload className="mr-2 h-4 w-4" />
                           Upload Files
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => handleDownloadKitSheet(kit._id)}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          Download Kit Sheet
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -995,6 +986,15 @@ export default function Research() {
                                   title="Delete Kit"
                                 >
                                   <Trash2 className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDownloadKitSheet(kit._id)}
+                                  title="Download Kit Sheet"
+                                >
+                                  <Download className="h-4 w-4" />
                                 </Button>
                               </>
                             )}

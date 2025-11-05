@@ -27,6 +27,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAction } from "convex/react";
 
 export default function Operations() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -45,6 +46,8 @@ export default function Operations() {
   const [selectedKitShortage, setSelectedKitShortage] = useState<any>(null);
   const [kitShortageDialogOpen, setKitShortageDialogOpen] = useState(false);
   const [procurementScope, setProcurementScope] = useState<"month" | "total">("month");
+
+  const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
 
   // Fetch kit-wise shortages when a program is selected
   const kitWiseShortages = useQuery(
@@ -605,16 +608,43 @@ export default function Operations() {
                               : "-"}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedAssignment(assignment);
-                                setShortageDialogOpen(true);
-                              }}
-                            >
-                              Shortage
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedAssignment(assignment);
+                                  setShortageDialogOpen(true);
+                                }}
+                              >
+                                Shortage
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  try {
+                                    toast.info("Generating kit sheet...");
+                                    const result = await downloadKitSheet({ kitId: assignment.kitId });
+                                    const blob = new Blob([result.html], { type: "text/html" });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    toast.success("Kit sheet downloaded successfully");
+                                  } catch (error) {
+                                    toast.error("Failed to generate kit sheet");
+                                  }
+                                }}
+                                title="Download Kit Sheet"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -662,23 +692,50 @@ export default function Operations() {
                               <Badge variant="secondary">{item.dispatchedQuantity}</Badge>
                             </TableCell>
                             <TableCell>
-                              <Button
-                                size="sm"
-                                variant={hasShortages ? "destructive" : "outline"}
-                                onClick={() => {
-                                  setSelectedKitShortage(item);
-                                  setKitShortageDialogOpen(true);
-                                }}
-                              >
-                                {hasShortages ? (
-                                  <>
-                                    <AlertTriangle className="mr-2 h-4 w-4" />
-                                    Shortage
-                                  </>
-                                ) : (
-                                  "View Materials"
-                                )}
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant={hasShortages ? "destructive" : "outline"}
+                                  onClick={() => {
+                                    setSelectedKitShortage(item);
+                                    setKitShortageDialogOpen(true);
+                                  }}
+                                >
+                                  {hasShortages ? (
+                                    <>
+                                      <AlertTriangle className="mr-2 h-4 w-4" />
+                                      Shortage
+                                    </>
+                                  ) : (
+                                    "View Materials"
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={async () => {
+                                    try {
+                                      toast.info("Generating kit sheet...");
+                                      const result = await downloadKitSheet({ kitId: item.kitId });
+                                      const blob = new Blob([result.html], { type: "text/html" });
+                                      const url = URL.createObjectURL(blob);
+                                      const a = document.createElement("a");
+                                      a.href = url;
+                                      a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
+                                      document.body.appendChild(a);
+                                      a.click();
+                                      document.body.removeChild(a);
+                                      URL.revokeObjectURL(url);
+                                      toast.success("Kit sheet downloaded successfully");
+                                    } catch (error) {
+                                      toast.error("Failed to generate kit sheet");
+                                    }
+                                  }}
+                                  title="Download Kit Sheet"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
