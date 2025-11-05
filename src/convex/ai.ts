@@ -60,7 +60,7 @@ Answer questions about kit availability, inventory levels, stock status, assignm
 
     try {
       const completion: any = await openai.chat.completions.create({
-        model: "anthropic/claude-3-haiku",
+        model: "tngtech/deepseek-r1t2-chimera:free",
         messages: messages,
         max_tokens: 500,
         temperature: 0.7,
