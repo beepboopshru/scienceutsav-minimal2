@@ -13,7 +13,7 @@ export const emailOtp = Email({
     
     try {
       const { data, error } = await resend.emails.send({
-        from: "ScienceUtsav <onboarding@resend.dev>", // Update this to your verified domain
+        from: "ScienceUtsav <no-reply@scienceutsav.com>", // Update this to your verified domain
         to: [email],
         subject: "Your verification code",
         html: `
