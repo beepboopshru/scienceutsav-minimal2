@@ -215,8 +215,12 @@ const schema = defineSchema(
     // Material processing jobs
     processingJobs: defineTable({
       name: v.string(),
-      sourceItemId: v.id("inventory"),
-      sourceQuantity: v.number(),
+      sources: v.array(
+        v.object({
+          sourceItemId: v.id("inventory"),
+          sourceQuantity: v.number(),
+        })
+      ),
       targets: v.array(
         v.object({
           targetItemId: v.id("inventory"),
@@ -235,7 +239,6 @@ const schema = defineSchema(
       createdBy: v.id("users"),
     })
       .index("by_status", ["status"])
-      .index("by_source_item", ["sourceItemId"])
       .index("by_created_by", ["createdBy"]),
 
     // Vendor purchase bills

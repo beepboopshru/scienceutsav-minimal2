@@ -36,8 +36,12 @@ export const getByStatus = query({
 export const create = mutation({
   args: {
     name: v.string(),
-    sourceItemId: v.id("inventory"),
-    sourceQuantity: v.number(),
+    sources: v.array(
+      v.object({
+        sourceItemId: v.id("inventory"),
+        sourceQuantity: v.number(),
+      })
+    ),
     targets: v.array(
       v.object({
         targetItemId: v.id("inventory"),
@@ -52,16 +56,18 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Reserve source material
-    const sourceItem = await ctx.db.get(args.sourceItemId);
-    if (!sourceItem) throw new Error("Source item not found");
-    if (sourceItem.quantity < args.sourceQuantity) {
-      throw new Error("Insufficient source material quantity");
-    }
+    // Reserve all source materials
+    for (const source of args.sources) {
+      const sourceItem = await ctx.db.get(source.sourceItemId);
+      if (!sourceItem) throw new Error(`Source item not found: ${source.sourceItemId}`);
+      if (sourceItem.quantity < source.sourceQuantity) {
+        throw new Error(`Insufficient quantity for ${sourceItem.name}`);
+      }
 
-    await ctx.db.patch(args.sourceItemId, {
-      quantity: sourceItem.quantity - args.sourceQuantity,
-    });
+      await ctx.db.patch(source.sourceItemId, {
+        quantity: sourceItem.quantity - source.sourceQuantity,
+      });
+    }
 
     return await ctx.db.insert("processingJobs", {
       ...args,
@@ -115,12 +121,14 @@ export const cancel = mutation({
       throw new Error("Cannot cancel completed job");
     }
 
-    // Return source material to inventory
-    const sourceItem = await ctx.db.get(job.sourceItemId);
-    if (sourceItem) {
-      await ctx.db.patch(job.sourceItemId, {
-        quantity: sourceItem.quantity + job.sourceQuantity,
-      });
+    // Return all source materials to inventory
+    for (const source of job.sources) {
+      const sourceItem = await ctx.db.get(source.sourceItemId);
+      if (sourceItem) {
+        await ctx.db.patch(source.sourceItemId, {
+          quantity: sourceItem.quantity + source.sourceQuantity,
+        });
+      }
     }
 
     await ctx.db.delete(args.id);
@@ -136,13 +144,15 @@ export const remove = mutation({
     const job = await ctx.db.get(args.id);
     if (!job) throw new Error("Processing job not found");
 
-    // If job is not completed, return source material
+    // If job is not completed, return all source materials
     if (job.status === "in_progress") {
-      const sourceItem = await ctx.db.get(job.sourceItemId);
-      if (sourceItem) {
-        await ctx.db.patch(job.sourceItemId, {
-          quantity: sourceItem.quantity + job.sourceQuantity,
-        });
+      for (const source of job.sources) {
+        const sourceItem = await ctx.db.get(source.sourceItemId);
+        if (sourceItem) {
+          await ctx.db.patch(source.sourceItemId, {
+            quantity: sourceItem.quantity + source.sourceQuantity,
+          });
+        }
       }
     }
 

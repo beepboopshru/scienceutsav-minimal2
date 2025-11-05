@@ -35,8 +35,7 @@ export default function ProcessingJobs() {
   const [preProcessingOpen, setPreProcessingOpen] = useState(false);
   const [processingForm, setProcessingForm] = useState({
     name: "",
-    sourceItemId: "" as Id<"inventory">,
-    sourceQuantity: 0,
+    sources: [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
     targets: [{ targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
     processedBy: "",
     processedByType: "in_house" as "vendor" | "service" | "in_house",
@@ -104,8 +103,7 @@ export default function ProcessingJobs() {
     try {
       const jobData: any = {
         name: processingForm.name,
-        sourceItemId: processingForm.sourceItemId,
-        sourceQuantity: processingForm.sourceQuantity,
+        sources: processingForm.sources,
         targets: processingForm.targets,
       };
       
@@ -124,8 +122,7 @@ export default function ProcessingJobs() {
       setPreProcessingOpen(false);
       setProcessingForm({
         name: "",
-        sourceItemId: "" as Id<"inventory">,
-        sourceQuantity: 0,
+        sources: [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
         targets: [{ targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
         processedBy: "",
         processedByType: "in_house",
@@ -153,10 +150,14 @@ export default function ProcessingJobs() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <p className="text-sm font-medium mb-2">Source Material</p>
-          <div className="flex items-center gap-2 text-sm">
-            <span>{getItemName(job.sourceItemId)}</span>
-            <span className="text-muted-foreground">× {job.sourceQuantity}</span>
+          <p className="text-sm font-medium mb-2">Source Materials</p>
+          <div className="space-y-2">
+            {job.sources.map((source: any, index: number) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <span>{getItemName(source.sourceItemId)}</span>
+                <span className="text-muted-foreground">× {source.sourceQuantity}</span>
+              </div>
+            ))}
           </div>
         </div>
         
@@ -247,38 +248,75 @@ export default function ProcessingJobs() {
                       />
                     </div>
                     <Separator />
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Source Material</Label>
-                        <Select
-                          value={processingForm.sourceItemId}
-                          onValueChange={(value: any) => setProcessingForm({ ...processingForm, sourceItemId: value })}
+                    <Label>Source Materials</Label>
+                    {processingForm.sources.map((source, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
+                        <div className="space-y-2">
+                          <Select
+                            value={source.sourceItemId}
+                            onValueChange={(value: any) => {
+                              const newSources = [...processingForm.sources];
+                              newSources[index].sourceItemId = value;
+                              setProcessingForm({ ...processingForm, sources: newSources });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select source" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inventory?.filter((item) => item.type === "raw").map((item) => (
+                                <SelectItem key={item._id} value={item._id}>
+                                  {item.name} ({item.quantity} {item.unit})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            placeholder="Quantity"
+                            value={source.sourceQuantity}
+                            onChange={(e) => {
+                              const newSources = [...processingForm.sources];
+                              newSources[index].sourceQuantity = Number(e.target.value);
+                              setProcessingForm({ ...processingForm, sources: newSources });
+                            }}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newSources = processingForm.sources.filter((_, i) => i !== index);
+                            if (newSources.length > 0) {
+                              setProcessingForm({ ...processingForm, sources: newSources });
+                            }
+                          }}
+                          disabled={processingForm.sources.length === 1}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select source" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {inventory?.filter((item) => item.type === "raw").map((item) => (
-                              <SelectItem key={item._id} value={item._id}>
-                                {item.name} ({item.quantity} {item.unit})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <XCircle className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Source Quantity</Label>
-                        <Input
-                          type="number"
-                          value={processingForm.sourceQuantity}
-                          onChange={(e) => setProcessingForm({ ...processingForm, sourceQuantity: Number(e.target.value) })}
-                        />
-                      </div>
-                    </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setProcessingForm({
+                          ...processingForm,
+                          sources: [...processingForm.sources, { sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
+                        })
+                      }
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Source
+                    </Button>
                     <Separator />
                     <Label>Target Items</Label>
                     {processingForm.targets.map((target, index) => (
-                      <div key={index} className="grid grid-cols-2 gap-4">
+                      <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
                         <div className="space-y-2">
                           <Select
                             value={target.targetItemId}
@@ -312,6 +350,20 @@ export default function ProcessingJobs() {
                             }}
                           />
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const newTargets = processingForm.targets.filter((_, i) => i !== index);
+                            if (newTargets.length > 0) {
+                              setProcessingForm({ ...processingForm, targets: newTargets });
+                            }
+                          }}
+                          disabled={processingForm.targets.length === 1}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
                     <Button
