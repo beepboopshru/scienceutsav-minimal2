@@ -162,8 +162,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarHeader className="border-b border-border">
-            <div className="flex items-center gap-2 px-2 py-2">
-              <LogoDropdown />
+            <div className="flex items-center gap-2 px-4 py-3">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold tracking-tight">
                   ScienceUtsav
