@@ -505,8 +505,8 @@ export function Layout({ children }: LayoutProps) {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
+              <ScrollArea className="flex-1 p-4 h-full">
+                <div className="space-y-4 pb-4">
                   {messages.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
                       <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
