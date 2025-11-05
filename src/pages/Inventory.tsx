@@ -10,11 +10,8 @@ import {
   Plus, 
   Search, 
   AlertTriangle,
-  Package,
   FileText,
   Settings,
-  Info,
-  Scissors,
   Upload,
   Trash2
 } from "lucide-react";
@@ -38,8 +35,6 @@ export default function Inventory() {
   const inventory = useQuery(api.inventory.list);
   const categories = useQuery(api.inventoryCategories.list, {});
   const vendors = useQuery(api.vendors.list);
-  const services = useQuery(api.services.list);
-  const kits = useQuery(api.kits.list);
   
   const createItem = useMutation(api.inventory.create);
   const updateItem = useMutation(api.inventory.update);
@@ -47,7 +42,6 @@ export default function Inventory() {
   const removeItem = useMutation(api.inventory.remove);
   const createCategory = useMutation(api.inventoryCategories.create);
   const removeCategory = useMutation(api.inventoryCategories.remove);
-  const createProcessingJob = useMutation(api.processingJobs.create);
   const createVendorImport = useMutation(api.vendorImports.create);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,7 +53,6 @@ export default function Inventory() {
   // Dialog states
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editItemOpen, setEditItemOpen] = useState(false);
-  const [preProcessingOpen, setPreProcessingOpen] = useState(false);
   const [billImportOpen, setBillImportOpen] = useState(false);
   const [categoryManagementOpen, setCategoryManagementOpen] = useState(false);
   const [vendorInfoOpen, setVendorInfoOpen] = useState(false);
@@ -185,34 +178,6 @@ export default function Inventory() {
     }
   };
 
-  const handleCreateProcessingJob = async () => {
-    try {
-      const jobData: any = {
-        name: processingForm.name,
-        sourceItemId: processingForm.sourceItemId,
-        sourceQuantity: processingForm.sourceQuantity,
-        targets: processingForm.targets,
-      };
-      
-      if (processingForm.processedBy) {
-        jobData.processedBy = processingForm.processedBy;
-      }
-      if (processingForm.processedByType) {
-        jobData.processedByType = processingForm.processedByType;
-      }
-      if (processingForm.notes) {
-        jobData.notes = processingForm.notes;
-      }
-      
-      await createProcessingJob(jobData);
-      toast.success("Processing job created");
-      setPreProcessingOpen(false);
-      navigate("/inventory/processing-jobs");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create processing job");
-    }
-  };
-
   const handleBillImport = async () => {
     try {
       const totalAmount = billForm.items.reduce(
@@ -280,7 +245,6 @@ export default function Inventory() {
             </div>
             <div className="flex gap-2">
               <Button onClick={() => navigate("/inventory/processing-jobs")} variant="outline">
-                <Scissors className="mr-2 h-4 w-4" />
                 Processing Jobs
               </Button>
               <Button onClick={() => navigate("/inventory/bill-records")} variant="outline">
@@ -408,161 +372,6 @@ export default function Inventory() {
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancel</Button>
                   <Button onClick={handleAddItem}>Add Item</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={preProcessingOpen} onOpenChange={setPreProcessingOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Scissors className="mr-2 h-4 w-4" />
-                  Start Pre-Processing
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Create Processing Job</DialogTitle>
-                  <DialogDescription>Transform raw materials into pre-processed items</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Job Name</Label>
-                    <Input
-                      value={processingForm.name}
-                      onChange={(e) => setProcessingForm({ ...processingForm, name: e.target.value })}
-                    />
-                  </div>
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Source Material</Label>
-                      <Select
-                        value={processingForm.sourceItemId}
-                        onValueChange={(value: any) => setProcessingForm({ ...processingForm, sourceItemId: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select source" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {inventory?.filter((item) => item.type === "raw").map((item) => (
-                            <SelectItem key={item._id} value={item._id}>
-                              {item.name} ({item.quantity} {item.unit})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Source Quantity</Label>
-                      <Input
-                        type="number"
-                        value={processingForm.sourceQuantity}
-                        onChange={(e) => setProcessingForm({ ...processingForm, sourceQuantity: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-                  <Separator />
-                  <Label>Target Items</Label>
-                  {processingForm.targets.map((target, index) => (
-                    <div key={index} className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Select
-                          value={target.targetItemId}
-                          onValueChange={(value: any) => {
-                            const newTargets = [...processingForm.targets];
-                            newTargets[index].targetItemId = value;
-                            setProcessingForm({ ...processingForm, targets: newTargets });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select target" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {inventory?.filter((item) => item.type === "pre_processed").map((item) => (
-                              <SelectItem key={item._id} value={item._id}>
-                                {item.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Input
-                          type="number"
-                          placeholder="Quantity"
-                          value={target.targetQuantity}
-                          onChange={(e) => {
-                            const newTargets = [...processingForm.targets];
-                            newTargets[index].targetQuantity = Number(e.target.value);
-                            setProcessingForm({ ...processingForm, targets: newTargets });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setProcessingForm({
-                        ...processingForm,
-                        targets: [...processingForm.targets, { targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
-                      })
-                    }
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Target
-                  </Button>
-                  <Separator />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Processed By Type</Label>
-                      <Select
-                        value={processingForm.processedByType}
-                        onValueChange={(value: any) => setProcessingForm({ ...processingForm, processedByType: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="in_house">In-House</SelectItem>
-                          <SelectItem value="vendor">Vendor</SelectItem>
-                          <SelectItem value="service">Service</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {processingForm.processedByType !== "in_house" && (
-                      <div className="space-y-2">
-                        <Label>Select {processingForm.processedByType === "vendor" ? "Vendor" : "Service"}</Label>
-                        <Select
-                          value={processingForm.processedBy}
-                          onValueChange={(value) => setProcessingForm({ ...processingForm, processedBy: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={`Select ${processingForm.processedByType}`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(processingForm.processedByType === "vendor" ? vendors : services)?.map((item) => (
-                              <SelectItem key={item._id} value={item._id}>
-                                {item.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={processingForm.notes}
-                      onChange={(e) => setProcessingForm({ ...processingForm, notes: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setPreProcessingOpen(false)}>Cancel</Button>
-                  <Button onClick={handleCreateProcessingJob}>Create Job</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

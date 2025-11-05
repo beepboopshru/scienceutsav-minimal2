@@ -5,13 +5,19 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function ProcessingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -24,6 +30,18 @@ export default function ProcessingJobs() {
   
   const completeJob = useMutation(api.processingJobs.complete);
   const cancelJob = useMutation(api.processingJobs.cancel);
+  const createProcessingJob = useMutation(api.processingJobs.create);
+
+  const [preProcessingOpen, setPreProcessingOpen] = useState(false);
+  const [processingForm, setProcessingForm] = useState({
+    name: "",
+    sourceItemId: "" as Id<"inventory">,
+    sourceQuantity: 0,
+    targets: [{ targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
+    processedBy: "",
+    processedByType: "in_house" as "vendor" | "service" | "in_house",
+    notes: "",
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -79,6 +97,42 @@ export default function ProcessingJobs() {
       toast.success("Job cancelled and materials returned");
     } catch (error: any) {
       toast.error(error.message || "Failed to cancel job");
+    }
+  };
+
+  const handleCreateProcessingJob = async () => {
+    try {
+      const jobData: any = {
+        name: processingForm.name,
+        sourceItemId: processingForm.sourceItemId,
+        sourceQuantity: processingForm.sourceQuantity,
+        targets: processingForm.targets,
+      };
+      
+      if (processingForm.processedBy) {
+        jobData.processedBy = processingForm.processedBy;
+      }
+      if (processingForm.processedByType) {
+        jobData.processedByType = processingForm.processedByType;
+      }
+      if (processingForm.notes) {
+        jobData.notes = processingForm.notes;
+      }
+      
+      await createProcessingJob(jobData);
+      toast.success("Processing job created");
+      setPreProcessingOpen(false);
+      setProcessingForm({
+        name: "",
+        sourceItemId: "" as Id<"inventory">,
+        sourceQuantity: 0,
+        targets: [{ targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
+        processedBy: "",
+        processedByType: "in_house",
+        notes: "",
+      });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create processing job");
     }
   };
 
@@ -171,9 +225,165 @@ export default function ProcessingJobs() {
                 Track material transformation and processing
               </p>
             </div>
-            <Button onClick={() => navigate("/inventory")} variant="outline">
-              Back to Inventory
-            </Button>
+            <div className="flex gap-2">
+              <Dialog open={preProcessingOpen} onOpenChange={setPreProcessingOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Scissors className="mr-2 h-4 w-4" />
+                    Start Pre-Processing
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Create Processing Job</DialogTitle>
+                    <DialogDescription>Transform raw materials into pre-processed items</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Job Name</Label>
+                      <Input
+                        value={processingForm.name}
+                        onChange={(e) => setProcessingForm({ ...processingForm, name: e.target.value })}
+                      />
+                    </div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Source Material</Label>
+                        <Select
+                          value={processingForm.sourceItemId}
+                          onValueChange={(value: any) => setProcessingForm({ ...processingForm, sourceItemId: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {inventory?.filter((item) => item.type === "raw").map((item) => (
+                              <SelectItem key={item._id} value={item._id}>
+                                {item.name} ({item.quantity} {item.unit})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Source Quantity</Label>
+                        <Input
+                          type="number"
+                          value={processingForm.sourceQuantity}
+                          onChange={(e) => setProcessingForm({ ...processingForm, sourceQuantity: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+                    <Separator />
+                    <Label>Target Items</Label>
+                    {processingForm.targets.map((target, index) => (
+                      <div key={index} className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Select
+                            value={target.targetItemId}
+                            onValueChange={(value: any) => {
+                              const newTargets = [...processingForm.targets];
+                              newTargets[index].targetItemId = value;
+                              setProcessingForm({ ...processingForm, targets: newTargets });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select target" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {inventory?.filter((item) => item.type === "pre_processed").map((item) => (
+                                <SelectItem key={item._id} value={item._id}>
+                                  {item.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            placeholder="Quantity"
+                            value={target.targetQuantity}
+                            onChange={(e) => {
+                              const newTargets = [...processingForm.targets];
+                              newTargets[index].targetQuantity = Number(e.target.value);
+                              setProcessingForm({ ...processingForm, targets: newTargets });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setProcessingForm({
+                          ...processingForm,
+                          targets: [...processingForm.targets, { targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
+                        })
+                      }
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Target
+                    </Button>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Processed By Type</Label>
+                        <Select
+                          value={processingForm.processedByType}
+                          onValueChange={(value: any) => setProcessingForm({ ...processingForm, processedByType: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in_house">In-House</SelectItem>
+                            <SelectItem value="vendor">Vendor</SelectItem>
+                            <SelectItem value="service">Service</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {processingForm.processedByType !== "in_house" && (
+                        <div className="space-y-2">
+                          <Label>Select {processingForm.processedByType === "vendor" ? "Vendor" : "Service"}</Label>
+                          <Select
+                            value={processingForm.processedBy}
+                            onValueChange={(value) => setProcessingForm({ ...processingForm, processedBy: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={`Select ${processingForm.processedByType}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(processingForm.processedByType === "vendor" ? vendors : services)?.map((item) => (
+                                <SelectItem key={item._id} value={item._id}>
+                                  {item.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={processingForm.notes}
+                        onChange={(e) => setProcessingForm({ ...processingForm, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setPreProcessingOpen(false)}>Cancel</Button>
+                    <Button onClick={handleCreateProcessingJob}>Create Job</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button onClick={() => navigate("/inventory")} variant="outline">
+                Back to Inventory
+              </Button>
+            </div>
           </div>
 
           <Tabs defaultValue="active" className="space-y-6">
