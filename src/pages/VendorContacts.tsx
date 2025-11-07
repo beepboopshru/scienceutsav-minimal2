@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, Plus, Search, Contact, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Search, Contact, Edit, Trash2, X, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export default function VendorContacts() {
   const [addVendorOpen, setAddVendorOpen] = useState(false);
   const [editVendorOpen, setEditVendorOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [itemSearchTerm, setItemSearchTerm] = useState("");
 
   const [vendorForm, setVendorForm] = useState({
     name: "",
@@ -42,6 +43,8 @@ export default function VendorContacts() {
     address: "",
     gstn: "",
     notes: "",
+    inventoryItems: [] as Id<"inventory">[],
+    itemPrices: [] as Array<{ itemId: Id<"inventory">; averagePrice: number }>,
   });
 
   useEffect(() => {
@@ -67,6 +70,11 @@ export default function VendorContacts() {
     vendor.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredInventoryItems = inventory?.filter((item) =>
+    item.name.toLowerCase().includes(itemSearchTerm.toLowerCase()) &&
+    !vendorForm.inventoryItems.includes(item._id)
+  ) || [];
+
   const handleAddVendor = async () => {
     try {
       await createVendor(vendorForm);
@@ -81,7 +89,10 @@ export default function VendorContacts() {
         address: "",
         gstn: "",
         notes: "",
+        inventoryItems: [],
+        itemPrices: [],
       });
+      setItemSearchTerm("");
     } catch (error: any) {
       toast.error(error.message || "Failed to add vendor");
     }
@@ -94,6 +105,7 @@ export default function VendorContacts() {
       toast.success("Vendor updated successfully");
       setEditVendorOpen(false);
       setSelectedVendor(null);
+      setItemSearchTerm("");
     } catch (error: any) {
       toast.error(error.message || "Failed to update vendor");
     }
@@ -110,6 +122,8 @@ export default function VendorContacts() {
       address: vendor.address || "",
       gstn: vendor.gstn || "",
       notes: vendor.notes || "",
+      inventoryItems: vendor.inventoryItems || [],
+      itemPrices: vendor.itemPrices || [],
     });
     setEditVendorOpen(true);
   };
@@ -123,6 +137,217 @@ export default function VendorContacts() {
       toast.error(error.message || "Failed to delete vendor");
     }
   };
+
+  const handleAddItemToVendor = (itemId: Id<"inventory">) => {
+    setVendorForm({
+      ...vendorForm,
+      inventoryItems: [...vendorForm.inventoryItems, itemId],
+      itemPrices: [...vendorForm.itemPrices, { itemId, averagePrice: 0 }],
+    });
+    setItemSearchTerm("");
+  };
+
+  const handleRemoveItemFromVendor = (itemId: Id<"inventory">) => {
+    setVendorForm({
+      ...vendorForm,
+      inventoryItems: vendorForm.inventoryItems.filter(id => id !== itemId),
+      itemPrices: vendorForm.itemPrices.filter(p => p.itemId !== itemId),
+    });
+  };
+
+  const handleUpdateItemPrice = (itemId: Id<"inventory">, price: number) => {
+    const updatedPrices = vendorForm.itemPrices.map(p =>
+      p.itemId === itemId ? { ...p, averagePrice: price } : p
+    );
+    setVendorForm({ ...vendorForm, itemPrices: updatedPrices });
+  };
+
+  const getItemById = (itemId: Id<"inventory">) => {
+    return inventory?.find(item => item._id === itemId);
+  };
+
+  const getItemPrice = (itemId: Id<"inventory">) => {
+    return vendorForm.itemPrices.find(p => p.itemId === itemId)?.averagePrice || 0;
+  };
+
+  const renderVendorFormDialog = (isEdit: boolean) => (
+    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle>{isEdit ? "Edit Vendor Contact" : "Add Vendor Contact"}</DialogTitle>
+        <DialogDescription>{isEdit ? "Update vendor information" : "Create a new vendor record"}</DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Vendor Name *</Label>
+            <Input
+              value={vendorForm.name}
+              onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
+              placeholder="ABC Suppliers"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Organization</Label>
+            <Input
+              value={vendorForm.organization}
+              onChange={(e) => setVendorForm({ ...vendorForm, organization: e.target.value })}
+              placeholder="ABC Pvt Ltd"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Contact Person</Label>
+            <Input
+              value={vendorForm.contactPerson}
+              onChange={(e) => setVendorForm({ ...vendorForm, contactPerson: e.target.value })}
+              placeholder="John Doe"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Phone</Label>
+            <Input
+              value={vendorForm.phone}
+              onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
+              placeholder="+91 98765 43210"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Email</Label>
+            <Input
+              type="email"
+              value={vendorForm.email}
+              onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
+              placeholder="contact@abcsuppliers.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>GSTN</Label>
+            <Input
+              value={vendorForm.gstn}
+              onChange={(e) => setVendorForm({ ...vendorForm, gstn: e.target.value })}
+              placeholder="22AAAAA0000A1Z5"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label>Address</Label>
+          <Textarea
+            value={vendorForm.address}
+            onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
+            placeholder="Street, City, State, PIN"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Notes</Label>
+          <Textarea
+            value={vendorForm.notes}
+            onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })}
+            placeholder="Payment terms, quality notes, etc."
+          />
+        </div>
+
+        <Separator className="my-2" />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-base">Inventory Items & Pricing</Label>
+            <Badge variant="secondary">{vendorForm.inventoryItems.length} items</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Associate inventory items with this vendor and set average prices
+          </p>
+
+          <div className="space-y-2">
+            <Label>Search & Add Items</Label>
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search inventory items..."
+                value={itemSearchTerm}
+                onChange={(e) => setItemSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            {itemSearchTerm && filteredInventoryItems.length > 0 && (
+              <div className="border rounded-md max-h-40 overflow-y-auto">
+                {filteredInventoryItems.slice(0, 10).map((item) => (
+                  <div
+                    key={item._id}
+                    className="p-2 hover:bg-accent cursor-pointer flex items-center justify-between"
+                    onClick={() => handleAddItemToVendor(item._id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{item.name}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : "Finished"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {vendorForm.inventoryItems.length > 0 && (
+            <div className="space-y-2 border rounded-md p-3">
+              <Label className="text-sm">Added Items</Label>
+              <div className="space-y-2">
+                {vendorForm.inventoryItems.map((itemId) => {
+                  const item = getItemById(itemId);
+                  if (!item) return null;
+                  return (
+                    <div key={itemId} className="flex items-center gap-2 p-2 border rounded">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.unit}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm text-muted-foreground">₹</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={getItemPrice(itemId) || ""}
+                            onChange={(e) => handleUpdateItemPrice(itemId, Number(e.target.value))}
+                            className="w-24 h-8 text-sm"
+                          />
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveItemFromVendor(itemId)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => {
+          if (isEdit) {
+            setEditVendorOpen(false);
+          } else {
+            setAddVendorOpen(false);
+          }
+          setItemSearchTerm("");
+        }}>Cancel</Button>
+        <Button onClick={isEdit ? handleEditVendor : handleAddVendor}>
+          {isEdit ? "Save Changes" : "Add Vendor"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
 
   return (
     <Layout>
@@ -146,89 +371,7 @@ export default function VendorContacts() {
                   Add Vendor
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add Vendor Contact</DialogTitle>
-                  <DialogDescription>Create a new vendor record</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Vendor Name *</Label>
-                      <Input
-                        value={vendorForm.name}
-                        onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
-                        placeholder="ABC Suppliers"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Organization</Label>
-                      <Input
-                        value={vendorForm.organization}
-                        onChange={(e) => setVendorForm({ ...vendorForm, organization: e.target.value })}
-                        placeholder="ABC Pvt Ltd"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Contact Person</Label>
-                      <Input
-                        value={vendorForm.contactPerson}
-                        onChange={(e) => setVendorForm({ ...vendorForm, contactPerson: e.target.value })}
-                        placeholder="John Doe"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Phone</Label>
-                      <Input
-                        value={vendorForm.phone}
-                        onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
-                        placeholder="+91 98765 43210"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Email</Label>
-                      <Input
-                        type="email"
-                        value={vendorForm.email}
-                        onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
-                        placeholder="contact@abcsuppliers.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>GSTN</Label>
-                      <Input
-                        value={vendorForm.gstn}
-                        onChange={(e) => setVendorForm({ ...vendorForm, gstn: e.target.value })}
-                        placeholder="22AAAAA0000A1Z5"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Address</Label>
-                    <Textarea
-                      value={vendorForm.address}
-                      onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
-                      placeholder="Street, City, State, PIN"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Notes</Label>
-                    <Textarea
-                      value={vendorForm.notes}
-                      onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })}
-                      placeholder="Payment terms, quality notes, etc."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setAddVendorOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddVendor}>Add Vendor</Button>
-                </DialogFooter>
-              </DialogContent>
+              {renderVendorFormDialog(false)}
             </Dialog>
           </div>
 
@@ -303,6 +446,38 @@ export default function VendorContacts() {
                       </div>
                     </>
                   )}
+
+                  {vendor.inventoryItems && vendor.inventoryItems.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Inventory Items & Pricing</Label>
+                          <Badge variant="secondary" className="text-xs">
+                            {vendor.inventoryItems.length} items
+                          </Badge>
+                        </div>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                          {vendor.inventoryItems.map((itemId: Id<"inventory">) => {
+                            const item = inventory?.find(i => i._id === itemId);
+                            const priceInfo = vendor.itemPrices?.find((p: any) => p.itemId === itemId);
+                            if (!item) return null;
+                            return (
+                              <div key={itemId} className="flex items-center justify-between text-sm p-2 bg-accent/50 rounded">
+                                <span className="font-medium">{item.name}</span>
+                                {priceInfo && priceInfo.averagePrice > 0 ? (
+                                  <Badge variant="outline">₹{priceInfo.averagePrice.toFixed(2)}</Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">No price</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   {vendor.notes && (
                     <>
                       <Separator />
@@ -329,81 +504,7 @@ export default function VendorContacts() {
           )}
 
           <Dialog open={editVendorOpen} onOpenChange={setEditVendorOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Vendor Contact</DialogTitle>
-                <DialogDescription>Update vendor information</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Vendor Name *</Label>
-                    <Input
-                      value={vendorForm.name}
-                      onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Organization</Label>
-                    <Input
-                      value={vendorForm.organization}
-                      onChange={(e) => setVendorForm({ ...vendorForm, organization: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Contact Person</Label>
-                    <Input
-                      value={vendorForm.contactPerson}
-                      onChange={(e) => setVendorForm({ ...vendorForm, contactPerson: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Phone</Label>
-                    <Input
-                      value={vendorForm.phone}
-                      onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      value={vendorForm.email}
-                      onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>GSTN</Label>
-                    <Input
-                      value={vendorForm.gstn}
-                      onChange={(e) => setVendorForm({ ...vendorForm, gstn: e.target.value })}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Textarea
-                    value={vendorForm.address}
-                    onChange={(e) => setVendorForm({ ...vendorForm, address: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={vendorForm.notes}
-                    onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditVendorOpen(false)}>Cancel</Button>
-                <Button onClick={handleEditVendor}>Save Changes</Button>
-              </DialogFooter>
-            </DialogContent>
+            {renderVendorFormDialog(true)}
           </Dialog>
         </motion.div>
       </div>
