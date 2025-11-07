@@ -64,9 +64,7 @@ export default function Inventory() {
   const [bomViewerOpen, setBomViewerOpen] = useState(false);
 
   const getVendorsForItem = useQuery(
-    selectedItemForVendors && !selectedItemForVendors.isKitPacket
-      ? api.vendors.getVendorsForItem
-      : (undefined as any),
+    api.vendors.getVendorsForItem,
     selectedItemForVendors && !selectedItemForVendors.isKitPacket
       ? { itemId: selectedItemForVendors._id }
       : "skip"
