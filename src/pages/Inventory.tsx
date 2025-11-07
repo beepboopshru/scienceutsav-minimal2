@@ -53,14 +53,24 @@ export default function Inventory() {
   const [tempQuantity, setTempQuantity] = useState<number>(0);
   const [viewPacketOpen, setViewPacketOpen] = useState(false);
   const [selectedPacket, setSelectedPacket] = useState<any>(null);
+  const [vendorInfoOpen, setVendorInfoOpen] = useState(false);
+  const [selectedItemForVendors, setSelectedItemForVendors] = useState<any>(null);
 
   // Dialog states
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editItemOpen, setEditItemOpen] = useState(false);
   const [billImportOpen, setBillImportOpen] = useState(false);
   const [categoryManagementOpen, setCategoryManagementOpen] = useState(false);
-  const [vendorInfoOpen, setVendorInfoOpen] = useState(false);
   const [bomViewerOpen, setBomViewerOpen] = useState(false);
+
+  const getVendorsForItem = useQuery(
+    selectedItemForVendors && !selectedItemForVendors.isKitPacket
+      ? api.vendors.getVendorsForItem
+      : (undefined as any),
+    selectedItemForVendors && !selectedItemForVendors.isKitPacket
+      ? { itemId: selectedItemForVendors._id }
+      : "skip"
+  );
 
   // Form states
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -712,6 +722,7 @@ export default function Inventory() {
                     <TableHead>Unit</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Vendor Info</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -771,6 +782,20 @@ export default function Inventory() {
                           </Badge>
                         ) : (
                           <Badge variant="secondary">In Stock</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {!item.isKitPacket && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedItemForVendors(item);
+                              setVendorInfoOpen(true);
+                            }}
+                          >
+                            View
+                          </Button>
                         )}
                       </TableCell>
                       <TableCell>
@@ -915,6 +940,102 @@ export default function Inventory() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setEditItemOpen(false)}>Cancel</Button>
                 <Button onClick={handleEditItem}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Vendor Info Dialog */}
+          <Dialog open={vendorInfoOpen} onOpenChange={setVendorInfoOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Vendor Information</DialogTitle>
+                <DialogDescription>
+                  {selectedItemForVendors?.name && `Vendors supplying: ${selectedItemForVendors.name}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {getVendorsForItem === undefined ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : getVendorsForItem && getVendorsForItem.length > 0 ? (
+                  <div className="space-y-3">
+                    {getVendorsForItem.map((vendor: any) => {
+                      const priceInfo = vendor.itemPrices?.find(
+                        (p: any) => p.itemId === selectedItemForVendors?._id
+                      );
+                      return (
+                        <Card key={vendor._id}>
+                          <CardContent className="pt-6">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <h3 className="font-semibold text-lg">{vendor.name}</h3>
+                                  {vendor.organization && (
+                                    <p className="text-sm text-muted-foreground">{vendor.organization}</p>
+                                  )}
+                                </div>
+                                {priceInfo && (
+                                  <Badge variant="secondary" className="text-base">
+                                    ₹{priceInfo.averagePrice.toFixed(2)}
+                                  </Badge>
+                                )}
+                              </div>
+                              <Separator />
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                {vendor.contactPerson && (
+                                  <div>
+                                    <span className="text-muted-foreground">Contact: </span>
+                                    <span>{vendor.contactPerson}</span>
+                                  </div>
+                                )}
+                                {vendor.phone && (
+                                  <div>
+                                    <span className="text-muted-foreground">Phone: </span>
+                                    <span>{vendor.phone}</span>
+                                  </div>
+                                )}
+                                {vendor.email && (
+                                  <div>
+                                    <span className="text-muted-foreground">Email: </span>
+                                    <span>{vendor.email}</span>
+                                  </div>
+                                )}
+                                {vendor.gstn && (
+                                  <div>
+                                    <span className="text-muted-foreground">GSTN: </span>
+                                    <span>{vendor.gstn}</span>
+                                  </div>
+                                )}
+                              </div>
+                              {vendor.address && (
+                                <>
+                                  <Separator />
+                                  <div className="text-sm">
+                                    <span className="text-muted-foreground">Address: </span>
+                                    <span>{vendor.address}</span>
+                                  </div>
+                                </>
+                              )}
+                              {!priceInfo && (
+                                <div className="text-sm text-muted-foreground italic">
+                                  No price information available
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No vendors associated with this item
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setVendorInfoOpen(false)}>Close</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
