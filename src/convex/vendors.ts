@@ -27,6 +27,10 @@ export const create = mutation({
     gstn: v.optional(v.string()),
     notes: v.optional(v.string()),
     inventoryItems: v.optional(v.array(v.id("inventory"))),
+    itemPrices: v.optional(v.array(v.object({
+      itemId: v.id("inventory"),
+      averagePrice: v.number(),
+    }))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -34,7 +38,7 @@ export const create = mutation({
 
     return await ctx.db.insert("vendors", {
       ...args,
-      itemPrices: [],
+      itemPrices: args.itemPrices || [],
       createdBy: userId,
     });
   },
@@ -52,6 +56,10 @@ export const update = mutation({
     gstn: v.optional(v.string()),
     notes: v.optional(v.string()),
     inventoryItems: v.optional(v.array(v.id("inventory"))),
+    itemPrices: v.optional(v.array(v.object({
+      itemId: v.id("inventory"),
+      averagePrice: v.number(),
+    }))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
