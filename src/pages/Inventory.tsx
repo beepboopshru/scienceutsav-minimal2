@@ -13,7 +13,8 @@ import {
   FileText,
   Settings,
   Upload,
-  Trash2
+  Trash2,
+  Package
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ export default function Inventory() {
   const inventory = useQuery(api.inventory.list);
   const categories = useQuery(api.inventoryCategories.list, {});
   const vendors = useQuery(api.vendors.list);
+  const kits = useQuery(api.kits.list);
   
   const createItem = useMutation(api.inventory.create);
   const updateItem = useMutation(api.inventory.update);
@@ -49,6 +51,8 @@ export default function Inventory() {
   const [filterSubcategory, setFilterSubcategory] = useState<string>("all");
   const [editingQuantity, setEditingQuantity] = useState<Id<"inventory"> | null>(null);
   const [tempQuantity, setTempQuantity] = useState<number>(0);
+  const [viewPacketOpen, setViewPacketOpen] = useState(false);
+  const [selectedPacket, setSelectedPacket] = useState<any>(null);
 
   // Dialog states
   const [addItemOpen, setAddItemOpen] = useState(false);
@@ -112,8 +116,45 @@ export default function Inventory() {
     );
   }
 
+  // Create virtual packet items from kits
+  const virtualPackets: any[] = [];
+  if (kits) {
+    kits.forEach((kit) => {
+      if (kit.packingRequirements) {
+        try {
+          const packingData = JSON.parse(kit.packingRequirements);
+          if (packingData.packets && Array.isArray(packingData.packets)) {
+            packingData.packets.forEach((packet: any, index: number) => {
+              virtualPackets.push({
+                _id: `${kit._id}_packet_${index}`,
+                name: `[${kit.name}] ${packet.name}`,
+                description: `Sealed packet from ${kit.name}`,
+                type: "sealed_packet",
+                quantity: kit.stockCount,
+                unit: "packet",
+                minStockLevel: 0,
+                location: "",
+                notes: "",
+                subcategory: "sealed_packet",
+                isKitPacket: true,
+                sourceKit: kit,
+                componentType: "packet",
+                componentData: packet,
+              });
+            });
+          }
+        } catch (e) {
+          // Invalid JSON, skip
+        }
+      }
+    });
+  }
+
+  // Combine real inventory with virtual packets
+  const combinedInventory = [...inventory, ...virtualPackets];
+
   // Filter inventory
-  const filteredInventory = inventory.filter((item) => {
+  const filteredInventory = combinedInventory.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === "all" || item.type === filterType;
     const matchesSubcategory = filterSubcategory === "all" || item.subcategory === filterSubcategory;
@@ -123,7 +164,7 @@ export default function Inventory() {
   // Get unique subcategories for current type filter
   const availableSubcategories = Array.from(
     new Set(
-      inventory
+      combinedInventory
         .filter((item) => filterType === "all" || item.type === filterType)
         .map((item) => item.subcategory)
         .filter((subcat): subcat is string => typeof subcat === "string" && subcat.trim() !== "")
@@ -225,6 +266,11 @@ export default function Inventory() {
       subcategory: item.subcategory || "",
     });
     setEditItemOpen(true);
+  };
+
+  const openViewPacketDialog = (packet: any) => {
+    setSelectedPacket(packet);
+    setViewPacketOpen(true);
   };
 
   return (
@@ -674,7 +720,10 @@ export default function Inventory() {
                     <TableRow key={item._id}>
                       <TableCell className="font-medium">
                         <div>
-                          <div>{item.name}</div>
+                          <div className="flex items-center gap-2">
+                            {item.isKitPacket && <Package className="h-4 w-4 text-muted-foreground" />}
+                            {item.name}
+                          </div>
                           {item.description && (
                             <div className="text-sm text-muted-foreground mt-0.5">
                               {item.description}
@@ -689,7 +738,9 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell>{item.subcategory || "-"}</TableCell>
                       <TableCell>
-                        {editingQuantity === item._id ? (
+                        {item.isKitPacket ? (
+                          <span>{item.quantity}</span>
+                        ) : editingQuantity === item._id ? (
                           <div className="flex gap-2">
                             <Input
                               type="number"
@@ -724,25 +775,33 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)}>
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={async () => {
-                              if (confirm("Delete this item?")) {
-                                try {
-                                  await removeItem({ id: item._id });
-                                  toast.success("Item deleted");
-                                } catch (error: any) {
-                                  toast.error(error.message);
-                                }
-                              }
-                            }}
-                          >
-                            Delete
-                          </Button>
+                          {item.isKitPacket ? (
+                            <Button size="sm" variant="ghost" onClick={() => openViewPacketDialog(item)}>
+                              View Components
+                            </Button>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)}>
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  if (confirm("Delete this item?")) {
+                                    try {
+                                      await removeItem({ id: item._id });
+                                      toast.success("Item deleted");
+                                    } catch (error: any) {
+                                      toast.error(error.message);
+                                    }
+                                  }
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -856,6 +915,52 @@ export default function Inventory() {
               <DialogFooter>
                 <Button variant="outline" onClick={() => setEditItemOpen(false)}>Cancel</Button>
                 <Button onClick={handleEditItem}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* View Packet Dialog */}
+          <Dialog open={viewPacketOpen} onOpenChange={setViewPacketOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Packet Components</DialogTitle>
+                <DialogDescription>
+                  {selectedPacket?.sourceKit && `From kit: ${selectedPacket.sourceKit.name}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">Sealed Packet</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    This is a virtual item derived from kit definitions
+                  </span>
+                </div>
+                <Separator />
+                <div>
+                  <Label className="text-base">Materials in Packet</Label>
+                  <div className="mt-4 space-y-3">
+                    {selectedPacket?.componentData?.materials?.map((material: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded">
+                        <div>
+                          <p className="font-medium">{material.name}</p>
+                          {material.notes && (
+                            <p className="text-sm text-muted-foreground">{material.notes}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{material.quantity} {material.unit}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Separator />
+                <p className="text-sm text-muted-foreground">
+                  To modify this packet, edit the source kit in the Kits page.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setViewPacketOpen(false)}>Close</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
