@@ -397,14 +397,105 @@ export default function Clients() {
                     required
                   />
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="contact">Phone Number *</Label>
-                  <Input
-                    id="contact"
-                    value={formData.contact}
-                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                    required
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label>Points of Contact</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          pointsOfContact: [
+                            ...formData.pointsOfContact,
+                            { name: "", designation: "", phone: "", email: "" },
+                          ],
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add POC
+                    </Button>
+                  </div>
+                  
+                  {formData.pointsOfContact.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No points of contact added yet.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {formData.pointsOfContact.map((poc, index) => (
+                        <div key={index} className="p-4 border rounded-lg space-y-3 relative">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 h-6 w-6"
+                            onClick={() => {
+                              const newPOCs = formData.pointsOfContact.filter((_, i) => i !== index);
+                              setFormData({ ...formData, pointsOfContact: newPOCs });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`poc-name-${index}`}>Name *</Label>
+                            <Input
+                              id={`poc-name-${index}`}
+                              value={poc.name}
+                              onChange={(e) => {
+                                const newPOCs = [...formData.pointsOfContact];
+                                newPOCs[index] = { ...newPOCs[index], name: e.target.value };
+                                setFormData({ ...formData, pointsOfContact: newPOCs });
+                              }}
+                              required
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`poc-designation-${index}`}>Designation</Label>
+                            <Input
+                              id={`poc-designation-${index}`}
+                              value={poc.designation || ""}
+                              onChange={(e) => {
+                                const newPOCs = [...formData.pointsOfContact];
+                                newPOCs[index] = { ...newPOCs[index], designation: e.target.value };
+                                setFormData({ ...formData, pointsOfContact: newPOCs });
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`poc-phone-${index}`}>Phone Number</Label>
+                            <Input
+                              id={`poc-phone-${index}`}
+                              value={poc.phone || ""}
+                              onChange={(e) => {
+                                const newPOCs = [...formData.pointsOfContact];
+                                newPOCs[index] = { ...newPOCs[index], phone: e.target.value };
+                                setFormData({ ...formData, pointsOfContact: newPOCs });
+                              }}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`poc-email-${index}`}>Email</Label>
+                            <Input
+                              id={`poc-email-${index}`}
+                              type="email"
+                              value={poc.email || ""}
+                              onChange={(e) => {
+                                const newPOCs = [...formData.pointsOfContact];
+                                newPOCs[index] = { ...newPOCs[index], email: e.target.value };
+                                setFormData({ ...formData, pointsOfContact: newPOCs });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salesPerson">Sales Person</Label>
