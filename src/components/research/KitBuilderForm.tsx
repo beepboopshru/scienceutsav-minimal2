@@ -195,7 +195,7 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Serial Number</Label>
+              <Label>Kit Number</Label>
               <Input
                 value={kitForm.serialNumber}
                 onChange={(e) => setKitForm({ ...kitForm, serialNumber: e.target.value })}

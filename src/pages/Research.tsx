@@ -726,7 +726,7 @@ export default function Research() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="serialNumber">Serial Number (optional)</Label>
+                        <Label htmlFor="serialNumber">Kit Number (optional)</Label>
                         <Input
                           id="serialNumber"
                           value={simpleKitFormData.serialNumber}
@@ -784,7 +784,7 @@ export default function Research() {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Serial No.</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Kit No.</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Kit Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Category</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
