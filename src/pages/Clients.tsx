@@ -54,6 +54,12 @@ export default function Clients() {
     type: "one_time" as "monthly" | "one_time",
     notes: "",
     salesPerson: "",
+    pointsOfContact: [] as Array<{
+      name: string;
+      designation?: string;
+      phone?: string;
+      email?: string;
+    }>,
     gradeAttendance: {
       grade1: undefined as number | undefined,
       grade2: undefined as number | undefined,
@@ -97,6 +103,7 @@ export default function Clients() {
           type: client.type || "one_time",
           notes: client.notes || "",
           salesPerson: client.salesPerson || "",
+          pointsOfContact: client.pointsOfContact || [],
           gradeAttendance: {
             grade1: client.gradeAttendance?.grade1 ?? undefined,
             grade2: client.gradeAttendance?.grade2 ?? undefined,
@@ -123,6 +130,7 @@ export default function Clients() {
         type: "one_time",
         notes: "",
         salesPerson: "",
+        pointsOfContact: [],
         gradeAttendance: {
           grade1: undefined,
           grade2: undefined,
@@ -154,6 +162,7 @@ export default function Clients() {
       type: "one_time",
       notes: "",
       salesPerson: "",
+      pointsOfContact: [],
       gradeAttendance: {
         grade1: undefined,
         grade2: undefined,
@@ -396,32 +405,6 @@ export default function Clients() {
                     onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
                     required
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Client Type *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value: "monthly" | "one_time") =>
-                      setFormData({ ...formData, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="one_time">One Time</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="salesPerson">Sales Person</Label>

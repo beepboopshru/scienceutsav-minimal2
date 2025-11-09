@@ -153,6 +153,12 @@ const schema = defineSchema(
       type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
       notes: v.optional(v.string()),
       salesPerson: v.optional(v.string()),
+      pointsOfContact: v.optional(v.array(v.object({
+        name: v.string(),
+        designation: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        email: v.optional(v.string()),
+      }))),
       gradeAttendance: v.optional(v.object({
         grade1: v.optional(v.number()),
         grade2: v.optional(v.number()),
