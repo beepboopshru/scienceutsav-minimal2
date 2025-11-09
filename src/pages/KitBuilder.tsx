@@ -255,7 +255,7 @@ export default function KitBuilder() {
                   </div>
 
                   <div>
-                    <Label>Serial Number</Label>
+                    <Label>Kit Number</Label>
                     <Input
                       value={kitForm.serialNumber}
                       onChange={(e) => setKitForm({ ...kitForm, serialNumber: e.target.value })}
