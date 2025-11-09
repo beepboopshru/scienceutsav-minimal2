@@ -180,88 +180,109 @@ export default function Clients() {
           </div>
         </div>
 
-        {!filteredClients ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : filteredClients.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            {searchQuery ? "No clients found matching your search." : "No clients yet. Add your first client to get started."}
-          </div>
-        ) : (
-          <Accordion type="single" collapsible className="space-y-2">
-            {filteredClients.map((client) => (
-              <AccordionItem key={client._id} value={client._id} className="border rounded-lg px-4">
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center justify-between w-full pr-4">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="text-left flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-lg">{client.organization || client.name}</span>
-                          <Badge variant={client.type === "monthly" ? "default" : "secondary"}>
-                            {client.type === "monthly" ? "Monthly" : "One Time"}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          {client.organization && (
-                            <span className="flex items-center gap-1">
-                              <Building2 className="h-3 w-3" />
-                              {client.name}
-                            </span>
+        <div className="border rounded-lg overflow-hidden">
+          {!filteredClients ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              {searchQuery ? "No clients found matching your search." : "No clients yet. Add your first client to get started."}
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr className="border-b">
+                    <th className="text-left p-4 font-semibold">Organization</th>
+                    <th className="text-left p-4 font-semibold">Contact Person</th>
+                    <th className="text-left p-4 font-semibold">Phone</th>
+                    <th className="text-left p-4 font-semibold">Email</th>
+                    <th className="text-left p-4 font-semibold">Type</th>
+                    {canEdit && <th className="text-right p-4 font-semibold">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClients.map((client) => (
+                    <AccordionItem key={client._id} value={client._id} className="border-b last:border-b-0" asChild>
+                      <>
+                        <tr className="hover:bg-muted/30">
+                          <td className="p-4">
+                            <AccordionTrigger className="hover:no-underline py-0 w-full justify-start">
+                              <span className="font-medium">{client.organization || client.name}</span>
+                            </AccordionTrigger>
+                          </td>
+                          <td className="p-4">
+                            {client.organization && (
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                <span>{client.name}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            {client.contact && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span>{client.contact}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            {client.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{client.email}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <Badge variant={client.type === "monthly" ? "default" : "secondary"}>
+                              {client.type === "monthly" ? "Monthly" : "One Time"}
+                            </Badge>
+                          </td>
+                          {canEdit && (
+                            <td className="p-4">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenDialog(client._id);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDelete(client._id);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
                           )}
-                          {client.contact && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {client.contact}
-                            </span>
-                          )}
-                          {client.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {client.email}
-                            </span>
-                          )}
-                        </div>
-                        {client.notes && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
-                            {client.notes}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {canEdit && (
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDialog(client._id);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(client._id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ClientMonthwiseView clientId={client._id} />
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        )}
+                        </tr>
+                        <tr>
+                          <td colSpan={canEdit ? 6 : 5} className="p-0">
+                            <AccordionContent className="px-4 pb-4">
+                              <ClientMonthwiseView clientId={client._id} />
+                            </AccordionContent>
+                          </td>
+                        </tr>
+                      </>
+                    </AccordionItem>
+                  ))}
+                </tbody>
+              </table>
+            </Accordion>
+          )}
+        </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-md">
