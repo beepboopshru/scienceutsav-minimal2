@@ -53,6 +53,21 @@ export default function Clients() {
     email: "",
     type: "one_time" as "monthly" | "one_time",
     notes: "",
+    salesPerson: "",
+    gradeAttendance: {
+      grade1: undefined as number | undefined,
+      grade2: undefined as number | undefined,
+      grade3: undefined as number | undefined,
+      grade4: undefined as number | undefined,
+      grade5: undefined as number | undefined,
+      grade6: undefined as number | undefined,
+      grade7: undefined as number | undefined,
+      grade8: undefined as number | undefined,
+      grade9: undefined as number | undefined,
+      grade10: undefined as number | undefined,
+      grade11: undefined as number | undefined,
+      grade12: undefined as number | undefined,
+    },
   });
 
   useEffect(() => {
@@ -81,6 +96,21 @@ export default function Clients() {
           email: client.email || "",
           type: client.type || "one_time",
           notes: client.notes || "",
+          salesPerson: client.salesPerson || "",
+          gradeAttendance: {
+            grade1: client.gradeAttendance?.grade1 ?? undefined,
+            grade2: client.gradeAttendance?.grade2 ?? undefined,
+            grade3: client.gradeAttendance?.grade3 ?? undefined,
+            grade4: client.gradeAttendance?.grade4 ?? undefined,
+            grade5: client.gradeAttendance?.grade5 ?? undefined,
+            grade6: client.gradeAttendance?.grade6 ?? undefined,
+            grade7: client.gradeAttendance?.grade7 ?? undefined,
+            grade8: client.gradeAttendance?.grade8 ?? undefined,
+            grade9: client.gradeAttendance?.grade9 ?? undefined,
+            grade10: client.gradeAttendance?.grade10 ?? undefined,
+            grade11: client.gradeAttendance?.grade11 ?? undefined,
+            grade12: client.gradeAttendance?.grade12 ?? undefined,
+          },
         });
         setEditingClient(clientId);
       }
@@ -92,6 +122,21 @@ export default function Clients() {
         email: "",
         type: "one_time",
         notes: "",
+        salesPerson: "",
+        gradeAttendance: {
+          grade1: undefined,
+          grade2: undefined,
+          grade3: undefined,
+          grade4: undefined,
+          grade5: undefined,
+          grade6: undefined,
+          grade7: undefined,
+          grade8: undefined,
+          grade9: undefined,
+          grade10: undefined,
+          grade11: undefined,
+          grade12: undefined,
+        },
       });
       setEditingClient(null);
     }
@@ -108,6 +153,21 @@ export default function Clients() {
       email: "",
       type: "one_time",
       notes: "",
+      salesPerson: "",
+      gradeAttendance: {
+        grade1: undefined,
+        grade2: undefined,
+        grade3: undefined,
+        grade4: undefined,
+        grade5: undefined,
+        grade6: undefined,
+        grade7: undefined,
+        grade8: undefined,
+        grade9: undefined,
+        grade10: undefined,
+        grade11: undefined,
+        grade12: undefined,
+      },
     });
   };
 
@@ -199,6 +259,8 @@ export default function Clients() {
                     <th className="text-left p-4 font-semibold">Phone</th>
                     <th className="text-left p-4 font-semibold">Email</th>
                     <th className="text-left p-4 font-semibold">Type</th>
+                    <th className="text-left p-4 font-semibold">Sales Person</th>
+                    <th className="text-left p-4 font-semibold">Created</th>
                     {canEdit && <th className="text-right p-4 font-semibold">Actions</th>}
                   </tr>
                 </thead>
@@ -241,6 +303,18 @@ export default function Clients() {
                               {client.type === "monthly" ? "Monthly" : "One Time"}
                             </Badge>
                           </td>
+                          <td className="p-4">
+                            <span className="text-sm">{client.salesPerson || "-"}</span>
+                          </td>
+                          <td className="p-4">
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(client._creationTime).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
+                          </td>
                           {canEdit && (
                             <td className="p-4">
                               <div className="flex items-center justify-end gap-2">
@@ -269,7 +343,7 @@ export default function Clients() {
                           )}
                         </tr>
                         <tr>
-                          <td colSpan={canEdit ? 6 : 5} className="p-0">
+                          <td colSpan={canEdit ? 8 : 7} className="p-0">
                             <AccordionContent className="px-4 pb-4">
                               <ClientMonthwiseView clientId={client._id} />
                             </AccordionContent>
@@ -348,6 +422,45 @@ export default function Clients() {
                       <SelectItem value="one_time">One Time</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="salesPerson">Sales Person</Label>
+                  <Input
+                    id="salesPerson"
+                    value={formData.salesPerson}
+                    onChange={(e) => setFormData({ ...formData, salesPerson: e.target.value })}
+                    placeholder="Enter sales person name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Grade Attendance (Class Strength)</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
+                      <div key={grade} className="space-y-1">
+                        <Label htmlFor={`grade${grade}`} className="text-xs">
+                          Grade {grade}
+                        </Label>
+                        <Input
+                          id={`grade${grade}`}
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          value={formData.gradeAttendance[`grade${grade}` as keyof typeof formData.gradeAttendance] || ""}
+                          onChange={(e) => {
+                            const value = e.target.value === "" ? undefined : parseInt(e.target.value);
+                            setFormData({
+                              ...formData,
+                              gradeAttendance: {
+                                ...formData.gradeAttendance,
+                                [`grade${grade}`]: value,
+                              },
+                            });
+                          }}
+                          className="h-8"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>

@@ -24,6 +24,21 @@ export const create = mutation({
     organization: v.optional(v.string()),
     type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
     notes: v.optional(v.string()),
+    salesPerson: v.optional(v.string()),
+    gradeAttendance: v.optional(v.object({
+      grade1: v.optional(v.number()),
+      grade2: v.optional(v.number()),
+      grade3: v.optional(v.number()),
+      grade4: v.optional(v.number()),
+      grade5: v.optional(v.number()),
+      grade6: v.optional(v.number()),
+      grade7: v.optional(v.number()),
+      grade8: v.optional(v.number()),
+      grade9: v.optional(v.number()),
+      grade10: v.optional(v.number()),
+      grade11: v.optional(v.number()),
+      grade12: v.optional(v.number()),
+    })),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -45,6 +60,21 @@ export const update = mutation({
     organization: v.optional(v.string()),
     type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
     notes: v.optional(v.string()),
+    salesPerson: v.optional(v.string()),
+    gradeAttendance: v.optional(v.object({
+      grade1: v.optional(v.number()),
+      grade2: v.optional(v.number()),
+      grade3: v.optional(v.number()),
+      grade4: v.optional(v.number()),
+      grade5: v.optional(v.number()),
+      grade6: v.optional(v.number()),
+      grade7: v.optional(v.number()),
+      grade8: v.optional(v.number()),
+      grade9: v.optional(v.number()),
+      grade10: v.optional(v.number()),
+      grade11: v.optional(v.number()),
+      grade12: v.optional(v.number()),
+    })),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
