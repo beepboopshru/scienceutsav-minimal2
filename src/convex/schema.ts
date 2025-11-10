@@ -147,6 +147,7 @@ const schema = defineSchema(
     // Clients database
     clients: defineTable({
       name: v.string(),
+      clientId: v.optional(v.string()),
       email: v.optional(v.string()),
       contact: v.optional(v.string()),
       organization: v.optional(v.string()),
@@ -175,7 +176,9 @@ const schema = defineSchema(
         grade12: v.optional(v.number()),
       })),
       createdBy: v.id("users"),
-    }).index("by_created_by", ["createdBy"]),
+    })
+      .index("by_created_by", ["createdBy"])
+      .index("by_client_id", ["clientId"]),
 
     // Kit assignments to clients
     assignments: defineTable({

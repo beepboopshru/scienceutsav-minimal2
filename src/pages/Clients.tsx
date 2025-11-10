@@ -51,6 +51,7 @@ export default function Clients() {
   const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
+    clientId: "",
     organization: "",
     contact: "",
     email: "",
@@ -101,6 +102,7 @@ export default function Clients() {
       if (client) {
         setFormData({
           name: client.name,
+          clientId: client.clientId || "",
           organization: client.organization || "",
           contact: client.contact || "",
           email: client.email || "",
@@ -129,6 +131,7 @@ export default function Clients() {
     } else {
       setFormData({
         name: "",
+        clientId: "",
         organization: "",
         contact: "",
         email: "",
@@ -162,6 +165,7 @@ export default function Clients() {
     setEditingClient(null);
     setFormData({
       name: "",
+      clientId: "",
       organization: "",
       contact: "",
       email: "",
@@ -222,7 +226,8 @@ export default function Clients() {
       client.name.toLowerCase().includes(query) ||
       client.organization?.toLowerCase().includes(query) ||
       client.contact?.toLowerCase().includes(query) ||
-      client.email?.toLowerCase().includes(query)
+      client.email?.toLowerCase().includes(query) ||
+      client.clientId?.toLowerCase().includes(query)
     );
   });
 
@@ -284,7 +289,12 @@ export default function Clients() {
                         <tr className="hover:bg-muted/30">
                           <td className="p-4">
                             <AccordionTrigger className="hover:no-underline py-0 w-full justify-start">
-                              <span className="font-medium">{client.organization || client.name}</span>
+                              <div className="flex flex-col items-start">
+                                <span className="font-medium">{client.organization || client.name}</span>
+                                {client.clientId && (
+                                  <span className="text-xs text-muted-foreground">{client.clientId}</span>
+                                )}
+                              </div>
                             </AccordionTrigger>
                           </td>
                           <td className="p-4">
@@ -503,6 +513,21 @@ export default function Clients() {
                     required
                   />
                 </div>
+
+                {editingClient && (
+                  <div className="space-y-2">
+                    <Label htmlFor="clientId">Client ID</Label>
+                    <Input
+                      id="clientId"
+                      value={formData.clientId}
+                      onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
+                      placeholder="Auto-generated on creation"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Client ID can be edited after creation if needed
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Organization Email</Label>
