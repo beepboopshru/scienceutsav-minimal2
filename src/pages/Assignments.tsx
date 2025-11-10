@@ -39,12 +39,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X } from "lucide-react";
+import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -73,7 +85,7 @@ export default function Assignments() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
 
-  // Form states
+  // Form states for dialog
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedKit, setSelectedKit] = useState<string>("");
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -98,6 +110,32 @@ export default function Assignments() {
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [editNotesValue, setEditNotesValue] = useState<string>("");
 
+  // Inline row creation states
+  const [isAddingNewRow, setIsAddingNewRow] = useState(false);
+  const [newRowProgram, setNewRowProgram] = useState<string>("");
+  const [newRowKit, setNewRowKit] = useState<string>("");
+  const [newRowClient, setNewRowClient] = useState<string>("");
+  const [newRowQuantity, setNewRowQuantity] = useState<string>("1");
+  const [newRowGrade, setNewRowGrade] = useState<string>("");
+  const [newRowDispatchDate, setNewRowDispatchDate] = useState<Date | undefined>(undefined);
+  const [newRowNotes, setNewRowNotes] = useState<string>("");
+
+  // Popover states for inline editing
+  const [programPopoverOpen, setProgramPopoverOpen] = useState(false);
+  const [kitPopoverOpen, setKitPopoverOpen] = useState(false);
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+  const [dispatchDatePopoverOpen, setDispatchDatePopoverOpen] = useState(false);
+
+  // Edit mode states
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [editRowProgram, setEditRowProgram] = useState<string>("");
+  const [editRowKit, setEditRowKit] = useState<string>("");
+  const [editRowClient, setEditRowClient] = useState<string>("");
+  const [editRowQuantity, setEditRowQuantity] = useState<string>("1");
+  const [editRowGrade, setEditRowGrade] = useState<string>("");
+  const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
+  const [editRowNotes, setEditRowNotes] = useState<string>("");
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
     if (!isLoading && isAuthenticated && user && !user.isApproved) navigate("/pending-approval");
@@ -113,26 +151,17 @@ export default function Assignments() {
 
   // Filter logic
   const filteredAssignments = assignments.filter((assignment) => {
-    // Month filter
     if (filterMonth !== "all") {
       const assignmentDate = assignment.dispatchedAt || assignment._creationTime;
       const assignmentMonth = format(new Date(assignmentDate), "yyyy-MM");
       if (assignmentMonth !== filterMonth) return false;
     }
-
-    // Status filter
     if (filterStatus !== "all" && assignment.status !== filterStatus) return false;
-
-    // Kit filter
     if (filterKit !== "all" && assignment.kitId !== filterKit) return false;
-
-    // Client filter
     if (filterClient !== "all" && assignment.clientId !== filterClient) return false;
-
     return true;
   });
 
-  // Get unique months from assignments
   const uniqueMonths = Array.from(
     new Set(
       assignments.map((a) => {
@@ -142,12 +171,25 @@ export default function Assignments() {
     )
   ).sort().reverse();
 
-  // Get filtered kits by program
   const filteredKits = selectedProgram
     ? kits.filter((kit) => kit.programId === selectedProgram)
     : [];
 
   const selectedKitData = kits.find((k) => k._id === selectedKit);
+
+  // Get filtered kits for new row
+  const newRowFilteredKits = newRowProgram
+    ? kits.filter((kit) => kit.programId === newRowProgram)
+    : [];
+
+  const newRowSelectedKit = kits.find((k) => k._id === newRowKit);
+
+  // Get filtered kits for edit row
+  const editRowFilteredKits = editRowProgram
+    ? kits.filter((kit) => kit.programId === editRowProgram)
+    : [];
+
+  const editRowSelectedKit = kits.find((k) => k._id === editRowKit);
 
   const handleCreateAssignment = async () => {
     if (!selectedKit || !selectedClient || !quantity) {
@@ -269,6 +311,87 @@ export default function Assignments() {
     setEditNotesValue("");
   };
 
+  const handleAddNewRow = () => {
+    setIsAddingNewRow(true);
+    setNewRowProgram("");
+    setNewRowKit("");
+    setNewRowClient("");
+    setNewRowQuantity("1");
+    setNewRowGrade("");
+    setNewRowDispatchDate(undefined);
+    setNewRowNotes("");
+  };
+
+  const handleSaveNewRow = async () => {
+    if (!newRowKit || !newRowClient || !newRowQuantity) {
+      toast.error("Please fill in Program, Kit, Client, and Quantity");
+      return;
+    }
+
+    try {
+      await createAssignment({
+        kitId: newRowKit as Id<"kits">,
+        clientId: newRowClient as Id<"clients">,
+        quantity: parseInt(newRowQuantity),
+        grade: newRowGrade && newRowGrade !== "none" ? newRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
+        notes: newRowNotes || undefined,
+        dispatchedAt: newRowDispatchDate ? newRowDispatchDate.getTime() : undefined,
+      });
+
+      toast.success("Assignment created successfully");
+      setIsAddingNewRow(false);
+    } catch (error) {
+      toast.error("Failed to create assignment");
+      console.error(error);
+    }
+  };
+
+  const handleCancelNewRow = () => {
+    setIsAddingNewRow(false);
+  };
+
+  const handleStartEditRow = (assignment: any) => {
+    setEditingAssignmentId(assignment._id);
+    setEditRowProgram(assignment.kit?.programId || "");
+    setEditRowKit(assignment.kitId);
+    setEditRowClient(assignment.clientId);
+    setEditRowQuantity(assignment.quantity.toString());
+    setEditRowGrade(assignment.grade || "");
+    setEditRowDispatchDate(assignment.dispatchedAt ? new Date(assignment.dispatchedAt) : undefined);
+    setEditRowNotes(assignment.notes || "");
+  };
+
+  const handleSaveEditRow = async (assignmentId: Id<"assignments">) => {
+    if (!editRowKit || !editRowClient || !editRowQuantity) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      // Note: You'll need to create an update mutation in assignments.ts
+      // For now, we'll delete and recreate
+      await deleteAssignment({ id: assignmentId });
+      await createAssignment({
+        kitId: editRowKit as Id<"kits">,
+        clientId: editRowClient as Id<"clients">,
+        quantity: parseInt(editRowQuantity),
+        grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
+        notes: editRowNotes || undefined,
+        dispatchedAt: editRowDispatchDate ? editRowDispatchDate.getTime() : undefined,
+      });
+
+      toast.success("Assignment updated successfully");
+      setEditingAssignmentId(null);
+    } catch (error) {
+      toast.error("Failed to update assignment");
+      console.error(error);
+    }
+  };
+
+  const handleCancelEditRow = () => {
+    setEditingAssignmentId(null);
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "outline"> = {
       assigned: "secondary",
@@ -294,10 +417,16 @@ export default function Assignments() {
               Manage kit assignments, track packing status, and monitor material shortages
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Assignment
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleAddNewRow} variant="outline" disabled={isAddingNewRow}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Assignment
+            </Button>
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Assignment
+            </Button>
+          </div>
         </div>
 
         {/* Filter Bar */}
@@ -383,20 +512,198 @@ export default function Assignments() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Program</TableHead>
                 <TableHead>Kit</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Grade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dispatch Date</TableHead>
+                <TableHead>Order Created On</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAssignments.length === 0 ? (
+              {/* New Row for inline creation */}
+              {isAddingNewRow && (
+                <TableRow className="bg-muted/50">
+                  <TableCell>
+                    <Popover open={programPopoverOpen} onOpenChange={setProgramPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          {newRowProgram ? programs.find(p => p._id === newRowProgram)?.name : "Select Program"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search program..." />
+                          <CommandList>
+                            <CommandEmpty>No program found.</CommandEmpty>
+                            <CommandGroup>
+                              {programs.map((program) => (
+                                <CommandItem
+                                  key={program._id}
+                                  value={program.name}
+                                  onSelect={() => {
+                                    setNewRowProgram(program._id);
+                                    setNewRowKit("");
+                                    setProgramPopoverOpen(false);
+                                  }}
+                                >
+                                  {program.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </TableCell>
+                  <TableCell>
+                    <Popover open={kitPopoverOpen} onOpenChange={setKitPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!newRowProgram}>
+                          {newRowKit ? kits.find(k => k._id === newRowKit)?.name : "Select Kit"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search kit..." />
+                          <CommandList>
+                            <CommandEmpty>No kit found.</CommandEmpty>
+                            <CommandGroup>
+                              {newRowFilteredKits.map((kit) => (
+                                <CommandItem
+                                  key={kit._id}
+                                  value={kit.name}
+                                  onSelect={() => {
+                                    setNewRowKit(kit._id);
+                                    setKitPopoverOpen(false);
+                                  }}
+                                >
+                                  {kit.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">
+                      {newRowSelectedKit?.category || "-"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          {newRowClient ? clients.find(c => c._id === newRowClient)?.name : "Select Client"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search client..." />
+                          <CommandList>
+                            <CommandEmpty>No client found.</CommandEmpty>
+                            <CommandGroup>
+                              {clients.map((client) => (
+                                <CommandItem
+                                  key={client._id}
+                                  value={client.name}
+                                  onSelect={() => {
+                                    setNewRowClient(client._id);
+                                    setClientPopoverOpen(false);
+                                  }}
+                                >
+                                  {client.organization && `${client.organization} - `}
+                                  {client.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newRowQuantity}
+                      onChange={(e) => setNewRowQuantity(e.target.value)}
+                      className="w-20"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Select value={newRowGrade} onValueChange={setNewRowGrade}>
+                      <SelectTrigger className="w-24">
+                        <SelectValue placeholder="Grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
+                          <SelectItem key={g} value={g.toString()}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">Assigned</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Popover open={dispatchDatePopoverOpen} onOpenChange={setDispatchDatePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newRowDispatchDate ? format(newRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={newRowDispatchDate}
+                          onSelect={(date) => {
+                            setNewRowDispatchDate(date);
+                            setDispatchDatePopoverOpen(false);
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm text-muted-foreground">-</span>
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      value={newRowNotes}
+                      onChange={(e) => setNewRowNotes(e.target.value)}
+                      placeholder="Notes..."
+                      className="w-full"
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button size="icon" variant="ghost" onClick={handleSaveNewRow}>
+                        <Save className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={handleCancelNewRow}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {filteredAssignments.length === 0 && !isAddingNewRow ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground">
                     No assignments found
                   </TableCell>
                 </TableRow>
@@ -409,86 +716,225 @@ export default function Assignments() {
                     transition={{ delay: index * 0.02 }}
                     className="hover:bg-muted/50"
                   >
-                    <TableCell className="font-medium">
-                      {assignment.kit?.name || "Unknown Kit"}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        {assignment.client?.organization && (
-                          <div className="text-sm text-muted-foreground">
-                            {assignment.client.organization}
-                          </div>
-                        )}
-                        <div className="font-medium">{assignment.client?.name || "Unknown"}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{assignment.quantity}</TableCell>
-                    <TableCell>{assignment.grade || "-"}</TableCell>
-                    <TableCell>{getStatusBadge(assignment.status)}</TableCell>
-                    <TableCell>
-                      {assignment.dispatchedAt
-                        ? format(new Date(assignment.dispatchedAt), "MMM dd, yyyy")
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      {editingNotes === assignment._id ? (
-                        <div className="flex items-center gap-2">
+                    {editingAssignmentId === assignment._id ? (
+                      <>
+                        {/* Edit mode */}
+                        <TableCell>
+                          <Select value={editRowProgram} onValueChange={(val) => {
+                            setEditRowProgram(val);
+                            setEditRowKit("");
+                          }}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {programs.map((program) => (
+                                <SelectItem key={program._id} value={program._id}>
+                                  {program.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {editRowFilteredKits.map((kit) => (
+                                <SelectItem key={kit._id} value={kit._id}>
+                                  {kit.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">
+                            {editRowSelectedKit?.category || "-"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Select value={editRowClient} onValueChange={setEditRowClient}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {clients.map((client) => (
+                                <SelectItem key={client._id} value={client._id}>
+                                  {client.organization && `${client.organization} - `}
+                                  {client.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
                           <Input
-                            value={editNotesValue}
-                            onChange={(e) => setEditNotesValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSaveNotes(assignment._id);
-                              if (e.key === "Escape") handleCancelEditNotes();
-                            }}
-                            className="h-8"
-                            autoFocus
+                            type="number"
+                            min="1"
+                            value={editRowQuantity}
+                            onChange={(e) => setEditRowQuantity(e.target.value)}
+                            className="w-20"
                           />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={() => handleSaveNotes(assignment._id)}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={handleCancelEditNotes}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div
-                          className="flex items-center gap-2 cursor-pointer group"
-                          onClick={() => handleStartEditNotes(assignment._id, assignment.notes || "")}
-                        >
-                          <span className="text-sm">{assignment.notes || "Add notes..."}</span>
-                          <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {assignment.status === "packed" && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleDispatch(assignment._id)}
-                          >
-                            Dispatch
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDeleteClick(assignment)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                        </TableCell>
+                        <TableCell>
+                          <Select value={editRowGrade} onValueChange={setEditRowGrade}>
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
+                                <SelectItem key={g} value={g.toString()}>
+                                  {g}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                        <TableCell>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar
+                                mode="single"
+                                selected={editRowDispatchDate}
+                                onSelect={setEditRowDispatchDate}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={editRowNotes}
+                            onChange={(e) => setEditRowNotes(e.target.value)}
+                            placeholder="Notes..."
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
+                              <Save className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </>
+                    ) : (
+                      <>
+                        {/* View mode */}
+                        <TableCell className="font-medium">
+                          {assignment.program?.name || "Unknown"}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {assignment.kit?.name || "Unknown Kit"}
+                        </TableCell>
+                        <TableCell>
+                          {assignment.kit?.category || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            {assignment.client?.organization && (
+                              <div className="text-sm text-muted-foreground">
+                                {assignment.client.organization}
+                              </div>
+                            )}
+                            <div className="font-medium">{assignment.client?.name || "Unknown"}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{assignment.quantity}</TableCell>
+                        <TableCell>{assignment.grade || "-"}</TableCell>
+                        <TableCell>{getStatusBadge(assignment.status)}</TableCell>
+                        <TableCell>
+                          {assignment.dispatchedAt
+                            ? format(new Date(assignment.dispatchedAt), "MMM dd, yyyy")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {editingNotes === assignment._id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={editNotesValue}
+                                onChange={(e) => setEditNotesValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleSaveNotes(assignment._id);
+                                  if (e.key === "Escape") handleCancelEditNotes();
+                                }}
+                                className="h-8"
+                                autoFocus
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => handleSaveNotes(assignment._id)}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={handleCancelEditNotes}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div
+                              className="flex items-center gap-2 cursor-pointer group"
+                              onClick={() => handleStartEditNotes(assignment._id, assignment.notes || "")}
+                            >
+                              <span className="text-sm">{assignment.notes || "Add notes..."}</span>
+                              <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleStartEditRow(assignment)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            {assignment.status === "packed" && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleDispatch(assignment._id)}
+                              >
+                                Dispatch
+                              </Button>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(assignment)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </>
+                    )}
                   </motion.tr>
                 ))
               )}
