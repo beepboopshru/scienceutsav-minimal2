@@ -64,6 +64,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
+import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 
 export default function Assignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -102,11 +103,13 @@ export default function Assignments() {
   const [checkTools, setCheckTools] = useState(false);
 
   // Filter states
-  const [filterMonth, setFilterMonth] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [filterKit, setFilterKit] = useState<string>("all");
-  const [filterClient, setFilterClient] = useState<string>("all");
-  const [filterProductionMonth, setFilterProductionMonth] = useState<string>("all");
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedKits, setSelectedKits] = useState<string[]>([]);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
 
   // Inline editing states
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
@@ -155,15 +158,39 @@ export default function Assignments() {
 
   // Filter logic
   const filteredAssignments = assignments.filter((assignment) => {
-    if (filterMonth !== "all") {
+    // Program filter
+    if (selectedPrograms.length > 0) {
+      const kit = kits.find((k) => k._id === assignment.kitId);
+      if (!kit || !selectedPrograms.includes(kit.programId)) return false;
+    }
+
+    // Category filter
+    if (selectedCategories.length > 0) {
+      const kit = kits.find((k) => k._id === assignment.kitId);
+      if (!kit || !kit.category || !selectedCategories.includes(kit.category)) return false;
+    }
+
+    // Kit filter
+    if (selectedKits.length > 0 && !selectedKits.includes(assignment.kitId)) return false;
+
+    // Client filter
+    if (selectedClients.length > 0 && !selectedClients.includes(assignment.clientId)) return false;
+
+    // Dispatch month filter
+    if (selectedDispatchMonths.length > 0) {
       const assignmentDate = assignment.dispatchedAt || assignment._creationTime;
       const assignmentMonth = format(new Date(assignmentDate), "yyyy-MM");
-      if (assignmentMonth !== filterMonth) return false;
+      if (!selectedDispatchMonths.includes(assignmentMonth)) return false;
     }
-    if (filterStatus !== "all" && assignment.status !== filterStatus) return false;
-    if (filterKit !== "all" && assignment.kitId !== filterKit) return false;
-    if (filterClient !== "all" && assignment.clientId !== filterClient) return false;
-    if (filterProductionMonth !== "all" && assignment.productionMonth !== filterProductionMonth) return false;
+
+    // Status filter
+    if (selectedStatuses.length > 0 && !selectedStatuses.includes(assignment.status)) return false;
+
+    // Production month filter
+    if (selectedProductionMonths.length > 0) {
+      if (!assignment.productionMonth || !selectedProductionMonths.includes(assignment.productionMonth)) return false;
+    }
+
     return true;
   });
 
@@ -455,6 +482,16 @@ export default function Assignments() {
     );
   };
 
+  const handleClearAllFilters = () => {
+    setSelectedPrograms([]);
+    setSelectedCategories([]);
+    setSelectedKits([]);
+    setSelectedClients([]);
+    setSelectedDispatchMonths([]);
+    setSelectedStatuses([]);
+    setSelectedProductionMonths([]);
+  };
+
   return (
     <Layout>
       <div className="p-8 space-y-6">
@@ -479,99 +516,27 @@ export default function Assignments() {
         </div>
 
         {/* Filter Bar */}
-        <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div className="space-y-2">
-              <Label>Month</Label>
-              <Select value={filterMonth} onValueChange={setFilterMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Months" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Months</SelectItem>
-                  {uniqueMonths.map((month) => (
-                    <SelectItem key={month} value={month}>
-                      {format(new Date(month + "-01"), "MMMM yyyy")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="packed">Packed</SelectItem>
-                  <SelectItem value="dispatched">Dispatched</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Kit</Label>
-              <Select value={filterKit} onValueChange={setFilterKit}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Kits" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Kits</SelectItem>
-                  {kits.map((kit) => (
-                    <SelectItem key={kit._id} value={kit._id}>
-                      {kit.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-              <div className="space-y-2">
-                <Label>Client</Label>
-                <Select value={filterClient} onValueChange={setFilterClient}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Clients" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Clients</SelectItem>
-                    {clients.map((client) => (
-                      <SelectItem key={client._id} value={client._id}>
-                        {client.organization || client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Production Month</Label>
-                <Select value={filterProductionMonth} onValueChange={setFilterProductionMonth}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Months" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Months</SelectItem>
-                    {uniqueProductionMonths.map((month) => (
-                      <SelectItem key={month} value={month}>
-                        {format(new Date(month + "-01"), "MMM yyyy")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-            <div className="space-y-2">
-              <Label>Results</Label>
-              <div className="h-10 flex items-center text-sm text-muted-foreground">
-                Showing {filteredAssignments.length} of {assignments.length}
-              </div>
-            </div>
-          </div>
-        </Card>
+        <AssignmentFilters
+          programs={programs}
+          kits={kits}
+          clients={clients}
+          assignments={filteredAssignments}
+          selectedPrograms={selectedPrograms}
+          selectedCategories={selectedCategories}
+          selectedKits={selectedKits}
+          selectedClients={selectedClients}
+          selectedDispatchMonths={selectedDispatchMonths}
+          selectedStatuses={selectedStatuses}
+          selectedProductionMonths={selectedProductionMonths}
+          onProgramsChange={setSelectedPrograms}
+          onCategoriesChange={setSelectedCategories}
+          onKitsChange={setSelectedKits}
+          onClientsChange={setSelectedClients}
+          onDispatchMonthsChange={setSelectedDispatchMonths}
+          onStatusesChange={setSelectedStatuses}
+          onProductionMonthsChange={setSelectedProductionMonths}
+          onClearAll={handleClearAllFilters}
+        />
 
         {/* Assignments Table */}
         <Card>
