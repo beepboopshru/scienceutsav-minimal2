@@ -271,7 +271,6 @@ export default function Clients() {
                 <thead className="bg-muted/50">
                   <tr className="border-b">
                     <th className="text-left p-4 font-semibold">Organization</th>
-                    <th className="text-left p-4 font-semibold">Contact Person</th>
                     <th className="text-left p-4 font-semibold">Type</th>
                     <th className="text-left p-4 font-semibold">Sales Person</th>
                     <th className="text-left p-4 font-semibold">Created</th>
@@ -287,14 +286,6 @@ export default function Clients() {
                             <AccordionTrigger className="hover:no-underline py-0 w-full justify-start">
                               <span className="font-medium">{client.organization || client.name}</span>
                             </AccordionTrigger>
-                          </td>
-                          <td className="p-4">
-                            {client.organization && (
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                                <span>{client.name}</span>
-                              </div>
-                            )}
                           </td>
                           <td className="p-4">
                             <Badge variant={client.type === "monthly" ? "default" : "secondary"}>
