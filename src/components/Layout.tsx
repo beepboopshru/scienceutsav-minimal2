@@ -309,15 +309,44 @@ export function Layout({ children }: LayoutProps) {
                   <SidebarMenu>
                     {filterByRole(coreOperations).map((item) => (
                       <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.path)}
-                        >
-                          <Link to={item.path}>
-                            <item.icon />
-                            <span>{item.title}</span>
-                          </Link>
-                        </SidebarMenuButton>
+                        {item.subItems ? (
+                          <>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={isSubActive(item.path)}
+                            >
+                              <Link to={item.path}>
+                                <item.icon />
+                                <span>{item.title}</span>
+                                <ChevronDown className="ml-auto h-4 w-4" />
+                              </Link>
+                            </SidebarMenuButton>
+                            <SidebarMenuSub>
+                              {item.subItems.map((subItem) => (
+                                <SidebarMenuSubItem key={subItem.path}>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={isActive(subItem.path)}
+                                  >
+                                    <Link to={subItem.path}>
+                                      <span>{subItem.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </>
+                        ) : (
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive(item.path)}
+                          >
+                            <Link to={item.path}>
+                              <item.icon />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        )}
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
