@@ -54,6 +54,7 @@ export default function Clients() {
     organization: "",
     contact: "",
     email: "",
+    address: "",
     type: "one_time" as "monthly" | "one_time",
     notes: "",
     salesPerson: "",
@@ -103,6 +104,7 @@ export default function Clients() {
           organization: client.organization || "",
           contact: client.contact || "",
           email: client.email || "",
+          address: client.address || "",
           type: client.type || "one_time",
           notes: client.notes || "",
           salesPerson: client.salesPerson || "",
@@ -130,6 +132,7 @@ export default function Clients() {
         organization: "",
         contact: "",
         email: "",
+        address: "",
         type: "one_time",
         notes: "",
         salesPerson: "",
@@ -162,6 +165,7 @@ export default function Clients() {
       organization: "",
       contact: "",
       email: "",
+      address: "",
       type: "one_time",
       notes: "",
       salesPerson: "",
@@ -268,8 +272,6 @@ export default function Clients() {
                   <tr className="border-b">
                     <th className="text-left p-4 font-semibold">Organization</th>
                     <th className="text-left p-4 font-semibold">Contact Person</th>
-                    <th className="text-left p-4 font-semibold">Phone</th>
-                    <th className="text-left p-4 font-semibold">Email</th>
                     <th className="text-left p-4 font-semibold">Type</th>
                     <th className="text-left p-4 font-semibold">Sales Person</th>
                     <th className="text-left p-4 font-semibold">Created</th>
@@ -291,22 +293,6 @@ export default function Clients() {
                               <div className="flex items-center gap-2">
                                 <Building2 className="h-4 w-4 text-muted-foreground" />
                                 <span>{client.name}</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            {client.contact && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                <span>{client.contact}</span>
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            {client.email && (
-                              <div className="flex items-center gap-2">
-                                <Mail className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{client.email}</span>
                               </div>
                             )}
                           </td>
@@ -379,7 +365,7 @@ export default function Clients() {
                           )}
                         </tr>
                         <tr>
-                          <td colSpan={canEdit ? 8 : 7} className="p-0">
+                          <td colSpan={canEdit ? 6 : 5} className="p-0">
                             <AccordionContent className="px-4 pb-4">
                               <ClientMonthwiseView clientId={client._id} />
                             </AccordionContent>
@@ -404,6 +390,28 @@ export default function Clients() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Organization Details */}
+              <div className="p-4 border rounded-lg bg-muted/30 space-y-2">
+                <h4 className="font-semibold text-sm">Organization Details</h4>
+                {selectedClientForView?.contact && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedClientForView.contact}</span>
+                  </div>
+                )}
+                {selectedClientForView?.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedClientForView.email}</span>
+                  </div>
+                )}
+                {selectedClientForView?.address && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <span>{selectedClientForView.address}</span>
+                  </div>
+                )}
+              </div>
               {selectedClientForView?.pointsOfContact && selectedClientForView.pointsOfContact.length > 0 ? (
                 selectedClientForView.pointsOfContact.map((poc: any, index: number) => (
                   <div key={index} className="p-4 border rounded-lg space-y-2">
@@ -523,6 +531,17 @@ export default function Clients() {
                     value={formData.contact}
                     onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
                     placeholder="+1 234 567 8900"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Organization address"
+                    rows={2}
                   />
                 </div>
                 

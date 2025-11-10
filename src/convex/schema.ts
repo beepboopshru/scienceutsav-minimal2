@@ -150,6 +150,7 @@ const schema = defineSchema(
       email: v.optional(v.string()),
       contact: v.optional(v.string()),
       organization: v.optional(v.string()),
+      address: v.optional(v.string()),
       type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
       notes: v.optional(v.string()),
       salesPerson: v.optional(v.string()),
