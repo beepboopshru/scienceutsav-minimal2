@@ -481,22 +481,22 @@ export default function Assignments() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <Select value={filterClient} onValueChange={setFilterClient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Clients" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Clients</SelectItem>
-                  {clients.map((client) => (
-                    <SelectItem key={client._id} value={client._id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-2">
+                <Label>Client</Label>
+                <Select value={filterClient} onValueChange={setFilterClient}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Clients" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Clients</SelectItem>
+                    {clients.map((client) => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.organization || client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
             <div className="space-y-2">
               <Label>Results</Label>
@@ -613,14 +613,13 @@ export default function Assignments() {
                               {clients.map((client) => (
                                 <CommandItem
                                   key={client._id}
-                                  value={client.name}
+                                  value={client.organization || client.name}
                                   onSelect={() => {
                                     setNewRowClient(client._id);
                                     setClientPopoverOpen(false);
                                   }}
                                 >
-                                  {client.organization && `${client.organization} - `}
-                                  {client.name}
+                                  {client.organization || client.name}
                                 </CommandItem>
                               ))}
                             </CommandGroup>
@@ -763,8 +762,7 @@ export default function Assignments() {
                             <SelectContent>
                               {clients.map((client) => (
                                 <SelectItem key={client._id} value={client._id}>
-                                  {client.organization && `${client.organization} - `}
-                                  {client.name}
+                                  {client.organization || client.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -847,13 +845,8 @@ export default function Assignments() {
                           {assignment.kit?.category || "-"}
                         </TableCell>
                         <TableCell>
-                          <div>
-                            {assignment.client?.organization && (
-                              <div className="text-sm text-muted-foreground">
-                                {assignment.client.organization}
-                              </div>
-                            )}
-                            <div className="font-medium">{assignment.client?.name || "Unknown"}</div>
+                          <div className="font-medium">
+                            {assignment.client?.organization || assignment.client?.name || "Unknown"}
                           </div>
                         </TableCell>
                         <TableCell>{assignment.quantity}</TableCell>
@@ -1011,8 +1004,7 @@ export default function Assignments() {
                   <SelectContent>
                     {clients.map((client) => (
                       <SelectItem key={client._id} value={client._id}>
-                        {client.organization && `${client.organization} - `}
-                        {client.name}
+                        {client.organization || client.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
