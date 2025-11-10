@@ -45,6 +45,7 @@ export const create = mutation({
     )),
     notes: v.optional(v.string()),
     dispatchedAt: v.optional(v.number()),
+    productionMonth: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

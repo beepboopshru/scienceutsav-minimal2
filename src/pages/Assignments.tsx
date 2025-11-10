@@ -93,6 +93,7 @@ export default function Assignments() {
   const [grade, setGrade] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [dispatchDate, setDispatchDate] = useState<Date | undefined>(undefined);
+  const [productionMonth, setProductionMonth] = useState<string>("");
 
   // Packing checklist states
   const [checkPouches, setCheckPouches] = useState(false);
@@ -105,6 +106,7 @@ export default function Assignments() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterKit, setFilterKit] = useState<string>("all");
   const [filterClient, setFilterClient] = useState<string>("all");
+  const [filterProductionMonth, setFilterProductionMonth] = useState<string>("all");
 
   // Inline editing states
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
@@ -119,6 +121,7 @@ export default function Assignments() {
   const [newRowGrade, setNewRowGrade] = useState<string>("");
   const [newRowDispatchDate, setNewRowDispatchDate] = useState<Date | undefined>(undefined);
   const [newRowNotes, setNewRowNotes] = useState<string>("");
+  const [newRowProductionMonth, setNewRowProductionMonth] = useState<string>("");
 
   // Popover states for inline editing
   const [programPopoverOpen, setProgramPopoverOpen] = useState(false);
@@ -135,6 +138,7 @@ export default function Assignments() {
   const [editRowGrade, setEditRowGrade] = useState<string>("");
   const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
   const [editRowNotes, setEditRowNotes] = useState<string>("");
+  const [editRowProductionMonth, setEditRowProductionMonth] = useState<string>("");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -159,6 +163,7 @@ export default function Assignments() {
     if (filterStatus !== "all" && assignment.status !== filterStatus) return false;
     if (filterKit !== "all" && assignment.kitId !== filterKit) return false;
     if (filterClient !== "all" && assignment.clientId !== filterClient) return false;
+    if (filterProductionMonth !== "all" && assignment.productionMonth !== filterProductionMonth) return false;
     return true;
   });
 
@@ -168,6 +173,14 @@ export default function Assignments() {
         const date = a.dispatchedAt || a._creationTime;
         return format(new Date(date), "yyyy-MM");
       })
+    )
+  ).sort().reverse();
+
+  const uniqueProductionMonths = Array.from(
+    new Set(
+      assignments
+        .filter((a) => a.productionMonth)
+        .map((a) => a.productionMonth!)
     )
   ).sort().reverse();
 
@@ -197,6 +210,16 @@ export default function Assignments() {
       return;
     }
 
+    // Validate production month vs dispatch date
+    if (productionMonth && dispatchDate) {
+      const prodMonth = new Date(productionMonth + "-01");
+      const dispMonth = new Date(dispatchDate.getFullYear(), dispatchDate.getMonth(), 1);
+      if (prodMonth > dispMonth) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
+    }
+
     try {
       await createAssignment({
         kitId: selectedKit as Id<"kits">,
@@ -205,6 +228,7 @@ export default function Assignments() {
         grade: grade && grade !== "none" ? grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: notes || undefined,
         dispatchedAt: dispatchDate ? dispatchDate.getTime() : undefined,
+        productionMonth: productionMonth || undefined,
       });
 
       toast.success("Assignment created successfully");
@@ -224,6 +248,7 @@ export default function Assignments() {
     setGrade("");
     setNotes("");
     setDispatchDate(undefined);
+    setProductionMonth("");
   };
 
   const handleOpenPackingDialog = (assignment: any) => {
@@ -320,12 +345,23 @@ export default function Assignments() {
     setNewRowGrade("");
     setNewRowDispatchDate(undefined);
     setNewRowNotes("");
+    setNewRowProductionMonth("");
   };
 
   const handleSaveNewRow = async () => {
     if (!newRowKit || !newRowClient || !newRowQuantity) {
       toast.error("Please fill in Program, Kit, Client, and Quantity");
       return;
+    }
+
+    // Validate production month vs dispatch date
+    if (newRowProductionMonth && newRowDispatchDate) {
+      const prodMonth = new Date(newRowProductionMonth + "-01");
+      const dispMonth = new Date(newRowDispatchDate.getFullYear(), newRowDispatchDate.getMonth(), 1);
+      if (prodMonth > dispMonth) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
     }
 
     try {
@@ -336,6 +372,7 @@ export default function Assignments() {
         grade: newRowGrade && newRowGrade !== "none" ? newRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: newRowNotes || undefined,
         dispatchedAt: newRowDispatchDate ? newRowDispatchDate.getTime() : undefined,
+        productionMonth: newRowProductionMonth || undefined,
       });
 
       toast.success("Assignment created successfully");
@@ -359,12 +396,23 @@ export default function Assignments() {
     setEditRowGrade(assignment.grade || "");
     setEditRowDispatchDate(assignment.dispatchedAt ? new Date(assignment.dispatchedAt) : undefined);
     setEditRowNotes(assignment.notes || "");
+    setEditRowProductionMonth(assignment.productionMonth || "");
   };
 
   const handleSaveEditRow = async (assignmentId: Id<"assignments">) => {
     if (!editRowKit || !editRowClient || !editRowQuantity) {
       toast.error("Please fill in all required fields");
       return;
+    }
+
+    // Validate production month vs dispatch date
+    if (editRowProductionMonth && editRowDispatchDate) {
+      const prodMonth = new Date(editRowProductionMonth + "-01");
+      const dispMonth = new Date(editRowDispatchDate.getFullYear(), editRowDispatchDate.getMonth(), 1);
+      if (prodMonth > dispMonth) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
     }
 
     try {
@@ -378,6 +426,7 @@ export default function Assignments() {
         grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: editRowNotes || undefined,
         dispatchedAt: editRowDispatchDate ? editRowDispatchDate.getTime() : undefined,
+        productionMonth: editRowProductionMonth || undefined,
       });
 
       toast.success("Assignment updated successfully");
@@ -431,7 +480,7 @@ export default function Assignments() {
 
         {/* Filter Bar */}
         <Card className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label>Month</Label>
               <Select value={filterMonth} onValueChange={setFilterMonth}>
@@ -498,6 +547,23 @@ export default function Assignments() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label>Production Month</Label>
+                <Select value={filterProductionMonth} onValueChange={setFilterProductionMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Months" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Months</SelectItem>
+                    {uniqueProductionMonths.map((month) => (
+                      <SelectItem key={month} value={month}>
+                        {format(new Date(month + "-01"), "MMM yyyy")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
             <div className="space-y-2">
               <Label>Results</Label>
               <div className="h-10 flex items-center text-sm text-muted-foreground">
@@ -520,6 +586,7 @@ export default function Assignments() {
                 <TableHead>Grade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dispatch Date</TableHead>
+                <TableHead>Production Month</TableHead>
                 <TableHead>Order Created On</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -677,6 +744,14 @@ export default function Assignments() {
                     </Popover>
                   </TableCell>
                   <TableCell>
+                    <Input
+                      type="month"
+                      value={newRowProductionMonth}
+                      onChange={(e) => setNewRowProductionMonth(e.target.value)}
+                      className="w-full"
+                    />
+                  </TableCell>
+                  <TableCell>
                     <span className="text-sm text-muted-foreground">-</span>
                   </TableCell>
                   <TableCell>
@@ -812,6 +887,14 @@ export default function Assignments() {
                           </Popover>
                         </TableCell>
                         <TableCell>
+                          <Input
+                            type="month"
+                            value={editRowProductionMonth}
+                            onChange={(e) => setEditRowProductionMonth(e.target.value)}
+                            className="w-full"
+                          />
+                        </TableCell>
+                        <TableCell>
                           {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
                         </TableCell>
                         <TableCell>
@@ -855,6 +938,11 @@ export default function Assignments() {
                         <TableCell>
                           {assignment.dispatchedAt
                             ? format(new Date(assignment.dispatchedAt), "MMM dd, yyyy")
+                            : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {assignment.productionMonth
+                            ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
                             : "-"}
                         </TableCell>
                         <TableCell>
@@ -1062,6 +1150,16 @@ export default function Assignments() {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Production Month (Optional)</Label>
+                <Input
+                  type="month"
+                  value={productionMonth}
+                  onChange={(e) => setProductionMonth(e.target.value)}
+                  placeholder="Select production month"
+                />
               </div>
 
               <div className="space-y-2">

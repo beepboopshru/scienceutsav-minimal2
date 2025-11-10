@@ -218,6 +218,7 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
       createdBy: v.id("users"),
       dispatchedAt: v.optional(v.number()),
+      productionMonth: v.optional(v.string()),
     })
       .index("by_client", ["clientId"])
       .index("by_kit", ["kitId"])
