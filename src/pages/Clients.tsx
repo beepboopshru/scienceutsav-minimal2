@@ -236,7 +236,7 @@ export default function Clients() {
       <div className="p-8 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Client Management</h1>
+            <h1 className="text-3xl font-bold tracking-tight">B2B Client Management</h1>
             <p className="text-muted-foreground mt-2">
               Manage your client database and contact information
             </p>

@@ -199,7 +199,7 @@ export function Layout({ children }: LayoutProps) {
       roles: ["admin", "manager", "operations"],
     },
     {
-      title: "Clients",
+      title: "B2B Clients",
       icon: Users,
       path: "/clients",
       roles: ["admin", "operations"],
