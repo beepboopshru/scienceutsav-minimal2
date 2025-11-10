@@ -472,16 +472,6 @@ export default function Assignments() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {assignment.status === "assigned" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenPackingDialog(assignment)}
-                          >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Checklist
-                          </Button>
-                        )}
                         {assignment.status === "packed" && (
                           <Button
                             size="sm"
