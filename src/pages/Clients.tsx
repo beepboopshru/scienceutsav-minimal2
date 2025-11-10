@@ -46,6 +46,9 @@ export default function Clients() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Id<"clients"> | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewPocDialogOpen, setViewPocDialogOpen] = useState(false);
+  const [viewAttendanceDialogOpen, setViewAttendanceDialogOpen] = useState(false);
+  const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     organization: "",
@@ -328,6 +331,28 @@ export default function Clients() {
                             <td className="p-4">
                               <div className="flex items-center justify-end gap-2">
                                 <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedClientForView(client);
+                                    setViewPocDialogOpen(true);
+                                  }}
+                                >
+                                  View POC
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedClientForView(client);
+                                    setViewAttendanceDialogOpen(true);
+                                  }}
+                                >
+                                  View Attendance
+                                </Button>
+                                <Button
                                   variant="ghost"
                                   size="icon"
                                   onClick={(e) => {
@@ -366,6 +391,95 @@ export default function Clients() {
             </Accordion>
           )}
         </div>
+
+        {/* View POC Dialog */}
+        <Dialog open={viewPocDialogOpen} onOpenChange={setViewPocDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Points of Contact</DialogTitle>
+              <DialogDescription>
+                {selectedClientForView?.organization || selectedClientForView?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedClientForView?.pointsOfContact && selectedClientForView.pointsOfContact.length > 0 ? (
+                selectedClientForView.pointsOfContact.map((poc: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-semibold">{poc.name}</span>
+                      {poc.designation && (
+                        <Badge variant="secondary">{poc.designation}</Badge>
+                      )}
+                    </div>
+                    {poc.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{poc.phone}</span>
+                      </div>
+                    )}
+                    {poc.email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{poc.email}</span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No points of contact added for this client.
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewPocDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Attendance Dialog */}
+        <Dialog open={viewAttendanceDialogOpen} onOpenChange={setViewAttendanceDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Grade Attendance (Class Strength)</DialogTitle>
+              <DialogDescription>
+                {selectedClientForView?.organization || selectedClientForView?.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedClientForView?.gradeAttendance ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => {
+                    const gradeKey = `grade${grade}` as keyof typeof selectedClientForView.gradeAttendance;
+                    const attendance = selectedClientForView.gradeAttendance?.[gradeKey];
+                    return (
+                      <div key={grade} className="p-4 border rounded-lg">
+                        <div className="text-sm font-semibold text-muted-foreground mb-1">
+                          Grade {grade}
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {attendance !== undefined && attendance !== null ? attendance : "-"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No attendance data available for this client.
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setViewAttendanceDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
