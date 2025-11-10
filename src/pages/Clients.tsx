@@ -388,6 +388,27 @@ export default function Clients() {
                     required
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Organization Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="organization@example.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="contact">Organization Phone</Label>
+                  <Input
+                    id="contact"
+                    value={formData.contact}
+                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+                    placeholder="+1 234 567 8900"
+                  />
+                </div>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
