@@ -199,10 +199,14 @@ export function Layout({ children }: LayoutProps) {
       roles: ["admin", "manager", "operations"],
     },
     {
-      title: "B2B Clients",
+      title: "Clients",
       icon: Users,
       path: "/clients",
       roles: ["admin", "operations"],
+      subItems: [
+        { title: "B2B Clients", path: "/clients" },
+        { title: "B2C Clients", path: "/b2c-clients" },
+      ],
     },
     {
       title: "Assignments",

@@ -144,7 +144,7 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
     }).index("by_kit", ["kitId"]),
 
-    // Clients database
+    // B2B Clients database
     clients: defineTable({
       name: v.string(),
       clientId: v.optional(v.string()),
@@ -175,6 +175,27 @@ const schema = defineSchema(
         grade11: v.optional(v.number()),
         grade12: v.optional(v.number()),
       })),
+      createdBy: v.id("users"),
+    })
+      .index("by_created_by", ["createdBy"])
+      .index("by_client_id", ["clientId"]),
+
+    // B2C Clients database
+    b2cClients: defineTable({
+      buyerName: v.string(),
+      clientId: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      address: v.optional(v.string()),
+      type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
+      notes: v.optional(v.string()),
+      salesPerson: v.optional(v.string()),
+      pointsOfContact: v.optional(v.array(v.object({
+        name: v.string(),
+        designation: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        email: v.optional(v.string()),
+      }))),
       createdBy: v.id("users"),
     })
       .index("by_created_by", ["createdBy"])

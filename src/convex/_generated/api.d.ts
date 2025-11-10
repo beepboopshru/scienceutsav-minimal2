@@ -19,6 +19,7 @@ import type * as assignments from "../assignments.js";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
 import type * as authCleanup from "../authCleanup.js";
+import type * as b2cClients from "../b2cClients.js";
 import type * as clients from "../clients.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "auth/emailOtp": typeof auth_emailOtp;
   auth: typeof auth;
   authCleanup: typeof authCleanup;
+  b2cClients: typeof b2cClients;
   clients: typeof clients;
   http: typeof http;
   inventory: typeof inventory;

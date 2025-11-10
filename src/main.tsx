@@ -20,6 +20,7 @@ import VendorContacts from "./pages/VendorContacts.tsx";
 import Services from "./pages/Services.tsx";
 import KitBuilder from "./pages/KitBuilder.tsx";
 import Clients from "@/pages/Clients.tsx";
+import B2CClients from "@/pages/B2CClients.tsx";
 import Assignments from "@/pages/Assignments.tsx";
 import Operations from "@/pages/Operations.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
@@ -72,6 +73,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/research" element={<Research />} />
             <Route path="/kit-builder" element={<KitBuilder />} />
             <Route path="/clients" element={<Clients />} />
+          <Route path="/b2c-clients" element={<B2CClients />} />
             <Route path="/assignments" element={<Assignments />} />
             <Route path="/operations" element={<Operations />} />
             <Route path="/procurement" element={<Procurement />} />
