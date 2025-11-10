@@ -30,7 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ClientMonthwiseView } from "@/components/ClientMonthwiseView";
 import { useQuery, useMutation } from "convex/react";
-import { Building2, Loader2, Mail, Phone, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Building2, Loader2, Mail, Phone, Plus, Pencil, Trash2, Search, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -331,26 +331,28 @@ export default function Clients() {
                             <td className="p-4">
                               <div className="flex items-center justify-end gap-2">
                                 <Button
-                                  variant="outline"
-                                  size="sm"
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedClientForView(client);
                                     setViewPocDialogOpen(true);
                                   }}
+                                  title="View Points of Contact"
                                 >
-                                  View POC
+                                  <Building2 className="h-4 w-4" />
                                 </Button>
                                 <Button
-                                  variant="outline"
-                                  size="sm"
+                                  variant="ghost"
+                                  size="icon"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedClientForView(client);
                                     setViewAttendanceDialogOpen(true);
                                   }}
+                                  title="View Grade Attendance"
                                 >
-                                  View Attendance
+                                  <Calendar className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="ghost"
