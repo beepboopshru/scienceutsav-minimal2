@@ -852,9 +852,10 @@ export default function Assignments() {
                                   className="w-full justify-start text-left font-normal"
                                 >
                                   {batch.client
-                                    ? (clients?.find((c) => c._id === batch.client)?.organization ||
-                                      clients?.find((c) => c._id === batch.client)?.name ||
-                                      "Unknown Client")
+                                    ? (() => {
+                                        const selectedClient = clients?.find((c) => c._id === batch.client);
+                                        return selectedClient?.organization || selectedClient?.name || "Unknown Client";
+                                      })()
                                     : "Select Client"}
                                 </Button>
                               </PopoverTrigger>
