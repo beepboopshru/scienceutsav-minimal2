@@ -201,26 +201,40 @@ const schema = defineSchema(
       .index("by_created_by", ["createdBy"])
       .index("by_client_id", ["clientId"]),
 
+    // Batches for client orders
+    batches: defineTable({
+      batchId: v.string(),
+      clientId: v.id("clients"),
+      createdBy: v.id("users"),
+      notes: v.optional(v.string()),
+      dispatchDate: v.optional(v.number()),
+      productionMonth: v.optional(v.string()),
+    }).index("by_client", ["clientId"]),
+
     // Kit assignments to clients
     assignments: defineTable({
       clientId: v.id("clients"),
       kitId: v.id("kits"),
       quantity: v.number(),
-      grade: v.optional(v.union(
-        v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
-        v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
-      )),
+      grade: v.optional(
+        v.union(
+          v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+          v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+        )
+      ),
       status: v.union(
         v.literal("assigned"),
         v.literal("packed"),
         v.literal("dispatched")
       ),
       notes: v.optional(v.string()),
-      createdBy: v.id("users"),
       dispatchedAt: v.optional(v.number()),
       productionMonth: v.optional(v.string()),
+      createdBy: v.id("users"),
+      batchId: v.optional(v.id("batches")),
     })
       .index("by_client", ["clientId"])
+      .index("by_batch", ["batchId"])
       .index("by_kit", ["kitId"])
       .index("by_status", ["status"])
       .index("by_created_by", ["createdBy"]),
