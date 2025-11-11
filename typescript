@@ -1,10 +1,8 @@
+// On a pre-processed item
 {
-  title: "Clients",
-  icon: Users,
-  path: "/clients",
-  roles: ["admin", "operations"],
-  subItems: [
-    { title: "B2B Clients", path: "/clients" },
-    { title: "B2C Clients", path: "/b2c-clients" },
-  ],
-},
+  name: "Cut MDF Sheet 12x12",
+  type: "pre_processed",
+  components: [
+    { rawMaterialId: Id<"inventory">, quantityRequired: 1.2, unit: "sq ft", wastageNotes: "10% cutting waste" }
+  ]
+}

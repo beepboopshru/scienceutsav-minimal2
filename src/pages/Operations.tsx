@@ -34,7 +34,7 @@ export default function Operations() {
   const navigate = useNavigate();
   
   const programs = useQuery(api.programs.list);
-  const assignments = useQuery(api.assignments.list);
+  const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
   
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
@@ -586,7 +586,7 @@ export default function Operations() {
                             {assignment.kit?.category || "-"}
                           </TableCell>
                           <TableCell>
-                            {assignment.client?.name || "Unknown"}
+                            {(assignment.client as any)?.name || "Unknown"}
                           </TableCell>
                           <TableCell>{assignment.quantity}</TableCell>
                           <TableCell>
@@ -630,7 +630,7 @@ export default function Operations() {
                                     const url = URL.createObjectURL(blob);
                                     const a = document.createElement("a");
                                     a.href = url;
-                                    a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
+                                    a.download = `${(result as any).kitName.replace(/\s+/g, "-")}-sheet.html`;
                                     document.body.appendChild(a);
                                     a.click();
                                     document.body.removeChild(a);
@@ -716,12 +716,12 @@ export default function Operations() {
                                   onClick={async () => {
                                     try {
                                       toast.info("Generating kit sheet...");
-                                      const result = await downloadKitSheet({ kitId: item.kitId });
-                                      const blob = new Blob([result.html], { type: "text/html" });
-                                      const url = URL.createObjectURL(blob);
-                                      const a = document.createElement("a");
-                                      a.href = url;
-                                      a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
+                                    const result = await downloadKitSheet({ kitId: item.kitId as any });
+                                    const blob = new Blob([result.html], { type: "text/html" });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `${(result as any).kitName.replace(/\s+/g, "-")}-sheet.html`;
                                       document.body.appendChild(a);
                                       a.click();
                                       document.body.removeChild(a);

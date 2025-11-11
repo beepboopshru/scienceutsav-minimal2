@@ -37,7 +37,7 @@ export default function AdminZone() {
     userId: userFilter !== "all" ? (userFilter as Id<"users">) : undefined,
     dateRange: dateRangeFilter,
   });
-  const allAssignments = useQuery(api.assignments.list);
+  const allAssignments = useQuery(api.assignments.list, {});
   
   const clearPendingAssignments = useMutation(api.users.clearPendingAssignments);
   const clearAllAssignments = useMutation(api.users.clearAllAssignments);

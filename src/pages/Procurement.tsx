@@ -24,7 +24,7 @@ export default function Procurement() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const programs = useQuery(api.programs.list);
-  const assignments = useQuery(api.assignments.list);
+  const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
   
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(
