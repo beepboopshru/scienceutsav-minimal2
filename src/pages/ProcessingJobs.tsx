@@ -5,11 +5,10 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -36,6 +36,8 @@ export default function ProcessingJobs() {
   const createProcessingJob = useMutation(api.processingJobs.create);
 
   const [preProcessingOpen, setPreProcessingOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed">("all");
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [processingForm, setProcessingForm] = useState({
     name: "",
     sources: [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
@@ -66,8 +68,10 @@ export default function ProcessingJobs() {
     );
   }
 
-  const activeJobs = allJobs.filter((job) => job.status === "in_progress");
-  const completedJobs = allJobs.filter((job) => job.status === "completed");
+  const filteredJobs = allJobs.filter((job) => {
+    if (statusFilter === "all") return true;
+    return job.status === statusFilter;
+  });
 
   const getItemName = (itemId: string) => {
     const item = inventory.find((i) => i._id === itemId);
@@ -85,6 +89,13 @@ export default function ProcessingJobs() {
       return service ? service.name : "Unknown Service";
     }
     return "Unknown";
+  };
+
+  const toggleRowExpansion = (jobId: string) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [jobId]: !prev[jobId],
+    }));
   };
 
   const handleTargetSelection = (targetIndex: number, itemId: Id<"inventory">) => {
@@ -188,84 +199,6 @@ export default function ProcessingJobs() {
       toast.error(error.message || "Failed to create processing job");
     }
   };
-
-  const JobCard = ({ job }: { job: any }) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{job.name}</CardTitle>
-            <CardDescription>
-              Processed by: {getProcessorName(job)}
-            </CardDescription>
-          </div>
-          <Badge variant={job.status === "completed" ? "secondary" : "default"}>
-            {job.status === "in_progress" ? "In Progress" : "Completed"}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <p className="text-sm font-medium mb-2">Source Materials</p>
-          <div className="space-y-2">
-            {job.sources.map((source: any, index: number) => (
-              <div key={index} className="flex items-center gap-2 text-sm">
-                <span>{getItemName(source.sourceItemId)}</span>
-                <span className="text-muted-foreground">× {source.sourceQuantity}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <Separator />
-        
-        <div>
-          <p className="text-sm font-medium mb-2">Target Materials</p>
-          <div className="space-y-2">
-            {job.targets.map((target: any, index: number) => (
-              <div key={index} className="flex items-center gap-2 text-sm">
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <span>{getItemName(target.targetItemId)}</span>
-                <span className="text-muted-foreground">× {target.targetQuantity}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {job.notes && (
-          <>
-            <Separator />
-            <div>
-              <p className="text-sm font-medium mb-1">Notes</p>
-              <p className="text-sm text-muted-foreground">{job.notes}</p>
-            </div>
-          </>
-        )}
-
-        {job.status === "completed" && job.completedAt && (
-          <>
-            <Separator />
-            <p className="text-xs text-muted-foreground">
-              Completed on {new Date(job.completedAt).toLocaleDateString()}
-            </p>
-          </>
-        )}
-
-        {job.status === "in_progress" && (
-          <div className="flex gap-2 pt-2">
-            <Button onClick={() => handleComplete(job._id)} className="flex-1">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Complete & Check-In
-            </Button>
-            <Button onClick={() => handleCancel(job._id)} variant="outline">
-              <XCircle className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   return (
     <Layout>
@@ -549,48 +482,145 @@ export default function ProcessingJobs() {
             </div>
           </div>
 
-          <Tabs defaultValue="active" className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="active">
-                Active Jobs ({activeJobs.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed">
-                Completed Jobs ({completedJobs.length})
-              </TabsTrigger>
-            </TabsList>
+          {/* Status Filter */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Filters</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Jobs</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-            <TabsContent value="active" className="space-y-4">
-              {activeJobs.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No active processing jobs</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {activeJobs.map((job) => (
-                    <JobCard key={job._id} job={job} />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="completed" className="space-y-4">
-              {completedJobs.length === 0 ? (
-                <Card>
-                  <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No completed processing jobs</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {completedJobs.map((job) => (
-                    <JobCard key={job._id} job={job} />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          {/* Jobs Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Processing Jobs ({filteredJobs.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]"></TableHead>
+                    <TableHead>Job Name</TableHead>
+                    <TableHead>Processor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredJobs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No processing jobs found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredJobs.map((job) => (
+                      <>
+                        <TableRow key={job._id}>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => toggleRowExpansion(job._id)}
+                            >
+                              {expandedRows[job._id] ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-medium">{job.name}</TableCell>
+                          <TableCell>{getProcessorName(job)}</TableCell>
+                          <TableCell>
+                            <Badge variant={job.status === "completed" ? "secondary" : "default"}>
+                              {job.status === "in_progress" ? "In Progress" : "Completed"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {job.status === "completed" && job.completedAt
+                              ? new Date(job.completedAt).toLocaleDateString()
+                              : new Date(job._creationTime).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {job.status === "in_progress" && (
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleComplete(job._id)}>
+                                  <CheckCircle className="mr-2 h-4 w-4" />
+                                  Complete
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleCancel(job._id)}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {expandedRows[job._id] && (
+                          <TableRow>
+                            <TableCell colSpan={6} className="bg-muted/50">
+                              <div className="p-4 space-y-4">
+                                <div className="grid md:grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-sm font-medium mb-2">Source Materials</p>
+                                    <div className="space-y-1">
+                                      {job.sources.map((source: any, index: number) => (
+                                        <div key={index} className="flex items-center gap-2 text-sm">
+                                          <span>{getItemName(source.sourceItemId)}</span>
+                                          <span className="text-muted-foreground">× {source.sourceQuantity}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium mb-2">Target Materials</p>
+                                    <div className="space-y-1">
+                                      {job.targets.map((target: any, index: number) => (
+                                        <div key={index} className="flex items-center gap-2 text-sm">
+                                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                          <span>{getItemName(target.targetItemId)}</span>
+                                          <span className="text-muted-foreground">× {target.targetQuantity}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                                {job.notes && (
+                                  <>
+                                    <Separator />
+                                    <div>
+                                      <p className="text-sm font-medium mb-1">Notes</p>
+                                      <p className="text-sm text-muted-foreground">{job.notes}</p>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
     </Layout>
