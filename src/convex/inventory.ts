@@ -33,6 +33,15 @@ export const create = mutation({
     notes: v.optional(v.string()),
     vendorId: v.optional(v.id("vendors")),
     subcategory: v.optional(v.string()),
+    components: v.optional(
+      v.array(
+        v.object({
+          rawMaterialId: v.id("inventory"),
+          quantityRequired: v.number(),
+          unit: v.string(),
+        })
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -62,6 +71,15 @@ export const update = mutation({
     notes: v.optional(v.string()),
     vendorId: v.optional(v.id("vendors")),
     subcategory: v.optional(v.string()),
+    components: v.optional(
+      v.array(
+        v.object({
+          rawMaterialId: v.id("inventory"),
+          quantityRequired: v.number(),
+          unit: v.string(),
+        })
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

@@ -14,7 +14,8 @@ import {
   Settings,
   Upload,
   Trash2,
-  Package
+  Package,
+  ListTree
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +83,7 @@ export default function Inventory() {
     location: "",
     notes: "",
     subcategory: "",
+    components: [] as Array<{ rawMaterialId: Id<"inventory">, quantityRequired: number, unit: string }>,
   });
 
   const [processingForm, setProcessingForm] = useState({
@@ -181,7 +183,11 @@ export default function Inventory() {
 
   const handleAddItem = async () => {
     try {
-      await createItem(itemForm);
+      const dataToSubmit = { ...itemForm };
+      if (itemForm.type !== "pre_processed" || itemForm.components.length === 0) {
+        delete (dataToSubmit as any).components;
+      }
+      await createItem(dataToSubmit);
       toast.success("Item added successfully");
       setAddItemOpen(false);
       setItemForm({
@@ -194,6 +200,7 @@ export default function Inventory() {
         location: "",
         notes: "",
         subcategory: "",
+        components: [],
       });
     } catch (error: any) {
       toast.error(error.message || "Failed to add item");
@@ -203,7 +210,11 @@ export default function Inventory() {
   const handleEditItem = async () => {
     if (!selectedItem) return;
     try {
-      await updateItem({ id: selectedItem._id, ...itemForm });
+      const dataToSubmit = { id: selectedItem._id, ...itemForm };
+      if (itemForm.type !== "pre_processed" || itemForm.components.length === 0) {
+        delete (dataToSubmit as any).components;
+      }
+      await updateItem(dataToSubmit);
       toast.success("Item updated successfully");
       setEditItemOpen(false);
       setSelectedItem(null);
@@ -272,6 +283,7 @@ export default function Inventory() {
       location: item.location || "",
       notes: item.notes || "",
       subcategory: item.subcategory || "",
+      components: item.components || [],
     });
     setEditItemOpen(true);
   };
@@ -422,6 +434,87 @@ export default function Inventory() {
                       onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
                     />
                   </div>
+                  
+                  {itemForm.type === "pre_processed" && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <ListTree className="h-4 w-4" />
+                          Bill of Materials (BOM)
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Define the raw materials required to create this pre-processed item
+                        </p>
+                        {itemForm.components.map((component, index) => (
+                          <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
+                            <Select
+                              value={component.rawMaterialId}
+                              onValueChange={(value: any) => {
+                                const newComponents = [...itemForm.components];
+                                newComponents[index].rawMaterialId = value;
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select raw material" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {inventory?.filter(item => item.type === "raw").map((rawItem) => (
+                                  <SelectItem key={rawItem._id} value={rawItem._id}>
+                                    {rawItem.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              placeholder="Quantity"
+                              value={component.quantityRequired}
+                              onChange={(e) => {
+                                const newComponents = [...itemForm.components];
+                                newComponents[index].quantityRequired = Number(e.target.value);
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            />
+                            <Input
+                              placeholder="Unit"
+                              value={component.unit}
+                              onChange={(e) => {
+                                const newComponents = [...itemForm.components];
+                                newComponents[index].unit = e.target.value;
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newComponents = itemForm.components.filter((_, i) => i !== index);
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setItemForm({
+                              ...itemForm,
+                              components: [...itemForm.components, { rawMaterialId: "" as Id<"inventory">, quantityRequired: 0, unit: "" }],
+                            })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Component
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancel</Button>
@@ -731,6 +824,9 @@ export default function Inventory() {
                         <div>
                           <div className="flex items-center gap-2">
                             {item.isKitPacket && <Package className="h-4 w-4 text-muted-foreground" />}
+                            {!item.isKitPacket && item.type === "pre_processed" && item.components && item.components.length > 0 && (
+                              <ListTree className="h-4 w-4 text-blue-500" />
+                            )}
                             {item.name}
                           </div>
                           {item.description && (
@@ -927,14 +1023,95 @@ export default function Inventory() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Textarea
-                    value={itemForm.notes}
-                    onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
-                  />
+                  <div className="space-y-2">
+                    <Label>Notes</Label>
+                    <Textarea
+                      value={itemForm.notes}
+                      onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
+                    />
+                  </div>
+                  
+                  {itemForm.type === "pre_processed" && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <ListTree className="h-4 w-4" />
+                          Bill of Materials (BOM)
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Define the raw materials required to create this pre-processed item
+                        </p>
+                        {itemForm.components.map((component, index) => (
+                          <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
+                            <Select
+                              value={component.rawMaterialId}
+                              onValueChange={(value: any) => {
+                                const newComponents = [...itemForm.components];
+                                newComponents[index].rawMaterialId = value;
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select raw material" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {inventory?.filter(item => item.type === "raw").map((rawItem) => (
+                                  <SelectItem key={rawItem._id} value={rawItem._id}>
+                                    {rawItem.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              placeholder="Quantity"
+                              value={component.quantityRequired}
+                              onChange={(e) => {
+                                const newComponents = [...itemForm.components];
+                                newComponents[index].quantityRequired = Number(e.target.value);
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            />
+                            <Input
+                              placeholder="Unit"
+                              value={component.unit}
+                              onChange={(e) => {
+                                const newComponents = [...itemForm.components];
+                                newComponents[index].unit = e.target.value;
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newComponents = itemForm.components.filter((_, i) => i !== index);
+                                setItemForm({ ...itemForm, components: newComponents });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setItemForm({
+                              ...itemForm,
+                              components: [...itemForm.components, { rawMaterialId: "" as Id<"inventory">, quantityRequired: 0, unit: "" }],
+                            })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Component
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setEditItemOpen(false)}>Cancel</Button>
                 <Button onClick={handleEditItem}>Save Changes</Button>

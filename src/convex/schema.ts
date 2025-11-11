@@ -261,6 +261,15 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
       vendorId: v.optional(v.id("vendors")),
       subcategory: v.optional(v.string()),
+      components: v.optional(
+        v.array(
+          v.object({
+            rawMaterialId: v.id("inventory"),
+            quantityRequired: v.number(),
+            unit: v.string(),
+          })
+        )
+      ),
     })
       .index("by_type", ["type"])
       .index("by_vendor", ["vendorId"])
