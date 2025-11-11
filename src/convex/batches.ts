@@ -4,26 +4,13 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import type { Id } from "./_generated/dataModel";
 
 export const list = query({
-  args: { clientType: v.optional(v.union(v.literal("b2b"), v.literal("b2c"))) },
-  handler: async (ctx, args) => {
-    let batches;
-    if (args.clientType !== undefined) {
-      batches = await ctx.db
-        .query("batches")
-        .withIndex("by_client_type", (q) => q.eq("clientType", args.clientType!))
-        .collect();
-    } else {
-      batches = await ctx.db.query("batches").collect();
-    }
+  args: {},
+  handler: async (ctx) => {
+    const batches = await ctx.db.query("batches").collect();
     
     const batchesWithDetails = await Promise.all(
       batches.map(async (batch) => {
-        let client;
-        if (batch.clientType === "b2b") {
-          client = await ctx.db.get(batch.clientId as any);
-        } else {
-          client = await ctx.db.get(batch.clientId as any);
-        }
+        const client = await ctx.db.get(batch.clientId);
         const assignments = await ctx.db
           .query("assignments")
           .withIndex("by_batch", (q) => q.eq("batchId", batch._id))
@@ -79,8 +66,7 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    clientId: v.union(v.id("clients"), v.id("b2cClients")),
-    clientType: v.union(v.literal("b2b"), v.literal("b2c")),
+    clientId: v.id("clients"),
     batchName: v.optional(v.string()),
     notes: v.optional(v.string()),
     dispatchDate: v.optional(v.number()),
@@ -112,7 +98,6 @@ export const create = mutation({
     const batchId = await ctx.db.insert("batches", {
       batchId: args.batchName || generatedBatchId,
       clientId: args.clientId,
-      clientType: args.clientType,
       createdBy: userId,
       notes: args.notes,
       dispatchDate: args.dispatchDate,
@@ -127,7 +112,6 @@ export const create = mutation({
       await ctx.db.insert("assignments", {
         kitId: assignment.kitId,
         clientId: args.clientId,
-        clientType: args.clientType,
         quantity: assignment.quantity,
         grade: assignment.grade,
         notes: assignment.notes,
@@ -270,7 +254,6 @@ export const addAssignment = mutation({
     const assignmentId = await ctx.db.insert("assignments", {
       kitId: args.kitId,
       clientId: batch.clientId,
-      clientType: batch.clientType,
       quantity: args.quantity,
       grade: args.grade,
       notes: args.notes,

@@ -21,8 +21,7 @@ import Services from "./pages/Services.tsx";
 import KitBuilder from "./pages/KitBuilder.tsx";
 import Clients from "@/pages/Clients.tsx";
 import B2CClients from "@/pages/B2CClients.tsx";
-import B2BAssignments from "@/pages/B2BAssignments.tsx";
-import B2CAssignments from "@/pages/B2CAssignments.tsx";
+import Assignments from "@/pages/Assignments.tsx";
 import Operations from "@/pages/Operations.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
 import ViewKitFiles from "@/pages/ViewKitFiles.tsx";
@@ -75,8 +74,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/kit-builder" element={<KitBuilder />} />
             <Route path="/clients" element={<Clients />} />
           <Route path="/b2c-clients" element={<B2CClients />} />
-            <Route path="/b2b-assignments" element={<B2BAssignments />} />
-            <Route path="/b2c-assignments" element={<B2CAssignments />} />
+            <Route path="/assignments" element={<Assignments />} />
             <Route path="/operations" element={<Operations />} />
             <Route path="/procurement" element={<Procurement />} />
             <Route path="/laser-files" element={<LaserFiles />} />

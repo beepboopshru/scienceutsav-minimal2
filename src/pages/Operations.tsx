@@ -34,7 +34,7 @@ export default function Operations() {
   const navigate = useNavigate();
   
   const programs = useQuery(api.programs.list);
-  const assignments = useQuery(api.assignments.list, {});
+  const assignments = useQuery(api.assignments.list);
   const inventory = useQuery(api.inventory.list);
   
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
@@ -586,10 +586,7 @@ export default function Operations() {
                             {assignment.kit?.category || "-"}
                           </TableCell>
                           <TableCell>
-                            {(() => {
-                              const client = assignment.client as any;
-                              return client?.organization || client?.name || "Unknown";
-                            })()}
+                            {assignment.client?.name || "Unknown"}
                           </TableCell>
                           <TableCell>{assignment.quantity}</TableCell>
                           <TableCell>

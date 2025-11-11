@@ -204,20 +204,16 @@ const schema = defineSchema(
     // Batches for client orders
     batches: defineTable({
       batchId: v.string(),
-      clientId: v.union(v.id("clients"), v.id("b2cClients")),
-      clientType: v.union(v.literal("b2b"), v.literal("b2c")),
+      clientId: v.id("clients"),
       createdBy: v.id("users"),
       notes: v.optional(v.string()),
       dispatchDate: v.optional(v.number()),
       productionMonth: v.optional(v.string()),
-    })
-      .index("by_client_type", ["clientType"])
-      .index("by_client_id", ["clientId"]),
+    }).index("by_client", ["clientId"]),
 
     // Kit assignments to clients
     assignments: defineTable({
-      clientId: v.union(v.id("clients"), v.id("b2cClients")),
-      clientType: v.union(v.literal("b2b"), v.literal("b2c")),
+      clientId: v.id("clients"),
       kitId: v.id("kits"),
       quantity: v.number(),
       grade: v.optional(
@@ -237,8 +233,7 @@ const schema = defineSchema(
       createdBy: v.id("users"),
       batchId: v.optional(v.id("batches")),
     })
-      .index("by_client_type", ["clientType"])
-      .index("by_client_id", ["clientId"])
+      .index("by_client", ["clientId"])
       .index("by_batch", ["batchId"])
       .index("by_kit", ["kitId"])
       .index("by_status", ["status"])

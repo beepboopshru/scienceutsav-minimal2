@@ -33,7 +33,7 @@ export const chat = action({
     // Fetch current system data for context
     const kits: Array<any> = await ctx.runQuery(api.kits.list);
     const inventory: Array<any> = await ctx.runQuery(api.inventory.list);
-    const assignments: Array<any> = await ctx.runQuery(api.assignments.list, {});
+    const assignments: Array<any> = await ctx.runQuery(api.assignments.list);
     const clients: Array<any> = await ctx.runQuery(api.clients.list);
 
     // Build system context
