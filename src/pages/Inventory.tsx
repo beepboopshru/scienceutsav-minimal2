@@ -56,13 +56,14 @@ export default function Inventory() {
   const [selectedPacket, setSelectedPacket] = useState<any>(null);
   const [vendorInfoOpen, setVendorInfoOpen] = useState(false);
   const [selectedItemForVendors, setSelectedItemForVendors] = useState<any>(null);
+  const [bomViewerOpen, setBomViewerOpen] = useState(false);
+  const [selectedBomItem, setSelectedBomItem] = useState<any>(null);
 
   // Dialog states
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editItemOpen, setEditItemOpen] = useState(false);
   const [billImportOpen, setBillImportOpen] = useState(false);
   const [categoryManagementOpen, setCategoryManagementOpen] = useState(false);
-  const [bomViewerOpen, setBomViewerOpen] = useState(false);
 
   const getVendorsForItem = useQuery(
     api.vendors.getVendorsForItem,
@@ -900,6 +901,18 @@ export default function Inventory() {
                             </Button>
                           ) : (
                             <>
+                              {item.type === "pre_processed" && item.components && item.components.length > 0 && (
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => {
+                                    setSelectedBomItem(item);
+                                    setBomViewerOpen(true);
+                                  }}
+                                >
+                                  View BOM
+                                </Button>
+                              )}
                               <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)}>
                                 Edit
                               </Button>
@@ -1211,6 +1224,56 @@ export default function Inventory() {
               </div>
               <DialogFooter>
                 <Button onClick={() => setVendorInfoOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* View BOM Dialog */}
+          <Dialog open={bomViewerOpen} onOpenChange={setBomViewerOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Bill of Materials (BOM)</DialogTitle>
+                <DialogDescription>
+                  {selectedBomItem?.name && `Components required for: ${selectedBomItem.name}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">Pre-Processed Item</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    Raw materials required to create this item
+                  </span>
+                </div>
+                <Separator />
+                <div>
+                  <Label className="text-base">Raw Materials</Label>
+                  <div className="mt-4 space-y-3">
+                    {selectedBomItem?.components?.map((component: any, index: number) => {
+                      const rawMaterial = inventory?.find(item => item._id === component.rawMaterialId);
+                      return (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded">
+                          <div>
+                            <p className="font-medium">{rawMaterial?.name || "Unknown Material"}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Type: {rawMaterial?.type === "raw" ? "Raw Material" : rawMaterial?.type}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">{component.quantityRequired} {component.unit}</p>
+                            <p className="text-xs text-muted-foreground">per unit</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <Separator />
+                <p className="text-sm text-muted-foreground">
+                  This BOM defines the raw materials needed to produce one unit of this pre-processed item.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setBomViewerOpen(false)}>Close</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
