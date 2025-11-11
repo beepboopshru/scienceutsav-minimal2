@@ -15,7 +15,9 @@ import {
   Upload,
   Trash2,
   Package,
-  ListTree
+  ListTree,
+  Edit,
+  Eye
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -894,30 +896,41 @@ export default function Inventory() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
                           {item.isKitPacket ? (
-                            <Button size="sm" variant="ghost" onClick={() => openViewPacketDialog(item)}>
-                              View Components
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => openViewPacketDialog(item)}
+                              title="View Components"
+                            >
+                              <Eye className="h-4 w-4" />
                             </Button>
                           ) : (
                             <>
                               {item.type === "pre_processed" && item.components && item.components.length > 0 && (
                                 <Button 
-                                  size="sm" 
+                                  size="icon" 
                                   variant="ghost" 
                                   onClick={() => {
                                     setSelectedBomItem(item);
                                     setBomViewerOpen(true);
                                   }}
+                                  title="View BOM"
                                 >
-                                  View BOM
+                                  <ListTree className="h-4 w-4" />
                                 </Button>
                               )}
-                              <Button size="sm" variant="ghost" onClick={() => openEditDialog(item)}>
-                                Edit
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => openEditDialog(item)}
+                                title="Edit"
+                              >
+                                <Edit className="h-4 w-4" />
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="ghost"
                                 onClick={async () => {
                                   if (confirm("Delete this item?")) {
@@ -929,8 +942,9 @@ export default function Inventory() {
                                     }
                                   }
                                 }}
+                                title="Delete"
                               >
-                                Delete
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
                           )}
