@@ -486,8 +486,8 @@ export default function Assignments() {
   };
 
   const handleUpdateBatchRow = (batchId: string, rowId: string, field: keyof BatchRow, value: string) => {
-    setBatchesInProgress(
-      batchesInProgress.map((batch) =>
+    setBatchesInProgress((prevBatches) =>
+      prevBatches.map((batch) =>
         batch.id === batchId
           ? {
               ...batch,
