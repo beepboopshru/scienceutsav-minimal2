@@ -871,8 +871,8 @@ export default function Assignments() {
                                           value={client.organization || client.name}
                                           onSelect={() => {
                                             const generatedBatchId = generateBatchId(client._id);
-                                            setBatchesInProgress(
-                                              batchesInProgress.map((b) =>
+                                            setBatchesInProgress((prevBatches) =>
+                                              prevBatches.map((b) =>
                                                 b.id === batch.id
                                                   ? {
                                                       ...b,
@@ -883,7 +883,7 @@ export default function Assignments() {
                                                   : b
                                               )
                                             );
-                                            setBatchClientPopoverOpen({ ...batchClientPopoverOpen, [batch.id]: false });
+                                            setBatchClientPopoverOpen((prev) => ({ ...prev, [batch.id]: false }));
                                           }}
                                         >
                                           {client.organization || client.name}
