@@ -5,7 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown, ChevronDown, ChevronRight, Play, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,10 +33,11 @@ export default function ProcessingJobs() {
   
   const completeJob = useMutation(api.processingJobs.complete);
   const cancelJob = useMutation(api.processingJobs.cancel);
+  const startJob = useMutation(api.processingJobs.startJob);
   const createProcessingJob = useMutation(api.processingJobs.create);
 
   const [preProcessingOpen, setPreProcessingOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<"all" | "in_progress" | "completed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed">("all");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [processingForm, setProcessingForm] = useState({
     name: "",
@@ -154,11 +155,26 @@ export default function ProcessingJobs() {
     }
   };
 
-  const handleCancel = async (jobId: string) => {
-    if (!confirm("Cancel this job? Source materials will be returned to inventory.")) return;
+  const handleStartJob = async (jobId: string) => {
+    try {
+      await startJob({ id: jobId as any });
+      toast.success("Job started and materials deducted from inventory");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to start job");
+    }
+  };
+
+  const handleCancel = async (jobId: string, status: string) => {
+    const message = status === "in_progress" 
+      ? "Cancel this job? Source materials will be returned to inventory."
+      : "Cancel this job?";
+    if (!confirm(message)) return;
     try {
       await cancelJob({ id: jobId as any });
-      toast.success("Job cancelled and materials returned");
+      const successMessage = status === "in_progress"
+        ? "Job cancelled and materials returned"
+        : "Job cancelled";
+      toast.success(successMessage);
     } catch (error: any) {
       toast.error(error.message || "Failed to cancel job");
     }
@@ -496,6 +512,7 @@ export default function ProcessingJobs() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Jobs</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
@@ -548,8 +565,14 @@ export default function ProcessingJobs() {
                           <TableCell className="font-medium">{job.name}</TableCell>
                           <TableCell>{getProcessorName(job)}</TableCell>
                           <TableCell>
-                            <Badge variant={job.status === "completed" ? "secondary" : "default"}>
-                              {job.status === "in_progress" ? "In Progress" : "Completed"}
+                            <Badge variant={
+                              job.status === "completed" ? "secondary" : 
+                              job.status === "in_progress" ? "default" : 
+                              "outline"
+                            }>
+                              {job.status === "assigned" ? "Assigned" : 
+                               job.status === "in_progress" ? "In Progress" : 
+                               "Completed"}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -558,13 +581,25 @@ export default function ProcessingJobs() {
                               : new Date(job._creationTime).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
+                            {job.status === "assigned" && (
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleStartJob(job._id)}>
+                                  <Play className="mr-2 h-4 w-4" />
+                                  Start Job
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
+                                  <XCircle className="mr-2 h-4 w-4" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            )}
                             {job.status === "in_progress" && (
                               <div className="flex gap-2">
                                 <Button size="sm" onClick={() => handleComplete(job._id)}>
                                   <CheckCircle className="mr-2 h-4 w-4" />
                                   Complete
                                 </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleCancel(job._id)}>
+                                <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
                                   <XCircle className="mr-2 h-4 w-4" />
                                   Cancel
                                 </Button>

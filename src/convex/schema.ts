@@ -303,12 +303,15 @@ const schema = defineSchema(
         })
       ),
       status: v.union(
+        v.literal("assigned"),
         v.literal("in_progress"),
         v.literal("completed")
       ),
       processedBy: v.optional(v.string()),
       processedByType: v.optional(v.union(v.literal("vendor"), v.literal("service"), v.literal("in_house"))),
       notes: v.optional(v.string()),
+      startedAt: v.optional(v.number()),
+      startedBy: v.optional(v.id("users")),
       completedAt: v.optional(v.number()),
       completedBy: v.optional(v.id("users")),
       createdBy: v.id("users"),
