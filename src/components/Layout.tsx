@@ -211,8 +211,12 @@ export function Layout({ children }: LayoutProps) {
     {
       title: "Assignments",
       icon: ClipboardList,
-      path: "/assignments",
+      path: "/b2b-assignments",
       roles: ["admin", "operations"],
+      subItems: [
+        { title: "B2B Assignments", path: "/b2b-assignments" },
+        { title: "B2C Assignments", path: "/b2c-assignments" },
+      ],
     },
   ];
 

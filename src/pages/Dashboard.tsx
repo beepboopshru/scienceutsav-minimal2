@@ -54,10 +54,17 @@ export default function Dashboard() {
       roles: ["admin", "operations"],
     },
     {
-      title: "Assignments",
-      description: "Track kit assignments",
+      title: "B2B Assignments",
+      description: "Track B2B kit assignments",
       icon: ClipboardList,
-      path: "/assignments",
+      path: "/b2b-assignments",
+      roles: ["admin", "operations"],
+    },
+    {
+      title: "B2C Assignments",
+      description: "Track B2C kit assignments",
+      icon: ClipboardList,
+      path: "/b2c-assignments",
       roles: ["admin", "operations"],
     },
     {
