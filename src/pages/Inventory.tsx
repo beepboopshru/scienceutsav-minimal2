@@ -332,7 +332,7 @@ export default function Inventory() {
                   Add Item
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add Inventory Item</DialogTitle>
                   <DialogDescription>Create a new inventory item</DialogDescription>
@@ -959,7 +959,7 @@ export default function Inventory() {
 
           {/* Edit Item Dialog */}
           <Dialog open={editItemOpen} onOpenChange={setEditItemOpen}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Edit Inventory Item</DialogTitle>
               </DialogHeader>
