@@ -162,6 +162,9 @@ export default function Assignments() {
   const [kitPopoverOpen, setKitPopoverOpen] = useState(false);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [dispatchDatePopoverOpen, setDispatchDatePopoverOpen] = useState(false);
+  
+  // Popover states for batch creation
+  const [batchClientPopoverOpen, setBatchClientPopoverOpen] = useState<Record<string, boolean>>({});
 
   // Edit mode states
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
@@ -837,7 +840,12 @@ export default function Assignments() {
                         <div className="grid grid-cols-4 gap-4">
                           <div className="space-y-2">
                             <Label>Client *</Label>
-                            <Popover>
+                            <Popover 
+                              open={batchClientPopoverOpen[batch.id] || false}
+                              onOpenChange={(open) => 
+                                setBatchClientPopoverOpen({ ...batchClientPopoverOpen, [batch.id]: open })
+                              }
+                            >
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
@@ -864,6 +872,7 @@ export default function Assignments() {
                                             const generatedBatchId = generateBatchId(client._id);
                                             handleUpdateBatchMetadata(batch.id, "batchId", generatedBatchId);
                                             handleUpdateBatchMetadata(batch.id, "batchName", generatedBatchId);
+                                            setBatchClientPopoverOpen({ ...batchClientPopoverOpen, [batch.id]: false });
                                           }}
                                         >
                                           {client.organization || client.name}
