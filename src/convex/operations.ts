@@ -82,7 +82,7 @@ export const getAssignmentsByProgram = query({
     const assignmentsWithDetails = await Promise.all(
       assignments.map(async (assignment) => {
         const kit = await ctx.db.get(assignment.kitId);
-        const client = await ctx.db.get(assignment.clientId);
+        const client = await ctx.db.get(assignment.clientId as any);
         return { ...assignment, kit, client };
       })
     );

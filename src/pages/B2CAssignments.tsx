@@ -72,11 +72,11 @@ export default function Assignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const assignments = useQuery(api.assignments.list);
-  const programs = useQuery(api.programs.list);
-  const kits = useQuery(api.kits.list);
-  const clients = useQuery(api.clients.list);
-  const batches = useQuery(api.batches.list);
+  const assignments = useQuery(api.assignments.list, { clientType: "b2c" });
+  const programs = useQuery(api.programs.list, {});
+  const kits = useQuery(api.kits.list, {});
+  const clients = useQuery(api.b2cClients.list, {});
+  const batches = useQuery(api.batches.list, { clientType: "b2c" });
 
   const createAssignment = useMutation(api.assignments.create);
   const updateStatus = useMutation(api.assignments.updateStatus);
@@ -294,7 +294,8 @@ export default function Assignments() {
     try {
       await createAssignment({
         kitId: selectedKit as Id<"kits">,
-        clientId: selectedClient as Id<"clients">,
+        clientId: selectedClient as Id<"b2cClients">,
+        clientType: "b2c",
         quantity: parseInt(quantity),
         grade: grade && grade !== "none" ? grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: notes || undefined,
@@ -512,7 +513,7 @@ export default function Assignments() {
     const client = clients?.find((c) => c._id === clientId);
     if (!client) return "";
 
-    const organization = client.organization || client.name;
+    const organization = client.buyerName;
     const now = new Date();
     const month = now.getMonth() + 1;
     const year = now.getFullYear();
@@ -566,7 +567,8 @@ export default function Assignments() {
 
     try {
       await createBatch({
-        clientId: batch.client as Id<"clients">,
+        clientId: batch.client as Id<"b2cClients">,
+        clientType: "b2c",
         batchName: batch.batchName || batch.batchId,
         notes: batch.batchNotes || undefined,
         dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
@@ -606,7 +608,8 @@ export default function Assignments() {
     try {
       await createAssignment({
         kitId: newRowKit as Id<"kits">,
-        clientId: newRowClient as Id<"clients">,
+        clientId: newRowClient as Id<"b2cClients">,
+        clientType: "b2c",
         quantity: parseInt(newRowQuantity),
         grade: newRowGrade && newRowGrade !== "none" ? newRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: newRowNotes || undefined,
@@ -660,7 +663,8 @@ export default function Assignments() {
       await deleteAssignment({ id: assignmentId });
       await createAssignment({
         kitId: editRowKit as Id<"kits">,
-        clientId: editRowClient as Id<"clients">,
+        clientId: editRowClient as Id<"b2cClients">,
+        clientType: "b2c",
         quantity: parseInt(editRowQuantity),
         grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: editRowNotes || undefined,
@@ -734,9 +738,9 @@ export default function Assignments() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Assignments</h1>
+            <h1 className="text-3xl font-bold tracking-tight">B2C Assignments</h1>
             <p className="text-muted-foreground mt-2">
-              Manage kit assignments, track packing status, and monitor material shortages
+              Manage B2C kit assignments, track packing status, and monitor material shortages
             </p>
           </div>
           <div className="flex gap-2">
@@ -854,7 +858,7 @@ export default function Assignments() {
                                   {batch.client
                                     ? (() => {
                                         const selectedClient = clients?.find((c) => c._id === batch.client);
-                                        return selectedClient?.organization || selectedClient?.name || "Unknown Client";
+                                        return selectedClient?.buyerName || "Unknown Client";
                                       })()
                                     : "Select Client"}
                                 </Button>
@@ -868,7 +872,7 @@ export default function Assignments() {
                                       {clients?.map((client) => (
                                         <CommandItem
                                           key={client._id}
-                                          value={client.organization || client.name}
+                                          value={client.buyerName}
                                           onSelect={() => {
                                             const generatedBatchId = generateBatchId(client._id);
                                             setBatchesInProgress((prevBatches) =>
@@ -886,7 +890,7 @@ export default function Assignments() {
                                             setBatchClientPopoverOpen((prev) => ({ ...prev, [batch.id]: false }));
                                           }}
                                         >
-                                          {client.organization || client.name}
+                                          {client.buyerName}
                                         </CommandItem>
                                       ))}
                                     </CommandGroup>
@@ -1020,8 +1024,7 @@ export default function Assignments() {
                       <TableCell>
                         <span className="text-sm">
                           {batch.client
-                            ? clients?.find((c) => c._id === batch.client)?.organization ||
-                              clients?.find((c) => c._id === batch.client)?.name
+                            ? clients?.find((c) => c._id === batch.client)?.buyerName
                             : "-"}
                         </span>
                       </TableCell>
@@ -1188,7 +1191,7 @@ export default function Assignments() {
                     <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {newRowClient ? clients.find(c => c._id === newRowClient)?.name : "Select Client"}
+                          {newRowClient ? clients.find(c => c._id === newRowClient)?.buyerName : "Select Client"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[200px] p-0">
@@ -1200,13 +1203,13 @@ export default function Assignments() {
                               {clients.map((client) => (
                                 <CommandItem
                                   key={client._id}
-                                  value={client.organization || client.name}
+                                  value={client.buyerName}
                                   onSelect={() => {
                                     setNewRowClient(client._id);
                                     setClientPopoverOpen(false);
                                   }}
                                 >
-                                  {client.organization || client.name}
+                                  {client.buyerName}
                                 </CommandItem>
                               ))}
                             </CommandGroup>
@@ -1332,7 +1335,12 @@ export default function Assignments() {
                                   {isExpanded ? "▼" : "▶"}
                                 </Button>
                                 <Badge variant="outline">{batch.batchId}</Badge>
-                                <span>{batch.client?.organization || batch.client?.name}</span>
+                                <span>
+                                  {(() => {
+                                    const client = clients?.find((c) => c._id === (batch.client as unknown as string));
+                                    return client?.buyerName || "Unknown";
+                                  })()}
+                                </span>
                                 <span className="text-sm text-muted-foreground">
                                   ({batchAssignments.length} assignments: {statusSummary})
                                 </span>
@@ -1406,7 +1414,7 @@ export default function Assignments() {
                                       <SelectContent>
                                         {clients.map((client) => (
                                           <SelectItem key={client._id} value={client._id}>
-                                            {client.organization || client.name}
+                                            {client.buyerName}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
@@ -1498,7 +1506,9 @@ export default function Assignments() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="font-medium">
-                                      {assignment.client?.organization || assignment.client?.name || "Unknown"}
+                                      {typeof assignment.clientId === "string"
+                                        ? clients?.find((c) => c._id === assignment.clientId)?.buyerName || "Unknown"
+                                        : "Unknown"}
                                     </div>
                                   </TableCell>
                                   <TableCell>{assignment.quantity}</TableCell>
@@ -1648,7 +1658,7 @@ export default function Assignments() {
                               <SelectContent>
                                 {clients.map((client) => (
                                   <SelectItem key={client._id} value={client._id}>
-                                    {client.organization || client.name}
+                                    {client.buyerName}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1740,7 +1750,9 @@ export default function Assignments() {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {assignment.client?.organization || assignment.client?.name || "Unknown"}
+                              {typeof assignment.client === 'object' && assignment.client && 'buyerName' in assignment.client 
+                                ? assignment.client.buyerName 
+                                : "Unknown"}
                             </div>
                           </TableCell>
                           <TableCell>{assignment.quantity}</TableCell>
@@ -1904,7 +1916,7 @@ export default function Assignments() {
                   <SelectContent>
                     {clients.map((client) => (
                       <SelectItem key={client._id} value={client._id}>
-                        {client.organization || client.name}
+                        {client.buyerName}
                       </SelectItem>
                     ))}
                   </SelectContent>

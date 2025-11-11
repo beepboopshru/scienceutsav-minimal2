@@ -24,7 +24,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 interface AssignmentFiltersProps {
   programs: Array<{ _id: string; name: string }>;
   kits: Array<{ _id: string; name: string; programId: string; category?: string }>;
-  clients: Array<{ _id: string; name: string; organization?: string }>;
+  clients: Array<{ _id: string; name?: string; organization?: string; buyerName?: string }>;
   assignments: Array<any>;
   
   selectedPrograms: string[];
@@ -111,6 +111,11 @@ export function AssignmentFilters({
     selectedDispatchMonths.length +
     selectedStatuses.length +
     selectedProductionMonths.length;
+
+  // Helper to get client display name (supports both B2B and B2C clients)
+  const getClientDisplayName = (client: any) => {
+    return client.buyerName || client.organization || client.name || "Unknown";
+  };
 
   return (
     <Card className="p-4">
@@ -302,7 +307,7 @@ export function AssignmentFilters({
                               checked={selectedClients.includes(client._id)}
                               className="mr-2"
                             />
-                            {client.organization || client.name}
+                            {getClientDisplayName(client)}
                           </CommandItem>
                         ))}
                       </CommandGroup>

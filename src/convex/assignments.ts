@@ -3,15 +3,26 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const assignments = await ctx.db.query("assignments").collect();
+  args: { clientType: v.optional(v.union(v.literal("b2b"), v.literal("b2c"))) },
+  handler: async (ctx, args) => {
+    let assignments;
+    if (args.clientType) {
+      assignments = await ctx.db
+        .query("assignments")
+        .withIndex("by_clientType", (q) => q.eq("clientType", args.clientType!))
+        .collect();
+    } else {
+      assignments = await ctx.db.query("assignments").collect();
+    }
     
     // Fetch related data for each assignment
     const assignmentsWithDetails = await Promise.all(
       assignments.map(async (assignment) => {
         const kit = await ctx.db.get(assignment.kitId);
-        const client = await ctx.db.get(assignment.clientId);
+        // Fetch from correct client table based on clientType
+        const client = assignment.clientType === "b2c"
+          ? await ctx.db.get(assignment.clientId as any)
+          : await ctx.db.get(assignment.clientId as any);
         const program = kit ? await ctx.db.get(kit.programId) : null;
         
         return {
@@ -36,7 +47,8 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    clientId: v.id("clients"),
+    clientId: v.string(), // Can be Id<"clients"> or Id<"b2cClients">
+    clientType: v.union(v.literal("b2b"), v.literal("b2c")),
     kitId: v.id("kits"),
     quantity: v.number(),
     grade: v.optional(v.union(
