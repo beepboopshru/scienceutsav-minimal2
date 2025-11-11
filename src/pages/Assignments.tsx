@@ -134,6 +134,29 @@ export default function Assignments() {
   const [newRowNotes, setNewRowNotes] = useState<string>("");
   const [newRowProductionMonth, setNewRowProductionMonth] = useState<string>("");
 
+  // Batch creation states
+  type BatchRow = {
+    id: string;
+    program: string;
+    kit: string;
+    quantity: string;
+    grade: string;
+    notes: string;
+  };
+
+  type BatchInProgress = {
+    id: string;
+    batchId: string;
+    client: string;
+    batchName: string;
+    dispatchDate: Date | undefined;
+    productionMonth: string;
+    batchNotes: string;
+    rows: BatchRow[];
+  };
+
+  const [batchesInProgress, setBatchesInProgress] = useState<BatchInProgress[]>([]);
+
   // Popover states for inline editing
   const [programPopoverOpen, setProgramPopoverOpen] = useState(false);
   const [kitPopoverOpen, setKitPopoverOpen] = useState(false);
@@ -393,6 +416,174 @@ export default function Assignments() {
     setNewRowProductionMonth("");
   };
 
+  const handleStartBatch = () => {
+    const newBatchId = `BATCH-${Date.now()}`;
+    const newBatch: BatchInProgress = {
+      id: newBatchId,
+      batchId: "", // Will be generated after client selection
+      client: "",
+      batchName: "",
+      dispatchDate: undefined,
+      productionMonth: "",
+      batchNotes: "",
+      rows: [
+        {
+          id: `row-${Date.now()}`,
+          program: "",
+          kit: "",
+          quantity: "1",
+          grade: "",
+          notes: "",
+        },
+      ],
+    };
+    setBatchesInProgress([...batchesInProgress, newBatch]);
+  };
+
+  const handleCancelBatch = (batchId: string) => {
+    if (confirm("Discard this batch? All unsaved assignments will be lost.")) {
+      setBatchesInProgress(batchesInProgress.filter((b) => b.id !== batchId));
+    }
+  };
+
+  const handleAddRowToBatch = (batchId: string) => {
+    setBatchesInProgress(
+      batchesInProgress.map((batch) =>
+        batch.id === batchId
+          ? {
+              ...batch,
+              rows: [
+                ...batch.rows,
+                {
+                  id: `row-${Date.now()}`,
+                  program: "",
+                  kit: "",
+                  quantity: "1",
+                  grade: "",
+                  notes: "",
+                },
+              ],
+            }
+          : batch
+      )
+    );
+  };
+
+  const handleRemoveRowFromBatch = (batchId: string, rowId: string) => {
+    setBatchesInProgress(
+      batchesInProgress.map((batch) =>
+        batch.id === batchId
+          ? {
+              ...batch,
+              rows: batch.rows.filter((r) => r.id !== rowId),
+            }
+          : batch
+      )
+    );
+  };
+
+  const handleUpdateBatchRow = (batchId: string, rowId: string, field: keyof BatchRow, value: string) => {
+    setBatchesInProgress(
+      batchesInProgress.map((batch) =>
+        batch.id === batchId
+          ? {
+              ...batch,
+              rows: batch.rows.map((row) =>
+                row.id === rowId ? { ...row, [field]: value } : row
+              ),
+            }
+          : batch
+      )
+    );
+  };
+
+  const handleUpdateBatchMetadata = (batchId: string, field: string, value: any) => {
+    setBatchesInProgress(
+      batchesInProgress.map((batch) =>
+        batch.id === batchId ? { ...batch, [field]: value } : batch
+      )
+    );
+  };
+
+  const generateBatchId = (clientId: string) => {
+    const client = clients?.find((c) => c._id === clientId);
+    if (!client) return "";
+
+    const organization = client.organization || client.name;
+    const now = new Date();
+    const month = now.getMonth() + 1;
+    const year = now.getFullYear();
+
+    // Extract initials
+    const words = organization.trim().split(/\s+/);
+    let initials = "";
+    if (words.length === 1) {
+      initials = words[0].charAt(0).toUpperCase();
+    } else {
+      initials = words
+        .map((word) => word.charAt(0).toUpperCase())
+        .filter((char) => /[A-Z]/.test(char))
+        .join("");
+    }
+
+    // Find existing batches with same base
+    const baseBatchId = `${initials}-${year}-${month.toString().padStart(2, "0")}`;
+    const existingBatches = batches?.filter((b) => b.batchId.startsWith(baseBatchId)) || [];
+    
+    const sequenceNumbers = existingBatches
+      .map((b) => {
+        const parts = b.batchId.split("-");
+        if (parts.length === 4) {
+          return parseInt(parts[3]);
+        }
+        return 0;
+      })
+      .filter((num) => !isNaN(num));
+
+    const maxSequence = sequenceNumbers.length > 0 ? Math.max(...sequenceNumbers) : 0;
+    const nextSequence = maxSequence + 1;
+
+    return `${baseBatchId}-${nextSequence.toString().padStart(3, "0")}`;
+  };
+
+  const handleSaveBatch = async (batchId: string) => {
+    const batch = batchesInProgress.find((b) => b.id === batchId);
+    if (!batch) return;
+
+    if (!batch.client) {
+      toast.error("Please select a client for this batch");
+      return;
+    }
+
+    const validRows = batch.rows.filter((row) => row.kit && row.quantity);
+    if (validRows.length === 0) {
+      toast.error("Please add at least one kit to this batch");
+      return;
+    }
+
+    try {
+      await createBatch({
+        clientId: batch.client as Id<"clients">,
+        batchName: batch.batchName || batch.batchId,
+        notes: batch.batchNotes || undefined,
+        dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
+        productionMonth: batch.productionMonth || undefined,
+        assignments: validRows.map((row) => ({
+          kitId: row.kit as Id<"kits">,
+          quantity: parseInt(row.quantity),
+          grade: row.grade && row.grade !== "none" ? row.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
+          notes: row.notes || undefined,
+        })),
+      });
+
+      toast.success("Batch created successfully");
+      setBatchesInProgress(batchesInProgress.filter((b) => b.id !== batchId));
+    } catch (error) {
+      toast.error("Failed to create batch");
+      console.error(error);
+    }
+  };
+
   const handleSaveNewRow = async () => {
     if (!newRowKit || !newRowClient || !newRowQuantity) {
       toast.error("Please fill in Program, Kit, Client, and Quantity");
@@ -546,13 +737,17 @@ export default function Assignments() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleAddNewRow} variant="outline" disabled={isAddingNewRow}>
+            <Button 
+              onClick={handleAddNewRow} 
+              variant="outline" 
+              disabled={isAddingNewRow || batchesInProgress.length > 0}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add New Assignment
             </Button>
-            <Button onClick={() => setBatchDialogOpen(true)} variant="outline">
+            <Button onClick={handleStartBatch} variant="outline">
               <Plus className="mr-2 h-4 w-4" />
-              Create Batch
+              Start Batch
             </Button>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -605,6 +800,299 @@ export default function Assignments() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {/* Batch Creation Rows */}
+              {batchesInProgress.map((batch) => (
+                <React.Fragment key={batch.id}>
+                  {/* Batch Info Panel Row */}
+                  <TableRow className="bg-muted/70 border-b-2 border-border">
+                    <TableCell colSpan={13}>
+                      <div className="space-y-4 p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <Badge variant="outline" className="text-lg px-3 py-1">
+                              {batch.batchId || "Select client to generate Batch ID"}
+                            </Badge>
+                            <div className="text-sm text-muted-foreground">
+                              Batch Creation Mode
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleSaveBatch(batch.id)}
+                              disabled={!batch.client || batch.rows.length === 0}
+                            >
+                              Save Batch
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCancelBatch(batch.id)}
+                            >
+                              Cancel Batch
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-4">
+                          <div className="space-y-2">
+                            <Label>Client *</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-start text-left font-normal"
+                                >
+                                  {batch.client
+                                    ? clients?.find((c) => c._id === batch.client)?.organization ||
+                                      clients?.find((c) => c._id === batch.client)?.name
+                                    : "Select Client"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[200px] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search client..." />
+                                  <CommandList>
+                                    <CommandEmpty>No client found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {clients?.map((client) => (
+                                        <CommandItem
+                                          key={client._id}
+                                          value={client.organization || client.name}
+                                          onSelect={() => {
+                                            handleUpdateBatchMetadata(batch.id, "client", client._id);
+                                            const generatedBatchId = generateBatchId(client._id);
+                                            handleUpdateBatchMetadata(batch.id, "batchId", generatedBatchId);
+                                            handleUpdateBatchMetadata(batch.id, "batchName", generatedBatchId);
+                                          }}
+                                        >
+                                          {client.organization || client.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Batch Name</Label>
+                            <Input
+                              value={batch.batchName}
+                              onChange={(e) =>
+                                handleUpdateBatchMetadata(batch.id, "batchName", e.target.value)
+                              }
+                              placeholder="Auto-generated"
+                              disabled={!batch.client}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Dispatch Date</Label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-start text-left font-normal"
+                                  disabled={!batch.client}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {batch.dispatchDate
+                                    ? format(batch.dispatchDate, "MMM dd, yyyy")
+                                    : "Pick date"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                  mode="single"
+                                  selected={batch.dispatchDate}
+                                  onSelect={(date) =>
+                                    handleUpdateBatchMetadata(batch.id, "dispatchDate", date)
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Production Month</Label>
+                            <Input
+                              type="month"
+                              value={batch.productionMonth}
+                              onChange={(e) =>
+                                handleUpdateBatchMetadata(batch.id, "productionMonth", e.target.value)
+                              }
+                              disabled={!batch.client}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Batch Notes</Label>
+                          <Textarea
+                            value={batch.batchNotes}
+                            onChange={(e) =>
+                              handleUpdateBatchMetadata(batch.id, "batchNotes", e.target.value)
+                            }
+                            placeholder="Notes for this batch..."
+                            rows={2}
+                            disabled={!batch.client}
+                          />
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Batch Assignment Rows */}
+                  {batch.rows.map((row, rowIndex) => (
+                    <TableRow key={row.id} className="bg-muted/70">
+                      <TableCell>
+                        <Badge variant="outline">{batch.batchId || "-"}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.program}
+                          onValueChange={(val) => {
+                            handleUpdateBatchRow(batch.id, row.id, "program", val);
+                            handleUpdateBatchRow(batch.id, row.id, "kit", "");
+                          }}
+                          disabled={!batch.client}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Program" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {programs?.map((program) => (
+                              <SelectItem key={program._id} value={program._id}>
+                                {program.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.kit}
+                          onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "kit", val)}
+                          disabled={!row.program || !batch.client}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Kit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {kits
+                              ?.filter((kit) => kit.programId === row.program)
+                              .map((kit) => (
+                                <SelectItem key={kit._id} value={kit._id}>
+                                  {kit.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {kits?.find((k) => k._id === row.kit)?.category || "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {batch.client
+                            ? clients?.find((c) => c._id === batch.client)?.organization ||
+                              clients?.find((c) => c._id === batch.client)?.name
+                            : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={row.quantity}
+                          onChange={(e) =>
+                            handleUpdateBatchRow(batch.id, row.id, "quantity", e.target.value)
+                          }
+                          className="w-20"
+                          disabled={!batch.client}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={row.grade}
+                          onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "grade", val)}
+                          disabled={!batch.client}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue placeholder="Grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
+                            {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
+                              <SelectItem key={g} value={g.toString()}>
+                                {g}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">Assigned</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {batch.dispatchDate ? format(batch.dispatchDate, "MMM dd, yyyy") : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {batch.productionMonth
+                            ? format(new Date(batch.productionMonth + "-01"), "MMM yyyy")
+                            : "-"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">-</span>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={row.notes}
+                          onChange={(e) =>
+                            handleUpdateBatchRow(batch.id, row.id, "notes", e.target.value)
+                          }
+                          placeholder="Notes..."
+                          disabled={!batch.client}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleRemoveRowFromBatch(batch.id, row.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {/* Add Another Kit Row */}
+                  <TableRow className="bg-muted/70">
+                    <TableCell colSpan={13} className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddRowToBatch(batch.id)}
+                        disabled={!batch.client}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Another Kit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              ))}
+
               {/* New Row for inline creation */}
               {isAddingNewRow && (
                 <TableRow className="bg-muted/50">
