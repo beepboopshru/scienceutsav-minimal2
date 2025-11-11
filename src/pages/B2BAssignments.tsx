@@ -285,7 +285,7 @@ export default function Assignments() {
     if (productionMonth && dispatchDate) {
       const prodMonth = new Date(productionMonth + "-01");
       const dispMonth = new Date(dispatchDate.getFullYear(), dispatchDate.getMonth(), 1);
-      if (prodMonth > dispMonth) {
+      if (prodMonth.getTime() > dispMonth.getTime()) {
         toast.error("Production month must be before or same as dispatch month");
         return;
       }
@@ -599,7 +599,7 @@ export default function Assignments() {
     if (newRowProductionMonth && newRowDispatchDate) {
       const prodMonth = new Date(newRowProductionMonth + "-01");
       const dispMonth = new Date(newRowDispatchDate.getFullYear(), newRowDispatchDate.getMonth(), 1);
-      if (prodMonth > dispMonth) {
+      if (prodMonth.getTime() > dispMonth.getTime()) {
         toast.error("Production month must be before or same as dispatch month");
         return;
       }
@@ -651,7 +651,7 @@ export default function Assignments() {
     if (editRowProductionMonth && editRowDispatchDate) {
       const prodMonth = new Date(editRowProductionMonth + "-01");
       const dispMonth = new Date(editRowDispatchDate.getFullYear(), editRowDispatchDate.getMonth(), 1);
-      if (prodMonth > dispMonth) {
+      if (prodMonth.getTime() > dispMonth.getTime()) {
         toast.error("Production month must be before or same as dispatch month");
         return;
       }
