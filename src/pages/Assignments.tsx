@@ -870,10 +870,19 @@ export default function Assignments() {
                                           key={client._id}
                                           value={client.organization || client.name}
                                           onSelect={() => {
-                                            handleUpdateBatchMetadata(batch.id, "client", client._id);
                                             const generatedBatchId = generateBatchId(client._id);
-                                            handleUpdateBatchMetadata(batch.id, "batchId", generatedBatchId);
-                                            handleUpdateBatchMetadata(batch.id, "batchName", generatedBatchId);
+                                            setBatchesInProgress(
+                                              batchesInProgress.map((b) =>
+                                                b.id === batch.id
+                                                  ? {
+                                                      ...b,
+                                                      client: client._id,
+                                                      batchId: generatedBatchId,
+                                                      batchName: generatedBatchId,
+                                                    }
+                                                  : b
+                                              )
+                                            );
                                             setBatchClientPopoverOpen({ ...batchClientPopoverOpen, [batch.id]: false });
                                           }}
                                         >
