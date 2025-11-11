@@ -852,8 +852,9 @@ export default function Assignments() {
                                   className="w-full justify-start text-left font-normal"
                                 >
                                   {batch.client
-                                    ? clients?.find((c) => c._id === batch.client)?.organization ||
-                                      clients?.find((c) => c._id === batch.client)?.name
+                                    ? (clients?.find((c) => c._id === batch.client)?.organization ||
+                                      clients?.find((c) => c._id === batch.client)?.name ||
+                                      "Unknown Client")
                                     : "Select Client"}
                                 </Button>
                               </PopoverTrigger>
