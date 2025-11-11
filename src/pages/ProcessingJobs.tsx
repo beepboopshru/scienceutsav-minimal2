@@ -87,6 +87,53 @@ export default function ProcessingJobs() {
     return "Unknown";
   };
 
+  const handleTargetSelection = (targetIndex: number, itemId: Id<"inventory">) => {
+    const selectedItem = inventory.find((i) => i._id === itemId);
+    const newTargets = [...processingForm.targets];
+    newTargets[targetIndex].targetItemId = itemId;
+    
+    // If the selected item has BOM components, auto-fill sources
+    if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
+      const newSources = selectedItem.components.map((component) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * (newTargets[targetIndex].targetQuantity || 1),
+      }));
+      
+      setProcessingForm({ 
+        ...processingForm, 
+        targets: newTargets,
+        sources: newSources.length > 0 ? newSources : processingForm.sources
+      });
+      toast.success("BOM materials auto-filled in sources");
+    } else {
+      setProcessingForm({ ...processingForm, targets: newTargets });
+    }
+    
+    setTargetComboboxOpen({ ...targetComboboxOpen, [targetIndex]: false });
+  };
+
+  const handleTargetQuantityChange = (targetIndex: number, quantity: number) => {
+    const newTargets = [...processingForm.targets];
+    newTargets[targetIndex].targetQuantity = quantity;
+    
+    // Update source quantities based on BOM if applicable
+    const selectedItem = inventory.find((i) => i._id === newTargets[targetIndex].targetItemId);
+    if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
+      const newSources = selectedItem.components.map((component) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * quantity,
+      }));
+      
+      setProcessingForm({ 
+        ...processingForm, 
+        targets: newTargets,
+        sources: newSources
+      });
+    } else {
+      setProcessingForm({ ...processingForm, targets: newTargets });
+    }
+  };
+
   const handleComplete = async (jobId: string) => {
     try {
       await completeJob({ id: jobId as any });
@@ -389,12 +436,7 @@ export default function ProcessingJobs() {
                                       <CommandItem
                                         key={item._id}
                                         value={`${item.name} ${item._id}`}
-                                        onSelect={() => {
-                                          const newTargets = [...processingForm.targets];
-                                          newTargets[index].targetItemId = item._id;
-                                          setProcessingForm({ ...processingForm, targets: newTargets });
-                                          setTargetComboboxOpen({ ...targetComboboxOpen, [index]: false });
-                                        }}
+                                        onSelect={() => handleTargetSelection(index, item._id)}
                                       >
                                         <Check
                                           className={cn(
@@ -416,11 +458,7 @@ export default function ProcessingJobs() {
                             type="number"
                             placeholder="Quantity"
                             value={target.targetQuantity}
-                            onChange={(e) => {
-                              const newTargets = [...processingForm.targets];
-                              newTargets[index].targetQuantity = Number(e.target.value);
-                              setProcessingForm({ ...processingForm, targets: newTargets });
-                            }}
+                            onChange={(e) => handleTargetQuantityChange(index, Number(e.target.value))}
                           />
                         </div>
                         <Button
