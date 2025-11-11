@@ -3,15 +3,28 @@ import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
-    const assignments = await ctx.db.query("assignments").collect();
+  args: { clientType: v.optional(v.union(v.literal("b2b"), v.literal("b2c"))) },
+  handler: async (ctx, args) => {
+    let assignments;
+    if (args.clientType !== undefined) {
+      assignments = await ctx.db
+        .query("assignments")
+        .withIndex("by_client_type", (q) => q.eq("clientType", args.clientType!))
+        .collect();
+    } else {
+      assignments = await ctx.db.query("assignments").collect();
+    }
     
     // Fetch related data for each assignment
     const assignmentsWithDetails = await Promise.all(
       assignments.map(async (assignment) => {
         const kit = await ctx.db.get(assignment.kitId);
-        const client = await ctx.db.get(assignment.clientId);
+        let client;
+        if (assignment.clientType === "b2b") {
+          client = await ctx.db.get(assignment.clientId as any);
+        } else {
+          client = await ctx.db.get(assignment.clientId as any);
+        }
         const program = kit ? await ctx.db.get(kit.programId) : null;
         
         return {
@@ -36,7 +49,8 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    clientId: v.id("clients"),
+    clientId: v.union(v.id("clients"), v.id("b2cClients")),
+    clientType: v.union(v.literal("b2b"), v.literal("b2c")),
     kitId: v.id("kits"),
     quantity: v.number(),
     grade: v.optional(v.union(
@@ -57,7 +71,14 @@ export const create = mutation({
 
     // Create assignment
     const assignmentId = await ctx.db.insert("assignments", {
-      ...args,
+      clientId: args.clientId,
+      clientType: args.clientType,
+      kitId: args.kitId,
+      quantity: args.quantity,
+      grade: args.grade,
+      notes: args.notes,
+      dispatchedAt: args.dispatchedAt,
+      productionMonth: args.productionMonth,
       status: "assigned",
       createdBy: userId,
     });
@@ -202,15 +223,21 @@ export const deleteAssignment = mutation({
 });
 
 export const getByClient = query({
-  args: { clientId: v.id("clients") },
+  args: { 
+    clientId: v.union(v.id("clients"), v.id("b2cClients")),
+    clientType: v.union(v.literal("b2b"), v.literal("b2c"))
+  },
   handler: async (ctx, args) => {
     const assignments = await ctx.db
       .query("assignments")
-      .withIndex("by_client", (q) => q.eq("clientId", args.clientId))
+      .withIndex("by_client_id", (q) => q.eq("clientId", args.clientId))
       .collect();
+    
+    // Filter by client type
+    const filteredAssignments = assignments.filter(a => a.clientType === args.clientType);
 
     const assignmentsWithKits = await Promise.all(
-      assignments.map(async (assignment) => {
+      filteredAssignments.map(async (assignment) => {
         const kit = await ctx.db.get(assignment.kitId);
         return { ...assignment, kit };
       })

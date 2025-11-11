@@ -11,7 +11,10 @@ interface ClientMonthwiseViewProps {
 }
 
 export function ClientMonthwiseView({ clientId }: ClientMonthwiseViewProps) {
-  const assignments = useQuery(api.assignments.getByClient, { clientId });
+  const assignments = useQuery(api.assignments.getByClient, { 
+    clientId,
+    clientType: "b2b"
+  });
   const [selectedMonth, setSelectedMonth] = useState<string>("");
 
   // Calculate monthly data - MUST be before any conditional returns

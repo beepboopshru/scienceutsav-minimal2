@@ -72,11 +72,11 @@ export default function Assignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const assignments = useQuery(api.assignments.list);
-  const programs = useQuery(api.programs.list);
-  const kits = useQuery(api.kits.list);
-  const clients = useQuery(api.clients.list);
-  const batches = useQuery(api.batches.list);
+  const assignments = useQuery(api.assignments.list, { clientType: "b2b" });
+  const programs = useQuery(api.programs.list, {});
+  const kits = useQuery(api.kits.list, {});
+  const clients = useQuery(api.clients.list, {});
+  const batches = useQuery(api.batches.list, { clientType: "b2b" });
 
   const createAssignment = useMutation(api.assignments.create);
   const updateStatus = useMutation(api.assignments.updateStatus);
@@ -295,6 +295,7 @@ export default function Assignments() {
       await createAssignment({
         kitId: selectedKit as Id<"kits">,
         clientId: selectedClient as Id<"clients">,
+        clientType: "b2b",
         quantity: parseInt(quantity),
         grade: grade && grade !== "none" ? grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: notes || undefined,
@@ -567,6 +568,7 @@ export default function Assignments() {
     try {
       await createBatch({
         clientId: batch.client as Id<"clients">,
+        clientType: "b2b",
         batchName: batch.batchName || batch.batchId,
         notes: batch.batchNotes || undefined,
         dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
@@ -607,6 +609,7 @@ export default function Assignments() {
       await createAssignment({
         kitId: newRowKit as Id<"kits">,
         clientId: newRowClient as Id<"clients">,
+        clientType: "b2b",
         quantity: parseInt(newRowQuantity),
         grade: newRowGrade && newRowGrade !== "none" ? newRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: newRowNotes || undefined,
@@ -661,6 +664,7 @@ export default function Assignments() {
       await createAssignment({
         kitId: editRowKit as Id<"kits">,
         clientId: editRowClient as Id<"clients">,
+        clientType: "b2b",
         quantity: parseInt(editRowQuantity),
         grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: editRowNotes || undefined,
@@ -1332,7 +1336,12 @@ export default function Assignments() {
                                   {isExpanded ? "▼" : "▶"}
                                 </Button>
                                 <Badge variant="outline">{batch.batchId}</Badge>
-                                <span>{batch.client?.organization || batch.client?.name}</span>
+                                <span>
+                                  {(() => {
+                                    const client = batch.client as any;
+                                    return client?.organization || client?.name || "Unknown";
+                                  })()}
+                                </span>
                                 <span className="text-sm text-muted-foreground">
                                   ({batchAssignments.length} assignments: {statusSummary})
                                 </span>
@@ -1498,7 +1507,10 @@ export default function Assignments() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="font-medium">
-                                      {assignment.client?.organization || assignment.client?.name || "Unknown"}
+                                      {(() => {
+                                        const client = assignment.client as any;
+                                        return client?.organization || client?.name || "Unknown";
+                                      })()}
                                     </div>
                                   </TableCell>
                                   <TableCell>{assignment.quantity}</TableCell>
@@ -1740,7 +1752,10 @@ export default function Assignments() {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium">
-                              {assignment.client?.organization || assignment.client?.name || "Unknown"}
+                              {(() => {
+                                const client = assignment.client as any;
+                                return client?.organization || client?.name || "Unknown";
+                              })()}
                             </div>
                           </TableCell>
                           <TableCell>{assignment.quantity}</TableCell>
