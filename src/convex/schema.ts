@@ -9,6 +9,7 @@ export const ROLES = {
   RESEARCH_DEVELOPMENT: "research_development",
   OPERATIONS: "operations",
   INVENTORY: "inventory",
+  DISPATCH: "dispatch",
 } as const;
 
 export const roleValidator = v.union(
@@ -17,6 +18,7 @@ export const roleValidator = v.union(
   v.literal(ROLES.RESEARCH_DEVELOPMENT),
   v.literal(ROLES.OPERATIONS),
   v.literal(ROLES.INVENTORY),
+  v.literal(ROLES.DISPATCH),
 );
 export type Role = Infer<typeof roleValidator>;
 

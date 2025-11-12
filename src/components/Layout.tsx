@@ -206,6 +206,12 @@ export function Layout({ children }: LayoutProps) {
       roles: ["admin", "manager", "operations"],
     },
     {
+      title: "Dispatch",
+      icon: Package,
+      path: "/dispatch",
+      roles: ["admin", "manager", "operations", "dispatch"],
+    },
+    {
       title: "Clients",
       icon: Users,
       path: "/clients",

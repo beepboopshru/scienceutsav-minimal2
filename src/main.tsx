@@ -30,6 +30,7 @@ import UserManagement from "@/pages/UserManagement.tsx";
 import AdminZone from "@/pages/AdminZone.tsx";
 import Procurement from "@/pages/Procurement.tsx";
 import Packing from "@/pages/Packing.tsx";
+import Dispatch from "@/pages/Dispatch.tsx";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -79,6 +80,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/b2b-assignments" element={<B2BAssignments />} />
             <Route path="/b2c-assignments" element={<B2CAssignments />} />
             <Route path="/packing" element={<Packing />} />
+            <Route path="/dispatch" element={<Dispatch />} />
             <Route path="/operations" element={<Operations />} />
             <Route path="/procurement" element={<Procurement />} />
             <Route path="/laser-files" element={<LaserFiles />} />
