@@ -38,6 +38,7 @@ import {
   X,
   Send,
   Trash2,
+  Package,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode, useState, useEffect, useRef } from "react";
@@ -196,6 +197,12 @@ export function Layout({ children }: LayoutProps) {
       title: "Operations",
       icon: ClipboardList,
       path: "/operations",
+      roles: ["admin", "manager", "operations"],
+    },
+    {
+      title: "Packing",
+      icon: Package,
+      path: "/packing",
       roles: ["admin", "manager", "operations"],
     },
     {

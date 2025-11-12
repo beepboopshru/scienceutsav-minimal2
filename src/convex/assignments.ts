@@ -241,3 +241,34 @@ export const remove = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+export const listAll = query({
+  args: {},
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    return await ctx.db.query("assignments").collect();
+  },
+});
+
+export const updatePackingStatus = mutation({
+  args: {
+    assignmentId: v.id("assignments"),
+    packingStatus: v.union(
+      v.literal("assigned"),
+      v.literal("in_progress"),
+      v.literal("transferred_to_dispatch")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    await ctx.db.patch(args.assignmentId, {
+      packingStatus: args.packingStatus,
+    });
+
+    return args.assignmentId;
+  },
+});
