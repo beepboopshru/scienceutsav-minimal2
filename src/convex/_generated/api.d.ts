@@ -30,6 +30,7 @@ import type * as kits from "../kits.js";
 import type * as laserFiles from "../laserFiles.js";
 import type * as operations from "../operations.js";
 import type * as processingJobs from "../processingJobs.js";
+import type * as procurementJobs from "../procurementJobs.js";
 import type * as programs from "../programs.js";
 import type * as services from "../services.js";
 import type * as userPermissions from "../userPermissions.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   laserFiles: typeof laserFiles;
   operations: typeof operations;
   processingJobs: typeof processingJobs;
+  procurementJobs: typeof procurementJobs;
   programs: typeof programs;
   services: typeof services;
   userPermissions: typeof userPermissions;

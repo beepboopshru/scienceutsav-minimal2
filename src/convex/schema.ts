@@ -495,6 +495,37 @@ const schema = defineSchema(
         })),
       }),
     }).index("by_user", ["userId"]),
+
+    // Procurement jobs for tracking material shortage requests
+    procurementJobs: defineTable({
+      jobId: v.string(),
+      createdBy: v.id("users"),
+      assignmentIds: v.array(v.id("assignments")),
+      materialShortages: v.array(
+        v.object({
+          name: v.string(),
+          currentStock: v.number(),
+          required: v.number(),
+          shortage: v.number(),
+          unit: v.string(),
+          category: v.optional(v.string()),
+        })
+      ),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("in_progress"),
+        v.literal("completed")
+      ),
+      priority: v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high")
+      ),
+      notes: v.optional(v.string()),
+    })
+      .index("by_created_by", ["createdBy"])
+      .index("by_status", ["status"])
+      .index("by_priority", ["priority"]),
   },
   {
     schemaValidation: false,

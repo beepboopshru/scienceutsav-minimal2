@@ -33,14 +33,17 @@ export default function Packing() {
   const b2cClients = useQuery(api.b2cClients.list, {});
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list, {});
+  const inventory = useQuery(api.inventory.list, {});
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
+  const createProcurementJob = useMutation(api.procurementJobs.create);
 
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [selectedAssignments, setSelectedAssignments] = useState<Set<Id<"assignments">>>(new Set());
   
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -51,6 +54,11 @@ export default function Packing() {
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
   const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
   const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
+
+  // Procurement dialog state
+  const [procurementDialog, setProcurementDialog] = useState(false);
+  const [procurementPriority, setProcurementPriority] = useState<"low" | "medium" | "high">("medium");
+  const [procurementNotes, setProcurementNotes] = useState("");
 
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
@@ -83,6 +91,196 @@ export default function Packing() {
   });
 
   const hasAccess = user?.role === "admin" || user?.role === "operations";
+
+  const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
+    setSelectedAssignments((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(assignmentId)) {
+        newSet.delete(assignmentId);
+      } else {
+        newSet.add(assignmentId);
+      }
+      return newSet;
+    });
+  };
+
+  const calculateMaterialShortages = () => {
+    if (!inventory) return [];
+
+    const materialMap = new Map<string, any>();
+
+    selectedAssignments.forEach((assignmentId) => {
+      const assignment = assignments?.find((a) => a._id === assignmentId);
+      if (!assignment) return;
+
+      const kit = kits?.find((k) => k._id === assignment.kitId);
+      if (!kit) return;
+
+      const requiredQty = assignment.quantity;
+
+      // Process structured packing requirements
+      if (kit.isStructured && kit.packingRequirements) {
+        try {
+          const packingData = JSON.parse(kit.packingRequirements);
+          
+          if (packingData.pouches) {
+            packingData.pouches.forEach((pouch: any) => {
+              if (pouch.materials) {
+                pouch.materials.forEach((material: any) => {
+                  const key = material.name.toLowerCase();
+                  const required = material.quantity * requiredQty;
+                  
+                  if (materialMap.has(key)) {
+                    const existing = materialMap.get(key);
+                    existing.required += required;
+                  } else {
+                    const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+                    materialMap.set(key, {
+                      name: material.name,
+                      currentStock: invItem?.quantity || 0,
+                      required,
+                      unit: material.unit,
+                      category: "Main Component",
+                    });
+                  }
+                });
+              }
+            });
+          }
+
+          if (packingData.packets) {
+            packingData.packets.forEach((packet: any) => {
+              if (packet.materials) {
+                packet.materials.forEach((material: any) => {
+                  const key = material.name.toLowerCase();
+                  const required = material.quantity * requiredQty;
+                  
+                  if (materialMap.has(key)) {
+                    const existing = materialMap.get(key);
+                    existing.required += required;
+                  } else {
+                    const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+                    materialMap.set(key, {
+                      name: material.name,
+                      currentStock: invItem?.quantity || 0,
+                      required,
+                      unit: material.unit,
+                      category: "Main Component",
+                    });
+                  }
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing packing requirements:", error);
+        }
+      }
+
+      // Process spare kits
+      if (kit.spareKits) {
+        kit.spareKits.forEach((spare: any) => {
+          const key = spare.name.toLowerCase();
+          const required = spare.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: spare.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: spare.unit,
+              category: "Spare Kit",
+            });
+          }
+        });
+      }
+
+      // Process bulk materials
+      if (kit.bulkMaterials) {
+        kit.bulkMaterials.forEach((bulk: any) => {
+          const key = bulk.name.toLowerCase();
+          const required = bulk.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: bulk.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: bulk.unit,
+              category: "Bulk Material",
+            });
+          }
+        });
+      }
+
+      // Process miscellaneous
+      if (kit.miscellaneous) {
+        kit.miscellaneous.forEach((misc: any) => {
+          const key = misc.name.toLowerCase();
+          const required = misc.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            materialMap.set(key, {
+              name: misc.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: misc.unit,
+              category: "Miscellaneous",
+            });
+          }
+        });
+      }
+    });
+
+    return Array.from(materialMap.values()).map((item) => ({
+      ...item,
+      shortage: Math.max(0, item.required - item.currentStock),
+    })).filter((item) => item.shortage > 0);
+  };
+
+  const handleRequestProcurement = () => {
+    setProcurementDialog(true);
+  };
+
+  const handleSubmitProcurement = async () => {
+    const shortages = calculateMaterialShortages();
+    
+    if (shortages.length === 0) {
+      toast.error("No material shortages found for selected assignments");
+      return;
+    }
+
+    try {
+      await createProcurementJob({
+        assignmentIds: Array.from(selectedAssignments),
+        materialShortages: shortages,
+        priority: procurementPriority,
+        notes: procurementNotes || undefined,
+      });
+      
+      toast.success("Procurement request created successfully");
+      setSelectedAssignments(new Set());
+      setProcurementDialog(false);
+      setProcurementNotes("");
+      setProcurementPriority("medium");
+    } catch (error) {
+      toast.error("Failed to create procurement request", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
 
   const filteredAssignments = (assignments || []).filter((assignment) => {
     // Basic filters
@@ -318,11 +516,46 @@ export default function Packing() {
           </div>
         </div>
 
+        {selectedAssignments.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20"
+          >
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              <span className="font-medium">
+                {selectedAssignments.size} assignment{selectedAssignments.size !== 1 ? "s" : ""} selected
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
+                Clear Selection
+              </Button>
+              <Button onClick={handleRequestProcurement}>
+                Request Procurement
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
         <div className="rounded-md border">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium w-10">
+                    <Checkbox
+                      checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
+                        } else {
+                          setSelectedAssignments(new Set());
+                        }
+                      }}
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left text-sm font-medium w-10"></th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Customer Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Batch</th>
@@ -367,6 +600,12 @@ export default function Packing() {
                           transition={{ delay: index * 0.02 }}
                           className="border-b hover:bg-muted/30"
                         >
+                          <td className="px-4 py-3">
+                            <Checkbox
+                              checked={selectedAssignments.has(assignment._id)}
+                              onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                            />
+                          </td>
                           <td className="px-4 py-3"></td>
                           <td className="px-4 py-3">
                             <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
@@ -502,6 +741,12 @@ export default function Packing() {
                             transition={{ delay: index * 0.02 }}
                             className="border-b hover:bg-muted/30 bg-background"
                           >
+                            <td className="px-4 py-3">
+                              <Checkbox
+                                checked={selectedAssignments.has(assignment._id)}
+                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                              />
+                            </td>
                             <td className="px-4 py-3"></td>
                             <td className="px-4 py-3">
                               <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
@@ -696,6 +941,80 @@ export default function Packing() {
             <DialogTitle>Kit Files: {fileViewerDialog.kitName}</DialogTitle>
           </DialogHeader>
           {fileViewerDialog.kitId && <KitFileViewer kitId={fileViewerDialog.kitId} />}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={procurementDialog} onOpenChange={setProcurementDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Request Procurement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Material shortages for {selectedAssignments.size} selected assignment{selectedAssignments.size !== 1 ? "s" : ""}
+            </p>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Material</th>
+                    <th className="px-3 py-2 text-left">Category</th>
+                    <th className="px-3 py-2 text-right">Current</th>
+                    <th className="px-3 py-2 text-right">Required</th>
+                    <th className="px-3 py-2 text-right">Shortage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {calculateMaterialShortages().map((item, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-3 py-2">{item.name}</td>
+                      <td className="px-3 py-2">
+                        <Badge variant="outline">{item.category}</Badge>
+                      </td>
+                      <td className="px-3 py-2 text-right">{item.currentStock} {item.unit}</td>
+                      <td className="px-3 py-2 text-right">{item.required} {item.unit}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <Label>Priority</Label>
+              <Select value={procurementPriority} onValueChange={(v) => setProcurementPriority(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Notes (Optional)</Label>
+              <Input
+                placeholder="Add any notes about this procurement request..."
+                value={procurementNotes}
+                onChange={(e) => setProcurementNotes(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setProcurementDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitProcurement}>
+                Submit Procurement Request
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>
