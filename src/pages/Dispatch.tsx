@@ -20,9 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2 } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -362,33 +368,55 @@ export default function Dispatch() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {assignment.status === "transferred_to_dispatch" && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => handleMarkAsDispatched(assignment._id)}
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Mark Dispatched
-                              </Button>
-                            )}
-                            {assignment.status === "dispatched" && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={async () => {
-                                  try {
-                                    await updateStatus({ id: assignment._id, status: "delivered" });
-                                    toast.success("Assignment marked as delivered");
-                                  } catch (error) {
-                                    toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                  }
-                                }}
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                Mark Delivered
-                              </Button>
-                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  Change Status
+                                  <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      await updateStatus({ id: assignment._id, status: "transferred_to_dispatch" });
+                                      toast.success("Status updated to Transferred to Dispatch");
+                                    } catch (error) {
+                                      toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                    }
+                                  }}
+                                  disabled={assignment.status === "transferred_to_dispatch"}
+                                >
+                                  Transferred to Dispatch
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      await updateStatus({ id: assignment._id, status: "dispatched" });
+                                      toast.success("Status updated to Dispatched");
+                                    } catch (error) {
+                                      toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                    }
+                                  }}
+                                  disabled={assignment.status === "dispatched"}
+                                >
+                                  Dispatched
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      await updateStatus({ id: assignment._id, status: "delivered" });
+                                      toast.success("Status updated to Delivered");
+                                    } catch (error) {
+                                      toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                    }
+                                  }}
+                                  disabled={assignment.status === "delivered"}
+                                >
+                                  Delivered
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </td>
                       </tr>
@@ -475,33 +503,55 @@ export default function Dispatch() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {assignment.status === "transferred_to_dispatch" && (
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={() => handleMarkAsDispatched(assignment._id)}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Mark Dispatched
-                                  </Button>
-                                )}
-                                {assignment.status === "dispatched" && (
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    onClick={async () => {
-                                      try {
-                                        await updateStatus({ id: assignment._id, status: "delivered" });
-                                        toast.success("Assignment marked as delivered");
-                                      } catch (error) {
-                                        toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                      }
-                                    }}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Mark Delivered
-                                  </Button>
-                                )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      Change Status
+                                      <ChevronDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={async () => {
+                                        try {
+                                          await updateStatus({ id: assignment._id, status: "transferred_to_dispatch" });
+                                          toast.success("Status updated to Transferred to Dispatch");
+                                        } catch (error) {
+                                          toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                        }
+                                      }}
+                                      disabled={assignment.status === "transferred_to_dispatch"}
+                                    >
+                                      Transferred to Dispatch
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={async () => {
+                                        try {
+                                          await updateStatus({ id: assignment._id, status: "dispatched" });
+                                          toast.success("Status updated to Dispatched");
+                                        } catch (error) {
+                                          toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                        }
+                                      }}
+                                      disabled={assignment.status === "dispatched"}
+                                    >
+                                      Dispatched
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={async () => {
+                                        try {
+                                          await updateStatus({ id: assignment._id, status: "delivered" });
+                                          toast.success("Status updated to Delivered");
+                                        } catch (error) {
+                                          toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                        }
+                                      }}
+                                      disabled={assignment.status === "delivered"}
+                                    >
+                                      Delivered
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </td>
                           </tr>
