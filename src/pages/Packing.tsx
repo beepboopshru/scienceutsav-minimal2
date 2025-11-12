@@ -292,7 +292,7 @@ export default function Packing() {
           }}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <Label className="text-xs">Customer Type</Label>
             <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
@@ -322,7 +322,7 @@ export default function Packing() {
             </Select>
           </div>
 
-          <div className="sm:col-span-2">
+          <div>
             <Label className="text-xs">Search</Label>
             <Input
               placeholder="Search by kit or client name..."
