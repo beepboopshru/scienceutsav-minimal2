@@ -13,7 +13,7 @@ import { useMutation, useQuery, useAction } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Download, Eye, Package } from "lucide-react";
+import { Download, Eye, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function Packing() {
@@ -38,6 +38,7 @@ export default function Packing() {
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
@@ -94,10 +95,32 @@ export default function Packing() {
     return true;
   });
 
+  // Group assignments by batch
+  const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
+    const batchKey = assignment.batchId ? assignment.batchId : "standalone";
+    if (!acc[batchKey]) {
+      acc[batchKey] = [];
+    }
+    acc[batchKey].push(assignment);
+    return acc;
+  }, {} as Record<string, typeof filteredAssignments>);
+
   const stats = {
     assigned: filteredAssignments.filter((a) => (a.packingStatus || "assigned") === "assigned").reduce((sum, a) => sum + a.quantity, 0),
     inProgress: filteredAssignments.filter((a) => a.packingStatus === "in_progress").reduce((sum, a) => sum + a.quantity, 0),
     transferred: filteredAssignments.filter((a) => a.packingStatus === "transferred_to_dispatch").reduce((sum, a) => sum + a.quantity, 0),
+  };
+
+  const toggleBatch = (batchKey: string) => {
+    setExpandedBatches((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchKey)) {
+        newSet.delete(batchKey);
+      } else {
+        newSet.add(batchKey);
+      }
+      return newSet;
+    });
   };
 
   const handleStatusChange = async (assignmentId: Id<"assignments">, newStatus: string) => {
@@ -252,6 +275,7 @@ export default function Packing() {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium w-10"></th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Customer Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Batch</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Client</th>
@@ -270,104 +294,250 @@ export default function Packing() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAssignments.map((assignment, index) => {
-                  const kit = kits?.find((k) => k._id === assignment.kitId);
-                  const program = kit ? programs?.find((p) => p._id === kit.programId) : null;
-                  const client = assignment.clientType === "b2b"
-                    ? clients?.find((c) => c._id === assignment.clientId)
-                    : b2cClients?.find((c) => c._id === assignment.clientId);
-                  const batch = batches?.find((b) => b._id === assignment.batchId);
+                {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
+                  const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
+                  const isExpanded = expandedBatches.has(batchKey);
+                  const firstAssignment = batchAssignments[0];
+                  const client = firstAssignment.clientType === "b2b"
+                    ? clients?.find((c) => c._id === firstAssignment.clientId)
+                    : b2cClients?.find((c) => c._id === firstAssignment.clientId);
 
-                  return (
-                    <motion.tr
-                      key={assignment._id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: index * 0.02 }}
-                      className="border-b hover:bg-muted/30"
-                    >
-                      <td className="px-4 py-3">
-                        <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
-                          {assignment.clientType?.toUpperCase() || "N/A"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {batch ? batch.batchId : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {assignment.clientType === "b2b" 
-                          ? (client as any)?.name || "Unknown"
-                          : (client as any)?.buyerName || "Unknown"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
-                      <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
-                      <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
-                      <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
-                      <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={
-                          assignment.status === "dispatched" ? "default" :
-                          assignment.status === "packed" ? "secondary" : "outline"
-                        }>
-                          {assignment.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {assignment.dispatchedAt 
-                          ? new Date(assignment.dispatchedAt).toLocaleDateString()
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
-                      <td className="px-4 py-3 text-sm">
-                        {new Date(assignment._creationTime).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
-                        {assignment.notes || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Select
-                          value={assignment.packingStatus || "assigned"}
-                          onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                  if (batchKey === "standalone") {
+                    // Render standalone assignments without batch grouping
+                    return batchAssignments.map((assignment, index) => {
+                      const kit = kits?.find((k) => k._id === assignment.kitId);
+                      const program = kit ? programs?.find((p) => p._id === kit.programId) : null;
+                      const assignmentClient = assignment.clientType === "b2b"
+                        ? clients?.find((c) => c._id === assignment.clientId)
+                        : b2cClients?.find((c) => c._id === assignment.clientId);
+
+                      return (
+                        <motion.tr
+                          key={assignment._id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: index * 0.02 }}
+                          className="border-b hover:bg-muted/30"
                         >
-                          <SelectTrigger className="h-8 w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="assigned">Assigned</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (kit) {
-                                setFileViewerDialog({
-                                  open: true,
-                                  kitId: kit._id,
-                                  kitName: kit.name,
-                                });
-                              }
-                            }}
-                            title="View Kit Files"
+                          <td className="px-4 py-3"></td>
+                          <td className="px-4 py-3">
+                            <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
+                              {assignment.clientType?.toUpperCase() || "N/A"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm">—</td>
+                          <td className="px-4 py-3 text-sm">
+                            {assignment.clientType === "b2b" 
+                              ? (assignmentClient as any)?.name || "Unknown"
+                              : (assignmentClient as any)?.buyerName || "Unknown"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
+                          <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
+                          <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
+                          <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
+                          <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant={
+                              assignment.status === "dispatched" ? "default" :
+                              assignment.status === "packed" ? "secondary" : "outline"
+                            }>
+                              {assignment.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {assignment.dispatchedAt 
+                              ? new Date(assignment.dispatchedAt).toLocaleDateString()
+                              : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {new Date(assignment._creationTime).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
+                            {assignment.notes || "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Select
+                              value={assignment.packingStatus || "assigned"}
+                              onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                            >
+                              <SelectTrigger className="h-8 w-[180px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="assigned">Assigned</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (kit) {
+                                    setFileViewerDialog({
+                                      open: true,
+                                      kitId: kit._id,
+                                      kitName: kit.name,
+                                    });
+                                  }
+                                }}
+                                title="View Kit Files"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => kit && handleDownloadKitSheet(kit._id)}
+                                title="Download Kit Sheet"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    });
+                  }
+
+                  // Render batch header row
+                  return (
+                    <>
+                      <motion.tr
+                        key={`batch-${batchKey}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="border-b bg-muted/20 hover:bg-muted/40 cursor-pointer"
+                        onClick={() => toggleBatch(batchKey)}
+                      >
+                        <td className="px-4 py-3">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
+                            {firstAssignment.clientType?.toUpperCase() || "N/A"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold" colSpan={2}>
+                          {batch?.batchId || "Unknown Batch"} - {firstAssignment.clientType === "b2b" 
+                            ? (client as any)?.name || "Unknown"
+                            : (client as any)?.buyerName || "Unknown"}
+                        </td>
+                        <td className="px-4 py-3 text-sm" colSpan={2}>
+                          {batchAssignments.length} assignment{batchAssignments.length !== 1 ? "s" : ""}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
+                        </td>
+                        <td colSpan={9}></td>
+                      </motion.tr>
+                      {isExpanded && batchAssignments.map((assignment, index) => {
+                        const kit = kits?.find((k) => k._id === assignment.kitId);
+                        const program = kit ? programs?.find((p) => p._id === kit.programId) : null;
+                        const assignmentClient = assignment.clientType === "b2b"
+                          ? clients?.find((c) => c._id === assignment.clientId)
+                          : b2cClients?.find((c) => c._id === assignment.clientId);
+
+                        return (
+                          <motion.tr
+                            key={assignment._id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: index * 0.02 }}
+                            className="border-b hover:bg-muted/30 bg-background"
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => kit && handleDownloadKitSheet(kit._id)}
-                            title="Download Kit Sheet"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </motion.tr>
+                            <td className="px-4 py-3"></td>
+                            <td className="px-4 py-3">
+                              <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
+                                {assignment.clientType?.toUpperCase() || "N/A"}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-sm">{batch?.batchId || "—"}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {assignment.clientType === "b2b" 
+                                ? (assignmentClient as any)?.name || "Unknown"
+                                : (assignmentClient as any)?.buyerName || "Unknown"}
+                            </td>
+                            <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
+                            <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
+                            <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
+                            <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
+                            <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
+                            <td className="px-4 py-3">
+                              <Badge variant={
+                                assignment.status === "dispatched" ? "default" :
+                                assignment.status === "packed" ? "secondary" : "outline"
+                              }>
+                                {assignment.status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {assignment.dispatchedAt 
+                                ? new Date(assignment.dispatchedAt).toLocaleDateString()
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {new Date(assignment._creationTime).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
+                              {assignment.notes || "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Select
+                                value={assignment.packingStatus || "assigned"}
+                                onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                              >
+                                <SelectTrigger className="h-8 w-[180px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="assigned">Assigned</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (kit) {
+                                      setFileViewerDialog({
+                                        open: true,
+                                        kitId: kit._id,
+                                        kitName: kit.name,
+                                      });
+                                    }
+                                  }}
+                                  title="View Kit Files"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => kit && handleDownloadKitSheet(kit._id)}
+                                  title="Download Kit Sheet"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        );
+                      })}
+                    </>
                   );
                 })}
               </tbody>
