@@ -277,7 +277,7 @@ export default function Packing() {
                     >
                       <td className="px-4 py-3">
                         <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
-                          {assignment.clientType.toUpperCase()}
+                          {assignment.clientType?.toUpperCase() || "N/A"}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm">
