@@ -16,6 +16,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Download, Eye, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 
 export default function Packing() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -48,6 +49,8 @@ export default function Packing() {
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
+  const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
+  const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
 
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
@@ -96,6 +99,11 @@ export default function Packing() {
     if (selectedClients.length > 0 && !selectedClients.includes(assignment.clientId)) return false;
     if (selectedStatuses.length > 0 && !selectedStatuses.includes(assignment.status)) return false;
     if (selectedBatches.length > 0 && (!assignment.batchId || !selectedBatches.includes(assignment.batchId))) return false;
+    if (selectedProductionMonths.length > 0 && (!assignment.productionMonth || !selectedProductionMonths.includes(assignment.productionMonth))) return false;
+    if (selectedDispatchMonths.length > 0) {
+      const dispatchMonth = format(new Date(assignment.dispatchedAt || assignment._creationTime), "yyyy-MM");
+      if (!selectedDispatchMonths.includes(dispatchMonth)) return false;
+    }
     
     // Search query
     if (searchQuery.trim()) {
@@ -259,16 +267,16 @@ export default function Packing() {
           selectedCategories={selectedCategories}
           selectedKits={selectedKits}
           selectedClients={selectedClients}
-          selectedDispatchMonths={[]}
+          selectedDispatchMonths={selectedDispatchMonths}
           selectedStatuses={selectedStatuses}
-          selectedProductionMonths={[]}
+          selectedProductionMonths={selectedProductionMonths}
           onProgramsChange={setSelectedPrograms}
           onCategoriesChange={setSelectedCategories}
           onKitsChange={setSelectedKits}
           onClientsChange={setSelectedClients}
-          onDispatchMonthsChange={() => {}}
+          onDispatchMonthsChange={setSelectedDispatchMonths}
           onStatusesChange={setSelectedStatuses}
-          onProductionMonthsChange={() => {}}
+          onProductionMonthsChange={setSelectedProductionMonths}
           onClearAll={() => {
             setSelectedPrograms([]);
             setSelectedCategories([]);
@@ -276,6 +284,8 @@ export default function Packing() {
             setSelectedClients([]);
             setSelectedStatuses([]);
             setSelectedBatches([]);
+            setSelectedDispatchMonths([]);
+            setSelectedProductionMonths([]);
             setCustomerTypeFilter("all");
             setPackingStatusFilter("all");
             setSearchQuery("");
