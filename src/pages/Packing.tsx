@@ -30,6 +30,7 @@ export default function Packing() {
   const clients = useQuery(api.clients.list, {});
   const b2cClients = useQuery(api.b2cClients.list, {});
   const batches = useQuery(api.batches.list, {});
+  const programs = useQuery(api.programs.list, {});
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
@@ -252,9 +253,18 @@ export default function Packing() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium">Customer Type</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Batch</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Client</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Program</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Kit</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Kit Category</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Grade</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Dispatch Date</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Production Month</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Created On</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Notes</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Packing Status</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
@@ -262,6 +272,7 @@ export default function Packing() {
               <tbody>
                 {filteredAssignments.map((assignment, index) => {
                   const kit = kits?.find((k) => k._id === assignment.kitId);
+                  const program = kit ? programs?.find((p) => p._id === kit.programId) : null;
                   const client = assignment.clientType === "b2b"
                     ? clients?.find((c) => c._id === assignment.clientId)
                     : b2cClients?.find((c) => c._id === assignment.clientId);
@@ -281,13 +292,38 @@ export default function Packing() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm">
+                        {batch ? batch.batchId : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
                         {assignment.clientType === "b2b" 
                           ? (client as any)?.name || "Unknown"
                           : (client as any)?.buyerName || "Unknown"}
-                        {batch && <div className="text-xs text-muted-foreground">Batch: {batch.batchId}</div>}
                       </td>
+                      <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
                       <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
+                      <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
                       <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
+                      <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={
+                          assignment.status === "dispatched" ? "default" :
+                          assignment.status === "packed" ? "secondary" : "outline"
+                        }>
+                          {assignment.status}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {assignment.dispatchedAt 
+                          ? new Date(assignment.dispatchedAt).toLocaleDateString()
+                          : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        {new Date(assignment._creationTime).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
+                        {assignment.notes || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <Select
                           value={assignment.packingStatus || "assigned"}
