@@ -32,6 +32,8 @@ import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail,
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -49,6 +51,16 @@ export default function Dispatch() {
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
   const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
+
+  // Checklist dialog state
+  const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
+  const [selectedAssignmentForDispatch, setSelectedAssignmentForDispatch] = useState<Id<"assignments"> | null>(null);
+  const [checklistItems, setChecklistItems] = useState({
+    kitCount: false,
+    bulkMaterials: false,
+    workbookWorksheetConceptMap: false,
+    spareKitsTools: false,
+  });
 
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -203,6 +215,48 @@ export default function Dispatch() {
     setSelectedStatuses([]);
     setSelectedProductionMonths([]);
     setSelectedDispatchMonths([]);
+  };
+
+  const handleStatusChange = async (assignmentId: Id<"assignments">, newStatus: string) => {
+    if (newStatus === "dispatched") {
+      // Open checklist dialog
+      setSelectedAssignmentForDispatch(assignmentId);
+      setChecklistItems({
+        kitCount: false,
+        bulkMaterials: false,
+        workbookWorksheetConceptMap: false,
+        spareKitsTools: false,
+      });
+      setChecklistDialogOpen(true);
+    } else {
+      // Directly update status for other statuses
+      try {
+        await updateStatus({ id: assignmentId, status: newStatus as any });
+        toast.success(`Status updated to ${newStatus.replace(/_/g, " ")}`);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to update status");
+      }
+    }
+  };
+
+  const handleConfirmDispatch = async () => {
+    const allChecked = Object.values(checklistItems).every((checked) => checked);
+    
+    if (!allChecked) {
+      toast.error("Please verify all checklist items before dispatching");
+      return;
+    }
+
+    if (!selectedAssignmentForDispatch) return;
+
+    try {
+      await updateStatus({ id: selectedAssignmentForDispatch, status: "dispatched" });
+      toast.success("Status updated to Dispatched");
+      setChecklistDialogOpen(false);
+      setSelectedAssignmentForDispatch(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update status");
+    }
   };
 
   const totalQuantity = filteredAssignments.reduce((sum, a) => sum + a.quantity, 0);
@@ -377,40 +431,19 @@ export default function Dispatch() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  onClick={async () => {
-                                    try {
-                                      await updateStatus({ id: assignment._id, status: "transferred_to_dispatch" });
-                                      toast.success("Status updated to Transferred to Dispatch");
-                                    } catch (error) {
-                                      toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                    }
-                                  }}
+                                  onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
                                   disabled={assignment.status === "transferred_to_dispatch"}
                                 >
                                   Transferred to Dispatch
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={async () => {
-                                    try {
-                                      await updateStatus({ id: assignment._id, status: "dispatched" });
-                                      toast.success("Status updated to Dispatched");
-                                    } catch (error) {
-                                      toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                    }
-                                  }}
+                                  onClick={() => handleStatusChange(assignment._id, "dispatched")}
                                   disabled={assignment.status === "dispatched"}
                                 >
                                   Dispatched
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={async () => {
-                                    try {
-                                      await updateStatus({ id: assignment._id, status: "delivered" });
-                                      toast.success("Status updated to Delivered");
-                                    } catch (error) {
-                                      toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                    }
-                                  }}
+                                  onClick={() => handleStatusChange(assignment._id, "delivered")}
                                   disabled={assignment.status === "delivered"}
                                 >
                                   Delivered
@@ -512,40 +545,19 @@ export default function Dispatch() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem
-                                      onClick={async () => {
-                                        try {
-                                          await updateStatus({ id: assignment._id, status: "transferred_to_dispatch" });
-                                          toast.success("Status updated to Transferred to Dispatch");
-                                        } catch (error) {
-                                          toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                        }
-                                      }}
+                                      onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
                                       disabled={assignment.status === "transferred_to_dispatch"}
                                     >
                                       Transferred to Dispatch
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onClick={async () => {
-                                        try {
-                                          await updateStatus({ id: assignment._id, status: "dispatched" });
-                                          toast.success("Status updated to Dispatched");
-                                        } catch (error) {
-                                          toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                        }
-                                      }}
+                                      onClick={() => handleStatusChange(assignment._id, "dispatched")}
                                       disabled={assignment.status === "dispatched"}
                                     >
                                       Dispatched
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onClick={async () => {
-                                        try {
-                                          await updateStatus({ id: assignment._id, status: "delivered" });
-                                          toast.success("Status updated to Delivered");
-                                        } catch (error) {
-                                          toast.error(error instanceof Error ? error.message : "Failed to update status");
-                                        }
-                                      }}
+                                      onClick={() => handleStatusChange(assignment._id, "delivered")}
                                       disabled={assignment.status === "delivered"}
                                     >
                                       Delivered
@@ -622,6 +634,76 @@ export default function Dispatch() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewClientDialogOpen(false)}>
                 Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dispatch Checklist Dialog */}
+        <Dialog open={checklistDialogOpen} onOpenChange={setChecklistDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Dispatch Checklist</DialogTitle>
+              <DialogDescription>
+                Please verify all items before marking as dispatched
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="kitCount"
+                  checked={checklistItems.kitCount}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, kitCount: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="kitCount" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Kit count verified
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="bulkMaterials"
+                  checked={checklistItems.bulkMaterials}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, bulkMaterials: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="bulkMaterials" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Bulk materials included
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="workbookWorksheetConceptMap"
+                  checked={checklistItems.workbookWorksheetConceptMap}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, workbookWorksheetConceptMap: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="workbookWorksheetConceptMap" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Workbook, worksheet, concept map included
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="spareKitsTools"
+                  checked={checklistItems.spareKitsTools}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, spareKitsTools: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="spareKitsTools" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Spare kits and tools included
+                </Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setChecklistDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmDispatch}>
+                Confirm Dispatch
               </Button>
             </DialogFooter>
           </DialogContent>
