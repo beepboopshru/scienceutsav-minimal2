@@ -81,9 +81,9 @@ export default function Dispatch() {
     );
   }
 
-  // Filter assignments: ONLY show transferred_to_dispatch
+  // Filter assignments: show transferred_to_dispatch and dispatched
   let filteredAssignments = assignments?.filter(
-    (a) => a.status === "transferred_to_dispatch"
+    (a) => a.status === "transferred_to_dispatch" || a.status === "dispatched"
   ) || [];
 
   // Apply customer type filter
@@ -339,7 +339,11 @@ export default function Dispatch() {
                           )}
                         </td>
                         <td className="p-4">
-                          <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
+                          <Badge variant={
+                            assignment.status === "dispatched" ? "default" : 
+                            assignment.status === "delivered" ? "default" : 
+                            "secondary"
+                          }>
                             {assignment.status}
                           </Badge>
                         </td>
@@ -358,7 +362,7 @@ export default function Dispatch() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {assignment.status !== "dispatched" && (
+                            {assignment.status === "transferred_to_dispatch" && (
                               <Button
                                 variant="default"
                                 size="sm"
@@ -366,6 +370,23 @@ export default function Dispatch() {
                               >
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Mark Dispatched
+                              </Button>
+                            )}
+                            {assignment.status === "dispatched" && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await updateStatus({ id: assignment._id, status: "delivered" });
+                                    toast.success("Assignment marked as delivered");
+                                  } catch (error) {
+                                    toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                  }
+                                }}
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Mark Delivered
                               </Button>
                             )}
                           </div>
@@ -431,7 +452,11 @@ export default function Dispatch() {
                               )}
                             </td>
                             <td className="p-4">
-                              <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
+                              <Badge variant={
+                                assignment.status === "dispatched" ? "default" : 
+                                assignment.status === "delivered" ? "default" : 
+                                "secondary"
+                              }>
                                 {assignment.status}
                               </Badge>
                             </td>
@@ -450,7 +475,7 @@ export default function Dispatch() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {assignment.status !== "dispatched" && (
+                                {assignment.status === "transferred_to_dispatch" && (
                                   <Button
                                     variant="default"
                                     size="sm"
@@ -458,6 +483,23 @@ export default function Dispatch() {
                                   >
                                     <CheckCircle2 className="h-4 w-4 mr-2" />
                                     Mark Dispatched
+                                  </Button>
+                                )}
+                                {assignment.status === "dispatched" && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={async () => {
+                                      try {
+                                        await updateStatus({ id: assignment._id, status: "delivered" });
+                                        toast.success("Assignment marked as delivered");
+                                      } catch (error) {
+                                        toast.error(error instanceof Error ? error.message : "Failed to update status");
+                                      }
+                                    }}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    Mark Delivered
                                   </Button>
                                 )}
                               </div>

@@ -232,7 +232,8 @@ const schema = defineSchema(
         v.literal("assigned"),
         v.literal("in_progress"),
         v.literal("transferred_to_dispatch"),
-        v.literal("dispatched")
+        v.literal("dispatched"),
+        v.literal("delivered")
       ),
       notes: v.optional(v.string()),
       dispatchedAt: v.optional(v.number()),

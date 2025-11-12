@@ -100,7 +100,8 @@ export const updateStatus = mutation({
       v.literal("assigned"),
       v.literal("in_progress"),
       v.literal("transferred_to_dispatch"),
-      v.literal("dispatched")
+      v.literal("dispatched"),
+      v.literal("delivered")
     ),
   },
   handler: async (ctx, args) => {
