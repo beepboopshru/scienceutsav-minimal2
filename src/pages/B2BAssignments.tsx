@@ -281,16 +281,6 @@ export default function Assignments() {
       return;
     }
 
-    // Validate production month vs dispatch date
-    if (productionMonth && dispatchDate) {
-      const prodMonth = new Date(productionMonth + "-01");
-      const dispMonth = new Date(dispatchDate.getFullYear(), dispatchDate.getMonth(), 1);
-      if (prodMonth.getTime() > dispMonth.getTime()) {
-        toast.error("Production month must be before or same as dispatch month");
-        return;
-      }
-    }
-
     try {
       await createAssignment({
         kitId: selectedKit as Id<"kits">,
@@ -595,16 +585,6 @@ export default function Assignments() {
       return;
     }
 
-    // Validate production month vs dispatch date
-    if (newRowProductionMonth && newRowDispatchDate) {
-      const prodMonth = new Date(newRowProductionMonth + "-01");
-      const dispMonth = new Date(newRowDispatchDate.getFullYear(), newRowDispatchDate.getMonth(), 1);
-      if (prodMonth.getTime() > dispMonth.getTime()) {
-        toast.error("Production month must be before or same as dispatch month");
-        return;
-      }
-    }
-
     try {
       await createAssignment({
         kitId: newRowKit as Id<"kits">,
@@ -645,16 +625,6 @@ export default function Assignments() {
     if (!editRowKit || !editRowClient || !editRowQuantity) {
       toast.error("Please fill in all required fields");
       return;
-    }
-
-    // Validate production month vs dispatch date
-    if (editRowProductionMonth && editRowDispatchDate) {
-      const prodMonth = new Date(editRowProductionMonth + "-01");
-      const dispMonth = new Date(editRowDispatchDate.getFullYear(), editRowDispatchDate.getMonth(), 1);
-      if (prodMonth.getTime() > dispMonth.getTime()) {
-        toast.error("Production month must be before or same as dispatch month");
-        return;
-      }
     }
 
     try {
