@@ -124,23 +124,27 @@ export default function Packing() {
           const packingData = JSON.parse(kit.packingRequirements);
           
           if (packingData.pouches) {
-            packingData.pouches.forEach((pouch: any) => {
+            packingData.pouches.forEach((pouch: any, pouchIndex: number) => {
               if (pouch.materials) {
                 pouch.materials.forEach((material: any) => {
-                  const key = material.name.toLowerCase();
+                  const key = `${material.name.toLowerCase()}_${kit._id}`;
                   const required = material.quantity * requiredQty;
                   
                   if (materialMap.has(key)) {
                     const existing = materialMap.get(key);
                     existing.required += required;
+                    existing.traceability.push(`Pouch ${pouchIndex + 1}`);
                   } else {
-                    const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+                    const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
                     materialMap.set(key, {
                       name: material.name,
                       currentStock: invItem?.quantity || 0,
                       required,
                       unit: material.unit,
                       category: "Main Component",
+                      inventoryType: invItem?.type || "unknown",
+                      sourceKits: [kit.name],
+                      traceability: [`Pouch ${pouchIndex + 1}`],
                     });
                   }
                 });
@@ -149,23 +153,27 @@ export default function Packing() {
           }
 
           if (packingData.packets) {
-            packingData.packets.forEach((packet: any) => {
+            packingData.packets.forEach((packet: any, packetIndex: number) => {
               if (packet.materials) {
                 packet.materials.forEach((material: any) => {
-                  const key = material.name.toLowerCase();
+                  const key = `${material.name.toLowerCase()}_${kit._id}`;
                   const required = material.quantity * requiredQty;
                   
                   if (materialMap.has(key)) {
                     const existing = materialMap.get(key);
                     existing.required += required;
+                    existing.traceability.push(`Packet ${packetIndex + 1}`);
                   } else {
-                    const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+                    const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
                     materialMap.set(key, {
                       name: material.name,
                       currentStock: invItem?.quantity || 0,
                       required,
                       unit: material.unit,
                       category: "Main Component",
+                      inventoryType: invItem?.type || "unknown",
+                      sourceKits: [kit.name],
+                      traceability: [`Packet ${packetIndex + 1}`],
                     });
                   }
                 });
@@ -180,20 +188,23 @@ export default function Packing() {
       // Process spare kits
       if (kit.spareKits) {
         kit.spareKits.forEach((spare: any) => {
-          const key = spare.name.toLowerCase();
+          const key = `${spare.name.toLowerCase()}_${kit._id}`;
           const required = spare.quantity * requiredQty;
           
           if (materialMap.has(key)) {
             const existing = materialMap.get(key);
             existing.required += required;
           } else {
-            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            const invItem = inventory.find((i) => i.name.toLowerCase() === spare.name.toLowerCase());
             materialMap.set(key, {
               name: spare.name,
               currentStock: invItem?.quantity || 0,
               required,
               unit: spare.unit,
               category: "Spare Kit",
+              inventoryType: invItem?.type || "unknown",
+              sourceKits: [kit.name],
+              traceability: ["Spare Kits"],
             });
           }
         });
@@ -202,20 +213,23 @@ export default function Packing() {
       // Process bulk materials
       if (kit.bulkMaterials) {
         kit.bulkMaterials.forEach((bulk: any) => {
-          const key = bulk.name.toLowerCase();
+          const key = `${bulk.name.toLowerCase()}_${kit._id}`;
           const required = bulk.quantity * requiredQty;
           
           if (materialMap.has(key)) {
             const existing = materialMap.get(key);
             existing.required += required;
           } else {
-            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            const invItem = inventory.find((i) => i.name.toLowerCase() === bulk.name.toLowerCase());
             materialMap.set(key, {
               name: bulk.name,
               currentStock: invItem?.quantity || 0,
               required,
               unit: bulk.unit,
               category: "Bulk Material",
+              inventoryType: invItem?.type || "unknown",
+              sourceKits: [kit.name],
+              traceability: ["Bulk Materials"],
             });
           }
         });
@@ -224,20 +238,23 @@ export default function Packing() {
       // Process miscellaneous
       if (kit.miscellaneous) {
         kit.miscellaneous.forEach((misc: any) => {
-          const key = misc.name.toLowerCase();
+          const key = `${misc.name.toLowerCase()}_${kit._id}`;
           const required = misc.quantity * requiredQty;
           
           if (materialMap.has(key)) {
             const existing = materialMap.get(key);
             existing.required += required;
           } else {
-            const invItem = inventory.find((i) => i.name.toLowerCase() === key);
+            const invItem = inventory.find((i) => i.name.toLowerCase() === misc.name.toLowerCase());
             materialMap.set(key, {
               name: misc.name,
               currentStock: invItem?.quantity || 0,
               required,
               unit: misc.unit,
               category: "Miscellaneous",
+              inventoryType: invItem?.type || "unknown",
+              sourceKits: [kit.name],
+              traceability: ["Miscellaneous"],
             });
           }
         });
@@ -247,6 +264,7 @@ export default function Packing() {
     return Array.from(materialMap.values()).map((item) => ({
       ...item,
       shortage: Math.max(0, item.required - item.currentStock),
+      traceability: [...new Set(item.traceability)].join(", "),
     })).filter((item) => item.shortage > 0);
   };
 
@@ -959,7 +977,9 @@ export default function Packing() {
                 <thead className="bg-muted">
                   <tr>
                     <th className="px-3 py-2 text-left">Material</th>
-                    <th className="px-3 py-2 text-left">Category</th>
+                    <th className="px-3 py-2 text-left">Type</th>
+                    <th className="px-3 py-2 text-left">Source Kit(s)</th>
+                    <th className="px-3 py-2 text-left">Component Location</th>
                     <th className="px-3 py-2 text-right">Current</th>
                     <th className="px-3 py-2 text-right">Required</th>
                     <th className="px-3 py-2 text-right">Shortage</th>
@@ -970,7 +990,22 @@ export default function Packing() {
                     <tr key={idx} className="border-t">
                       <td className="px-3 py-2">{item.name}</td>
                       <td className="px-3 py-2">
-                        <Badge variant="outline">{item.category}</Badge>
+                        <Badge variant={
+                          item.inventoryType === "sealed_packet" ? "default" :
+                          item.inventoryType === "finished" ? "secondary" :
+                          "outline"
+                        }>
+                          {item.inventoryType === "sealed_packet" ? "Sealed Packet" :
+                           item.inventoryType === "finished" ? "Finished" :
+                           item.inventoryType === "pre_processed" ? "Pre-Processed" :
+                           item.inventoryType === "raw" ? "Raw" : "Unknown"}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-xs">{item.sourceKits.join(", ")}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="text-xs text-muted-foreground">{item.traceability}</span>
                       </td>
                       <td className="px-3 py-2 text-right">{item.currentStock} {item.unit}</td>
                       <td className="px-3 py-2 text-right">{item.required} {item.unit}</td>
