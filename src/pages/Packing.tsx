@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -39,6 +40,14 @@ export default function Packing() {
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  
+  // Advanced filters
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedKits, setSelectedKits] = useState<string[]>([]);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
 
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
@@ -73,11 +82,23 @@ export default function Packing() {
   const hasAccess = user?.role === "admin" || user?.role === "operations";
 
   const filteredAssignments = (assignments || []).filter((assignment) => {
+    // Basic filters
     if (customerTypeFilter !== "all" && assignment.clientType !== customerTypeFilter) return false;
     if (packingStatusFilter !== "all" && (assignment.packingStatus || "assigned") !== packingStatusFilter) return false;
     
+    // Advanced filters
+    const kit = kits?.find((k) => k._id === assignment.kitId);
+    const program = kit ? programs?.find((p) => p._id === kit.programId) : null;
+    
+    if (selectedPrograms.length > 0 && (!program || !selectedPrograms.includes(program._id))) return false;
+    if (selectedCategories.length > 0 && (!kit?.category || !selectedCategories.includes(kit.category))) return false;
+    if (selectedKits.length > 0 && !selectedKits.includes(assignment.kitId)) return false;
+    if (selectedClients.length > 0 && !selectedClients.includes(assignment.clientId)) return false;
+    if (selectedStatuses.length > 0 && !selectedStatuses.includes(assignment.status)) return false;
+    if (selectedBatches.length > 0 && (!assignment.batchId || !selectedBatches.includes(assignment.batchId))) return false;
+    
+    // Search query
     if (searchQuery.trim()) {
-      const kit = kits?.find((k) => k._id === assignment.kitId);
       const client = assignment.clientType === "b2b" 
         ? clients?.find((c) => c._id === assignment.clientId)
         : b2cClients?.find((c) => c._id === assignment.clientId);
@@ -228,6 +249,38 @@ export default function Packing() {
           <h1 className="text-3xl font-bold tracking-tight">Packing Operations</h1>
           <p className="text-muted-foreground mt-2">Manage kit packing and dispatch preparation</p>
         </div>
+
+        <AssignmentFilters
+          programs={programs || []}
+          kits={kits || []}
+          clients={[...(clients || []), ...(b2cClients || [])]}
+          assignments={filteredAssignments}
+          selectedPrograms={selectedPrograms}
+          selectedCategories={selectedCategories}
+          selectedKits={selectedKits}
+          selectedClients={selectedClients}
+          selectedDispatchMonths={[]}
+          selectedStatuses={selectedStatuses}
+          selectedProductionMonths={[]}
+          onProgramsChange={setSelectedPrograms}
+          onCategoriesChange={setSelectedCategories}
+          onKitsChange={setSelectedKits}
+          onClientsChange={setSelectedClients}
+          onDispatchMonthsChange={() => {}}
+          onStatusesChange={setSelectedStatuses}
+          onProductionMonthsChange={() => {}}
+          onClearAll={() => {
+            setSelectedPrograms([]);
+            setSelectedCategories([]);
+            setSelectedKits([]);
+            setSelectedClients([]);
+            setSelectedStatuses([]);
+            setSelectedBatches([]);
+            setCustomerTypeFilter("all");
+            setPackingStatusFilter("all");
+            setSearchQuery("");
+          }}
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
