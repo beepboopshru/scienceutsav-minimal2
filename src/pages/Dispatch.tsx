@@ -295,6 +295,7 @@ export default function Dispatch() {
                   <th className="text-left p-4 font-semibold">Customer</th>
                   <th className="text-left p-4 font-semibold">Kit</th>
                   <th className="text-left p-4 font-semibold">Quantity</th>
+                  <th className="text-left p-4 font-semibold">Grade</th>
                   <th className="text-left p-4 font-semibold">Status</th>
                   <th className="text-left p-4 font-semibold">Dispatch Date</th>
                   <th className="text-right p-4 font-semibold">Actions</th>
@@ -330,6 +331,13 @@ export default function Dispatch() {
                           </div>
                         </td>
                         <td className="p-4">{assignment.quantity}</td>
+                        <td className="p-4">
+                          {assignment.grade ? (
+                            <Badge variant="outline">Grade {assignment.grade}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </td>
                         <td className="p-4">
                           <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
                             {assignment.status}
@@ -415,6 +423,13 @@ export default function Dispatch() {
                               </div>
                             </td>
                             <td className="p-4">{assignment.quantity}</td>
+                            <td className="p-4">
+                              {assignment.grade ? (
+                                <Badge variant="outline">Grade {assignment.grade}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </td>
                             <td className="p-4">
                               <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
                                 {assignment.status}
