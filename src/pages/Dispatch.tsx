@@ -317,7 +317,7 @@ export default function Dispatch() {
                                 : (assignment.client as any)?.buyerName}
                             </span>
                             <Badge variant="outline" className="w-fit mt-1">
-                              {assignment.clientType.toUpperCase()}
+                              {assignment.clientType?.toUpperCase() || "N/A"}
                             </Badge>
                           </div>
                         </td>
@@ -402,7 +402,7 @@ export default function Dispatch() {
                                     : (assignment.client as any)?.buyerName}
                                 </span>
                                 <Badge variant="outline" className="w-fit mt-1">
-                                  {assignment.clientType.toUpperCase()}
+                                  {assignment.clientType?.toUpperCase() || "N/A"}
                                 </Badge>
                               </div>
                             </td>
