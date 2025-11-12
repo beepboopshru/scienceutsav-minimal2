@@ -292,7 +292,7 @@ export default function Packing() {
           }}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label className="text-xs">Customer Type</Label>
             <Select value={customerTypeFilter} onValueChange={setCustomerTypeFilter}>
@@ -303,21 +303,6 @@ export default function Packing() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="b2b">B2B</SelectItem>
                 <SelectItem value="b2c">B2C</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs">Packing Status</Label>
-            <Select value={packingStatusFilter} onValueChange={setPackingStatusFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="assigned">Assigned</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
               </SelectContent>
             </Select>
           </div>
