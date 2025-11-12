@@ -246,6 +246,12 @@ export function Layout({ children }: LayoutProps) {
       ],
     },
     {
+      title: "Operations-Inventory",
+      icon: TrendingUp,
+      path: "/operations-inventory-relations",
+      roles: ["admin", "inventory", "operations", "manager"],
+    },
+    {
       title: "Vendor Contacts",
       icon: Contact,
       path: "/vendor-contacts",
