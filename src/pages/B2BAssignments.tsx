@@ -1091,6 +1091,9 @@ export default function Assignments() {
               {isAddingNewRow && (
                 <TableRow className="bg-muted/50">
                   <TableCell>
+                    <span className="text-sm text-muted-foreground">-</span>
+                  </TableCell>
+                  <TableCell>
                     <Popover open={programPopoverOpen} onOpenChange={setProgramPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-normal">
