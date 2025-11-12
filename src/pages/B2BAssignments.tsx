@@ -331,7 +331,7 @@ export default function Assignments() {
     try {
       await updateStatus({
         id: selectedAssignment._id,
-        status: "packed",
+          status: "in_progress",
       });
       toast.success("Marked as packed");
       setPackingDialogOpen(false);
@@ -655,15 +655,23 @@ export default function Assignments() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "outline"> = {
+    const variants: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
       assigned: "secondary",
-      packed: "default",
-      dispatched: "outline",
+      in_progress: "default",
+      transferred_to_dispatch: "outline",
+      dispatched: "destructive",
+    };
+
+    const labels: Record<string, string> = {
+      assigned: "Assigned",
+      in_progress: "In Progress",
+      transferred_to_dispatch: "Transferred to Dispatch",
+      dispatched: "Dispatched",
     };
 
     return (
       <Badge variant={variants[status] || "default"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {labels[status] || status}
       </Badge>
     );
   };
@@ -1551,7 +1559,7 @@ export default function Assignments() {
                                       >
                                         <Edit2 className="h-4 w-4" />
                                       </Button>
-                                      {assignment.status === "packed" && (
+                                      {assignment.status === "in_progress" && (
                                         <Button
                                           size="sm"
                                           onClick={() => handleDispatch(assignment._id)}
@@ -1795,7 +1803,7 @@ export default function Assignments() {
                               >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              {assignment.status === "packed" && (
+                              {assignment.status === "in_progress" && (
                                 <Button
                                   size="sm"
                                   onClick={() => handleDispatch(assignment._id)}

@@ -87,7 +87,7 @@ export default function Packing() {
   const filteredAssignments = (assignments || []).filter((assignment) => {
     // Basic filters
     if (customerTypeFilter !== "all" && assignment.clientType !== customerTypeFilter) return false;
-    if (packingStatusFilter !== "all" && (assignment.packingStatus || "assigned") !== packingStatusFilter) return false;
+    if (packingStatusFilter !== "all" && (assignment.status || "assigned") !== packingStatusFilter) return false;
     
     // Advanced filters
     const kit = kits?.find((k) => k._id === assignment.kitId);
@@ -135,9 +135,9 @@ export default function Packing() {
   }, {} as Record<string, typeof filteredAssignments>);
 
   const stats = {
-    assigned: filteredAssignments.filter((a) => (a.packingStatus || "assigned") === "assigned").reduce((sum, a) => sum + a.quantity, 0),
-    inProgress: filteredAssignments.filter((a) => a.packingStatus === "in_progress").reduce((sum, a) => sum + a.quantity, 0),
-    transferred: filteredAssignments.filter((a) => a.packingStatus === "transferred_to_dispatch").reduce((sum, a) => sum + a.quantity, 0),
+    assigned: filteredAssignments.filter((a) => (a.status || "assigned") === "assigned").reduce((sum, a) => sum + a.quantity, 0),
+    inProgress: filteredAssignments.filter((a) => a.status === "in_progress").reduce((sum, a) => sum + a.quantity, 0),
+    transferred: filteredAssignments.filter((a) => a.status === "transferred_to_dispatch").reduce((sum, a) => sum + a.quantity, 0),
   };
 
   const toggleBatch = (batchKey: string) => {
@@ -166,7 +166,7 @@ export default function Packing() {
       });
     } else {
       try {
-        await updatePackingStatus({ assignmentId, packingStatus: newStatus as any });
+        await updatePackingStatus({ assignmentId, packingStatus: newStatus as "assigned" | "in_progress" | "transferred_to_dispatch" });
         toast.success("Packing status updated");
       } catch (error) {
         toast.error("Failed to update status", {
@@ -387,7 +387,7 @@ export default function Packing() {
                           <td className="px-4 py-3">
                             <Badge variant={
                               assignment.status === "dispatched" ? "default" :
-                              assignment.status === "packed" ? "secondary" : "outline"
+                              assignment.status === "in_progress" ? "secondary" : "outline"
                             }>
                               {assignment.status}
                             </Badge>
@@ -406,7 +406,7 @@ export default function Packing() {
                           </td>
                           <td className="px-4 py-3">
                             <Select
-                              value={assignment.packingStatus || "assigned"}
+                              value={assignment.status || "assigned"}
                               onValueChange={(value) => handleStatusChange(assignment._id, value)}
                             >
                               <SelectTrigger className="h-8 w-[180px]">
@@ -520,10 +520,10 @@ export default function Packing() {
                             <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
                             <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
                             <td className="px-4 py-3">
-                              <Badge variant={
-                                assignment.status === "dispatched" ? "default" :
-                                assignment.status === "packed" ? "secondary" : "outline"
-                              }>
+                            <Badge variant={
+                              assignment.status === "dispatched" ? "default" :
+                              assignment.status === "in_progress" ? "secondary" : "outline"
+                            }>
                                 {assignment.status}
                               </Badge>
                             </td>
@@ -541,7 +541,7 @@ export default function Packing() {
                             </td>
                             <td className="px-4 py-3">
                               <Select
-                                value={assignment.packingStatus || "assigned"}
+                                value={assignment.status || "assigned"}
                                 onValueChange={(value) => handleStatusChange(assignment._id, value)}
                               >
                                 <SelectTrigger className="h-8 w-[180px]">

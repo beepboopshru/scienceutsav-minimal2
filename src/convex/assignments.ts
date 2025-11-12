@@ -98,7 +98,8 @@ export const updateStatus = mutation({
     id: v.id("assignments"),
     status: v.union(
       v.literal("assigned"),
-      v.literal("packed"),
+      v.literal("in_progress"),
+      v.literal("transferred_to_dispatch"),
       v.literal("dispatched")
     ),
   },
@@ -265,8 +266,9 @@ export const updatePackingStatus = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Update the main status field instead of packingStatus
     await ctx.db.patch(args.assignmentId, {
-      packingStatus: args.packingStatus,
+      status: args.packingStatus,
     });
 
     return args.assignmentId;

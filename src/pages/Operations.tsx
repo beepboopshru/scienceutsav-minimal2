@@ -594,7 +594,7 @@ export default function Operations() {
                               variant={
                                 assignment.status === "dispatched"
                                   ? "default"
-                                  : assignment.status === "packed"
+                                  : assignment.status === "in_progress"
                                   ? "secondary"
                                   : "outline"
                               }

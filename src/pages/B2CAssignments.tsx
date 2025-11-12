@@ -341,7 +341,7 @@ export default function Assignments() {
     try {
       await updateStatus({
         id: selectedAssignment._id,
-        status: "packed",
+          status: "in_progress",
       });
       toast.success("Marked as packed");
       setPackingDialogOpen(false);
@@ -1579,7 +1579,7 @@ export default function Assignments() {
                                       >
                                         <Edit2 className="h-4 w-4" />
                                       </Button>
-                                      {assignment.status === "packed" && (
+                                      {assignment.status === "in_progress" && (
                                         <Button
                                           size="sm"
                                           onClick={() => handleDispatch(assignment._id)}
@@ -1823,7 +1823,7 @@ export default function Assignments() {
                               >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              {assignment.status === "packed" && (
+                              {assignment.status === "in_progress" && (
                                 <Button
                                   size="sm"
                                   onClick={() => handleDispatch(assignment._id)}

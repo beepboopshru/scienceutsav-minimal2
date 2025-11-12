@@ -296,7 +296,7 @@ export const clearPendingAssignments = mutation({
 
     const assignments = await ctx.db.query("assignments").collect();
     const pendingAssignments = assignments.filter(
-      a => a.status === "assigned" || a.status === "packed"
+      a => a.status === "assigned" || a.status === "in_progress"
     );
 
     let count = 0;

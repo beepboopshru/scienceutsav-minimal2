@@ -66,7 +66,7 @@ export default function AdminZone() {
 
   const handleClearPendingAssignments = () => {
     const pendingCount = allAssignments.filter(
-      a => a.status === "assigned" || a.status === "packed"
+      a => a.status === "assigned" || a.status === "in_progress"
     ).length;
     
     setConfirmDialog({

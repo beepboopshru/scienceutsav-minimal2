@@ -230,14 +230,10 @@ const schema = defineSchema(
       ),
       status: v.union(
         v.literal("assigned"),
-        v.literal("packed"),
+        v.literal("in_progress"),
+        v.literal("transferred_to_dispatch"),
         v.literal("dispatched")
       ),
-      packingStatus: v.optional(v.union(
-        v.literal("assigned"),
-        v.literal("in_progress"),
-        v.literal("transferred_to_dispatch")
-      )),
       notes: v.optional(v.string()),
       dispatchedAt: v.optional(v.number()),
       productionMonth: v.optional(v.string()),
@@ -249,8 +245,7 @@ const schema = defineSchema(
       .index("by_kit", ["kitId"])
       .index("by_status", ["status"])
       .index("by_created_by", ["createdBy"])
-      .index("by_clientType", ["clientType"])
-      .index("by_packing_status", ["packingStatus"]),
+      .index("by_clientType", ["clientType"]),
 
     // Inventory materials
     inventory: defineTable({

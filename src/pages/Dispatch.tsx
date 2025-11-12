@@ -83,7 +83,7 @@ export default function Dispatch() {
 
   // Filter assignments: ONLY show transferred_to_dispatch
   let filteredAssignments = assignments?.filter(
-    (a) => a.packingStatus === "transferred_to_dispatch"
+    (a) => a.status === "transferred_to_dispatch"
   ) || [];
 
   // Apply customer type filter
