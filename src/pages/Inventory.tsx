@@ -49,6 +49,7 @@ export default function Inventory() {
   const removeCategory = useMutation(api.inventoryCategories.remove);
   const createVendorImport = useMutation(api.vendorImports.create);
   const updateKit = useMutation(api.kits.update);
+  const generateUploadUrl = useMutation(api.vendorImports.generateUploadUrl);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
@@ -280,26 +281,12 @@ export default function Inventory() {
           canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
         });
 
-        // Generate upload URL from Convex
-        const uploadUrl = await fetch(
-          `${import.meta.env.VITE_CONVEX_URL}/api/storage/generateUploadUrl`,
-          {
-            method: 'POST',
-          }
-        );
-
-        if (!uploadUrl.ok) {
-          throw new Error('Failed to generate upload URL');
-        }
-
-        const { uploadUrl: url } = await uploadUrl.json();
+        // Generate upload URL from Convex mutation
+        const uploadUrl = await generateUploadUrl({});
 
         // Upload the WebP image to the generated URL
-        const uploadResponse = await fetch(url, {
+        const uploadResponse = await fetch(uploadUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'image/webp',
-          },
           body: webpBlob,
         });
 

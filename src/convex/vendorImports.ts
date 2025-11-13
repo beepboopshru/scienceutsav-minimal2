@@ -65,6 +65,16 @@ export const create = mutation({
   },
 });
 
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("vendorImports") },
   handler: async (ctx, args) => {
