@@ -40,6 +40,8 @@ export default function ProcessingJobs() {
   const [sealingPacketOpen, setSealingPacketOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed">("all");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [sourceComboboxOpen, setSourceComboboxOpen] = useState<Record<number, boolean>>({});
+  const [targetComboboxOpen, setTargetComboboxOpen] = useState<Record<number, boolean>>({});
   const [processingForm, setProcessingForm] = useState({
     name: "",
     sources: [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
