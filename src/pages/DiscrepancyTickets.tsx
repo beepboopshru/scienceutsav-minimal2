@@ -5,7 +5,11 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, Plus, AlertTriangle, Trash2 } from "lucide-react";
+import { Loader2, Plus, AlertTriangle, Trash2, Filter } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +34,14 @@ export default function DiscrepancyTickets() {
   const [selectedClientId, setSelectedClientId] = useState<Id<"clients"> | "">("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
   const [discrepancy, setDiscrepancy] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterClient, setFilterClient] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "dueDate" | "priority">("date");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -57,12 +68,14 @@ export default function DiscrepancyTickets() {
         clientId: selectedClientId as Id<"clients">,
         priority,
         discrepancy: discrepancy.trim(),
+        dueDate: dueDate ? dueDate.getTime() : undefined,
       });
       toast.success("Discrepancy ticket created");
       setCreateDialogOpen(false);
       setSelectedClientId("");
       setPriority("medium");
       setDiscrepancy("");
+      setDueDate(undefined);
     } catch (error) {
       toast.error("Failed to create ticket");
     } finally {
@@ -74,10 +87,33 @@ export default function DiscrepancyTickets() {
     try {
       await updateStatus({ ticketId, status: newStatus });
       toast.success("Ticket status updated");
-    } catch (error) {
-      toast.error("Failed to update status");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update status");
     }
   };
+
+  // Filter and sort tickets
+  const filteredAndSortedTickets = tickets
+    ?.filter((ticket) => {
+      if (filterStatus !== "all" && ticket.status !== filterStatus) return false;
+      if (filterPriority !== "all" && ticket.priority !== filterPriority) return false;
+      if (filterClient !== "all" && ticket.clientId !== filterClient) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "date") {
+        return b._creationTime - a._creationTime;
+      } else if (sortBy === "dueDate") {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate - b.dueDate;
+      } else if (sortBy === "priority") {
+        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      return 0;
+    }) || [];
 
   const handleDeleteTicket = async (ticketId: Id<"discrepancyTickets">) => {
     try {
@@ -187,6 +223,30 @@ export default function DiscrepancyTickets() {
                       </Select>
                     </div>
                     <div className="space-y-2">
+                      <Label>Due Date (Optional)</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !dueDate && "text-muted-foreground"
+                            )}
+                          >
+                            {dueDate ? format(dueDate, "PPP") : "Pick a due date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={dueDate}
+                            onSelect={setDueDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-2">
                       <Label>Discrepancy Details</Label>
                       <Textarea
                         value={discrepancy}
@@ -209,8 +269,81 @@ export default function DiscrepancyTickets() {
             )}
           </div>
 
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filters & Sorting
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Priority</Label>
+                  <Select value={filterPriority} onValueChange={setFilterPriority}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Client</Label>
+                  <Select value={filterClient} onValueChange={setFilterClient}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clients</SelectItem>
+                      {clients?.map((client) => (
+                        <SelectItem key={client._id} value={client._id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sort By</Label>
+                  <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date">Creation Date</SelectItem>
+                      <SelectItem value="dueDate">Due Date</SelectItem>
+                      <SelectItem value="priority">Priority</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid gap-4">
-            {!tickets || tickets.length === 0 ? (
+            {!filteredAndSortedTickets || filteredAndSortedTickets.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
@@ -218,7 +351,7 @@ export default function DiscrepancyTickets() {
                 </CardContent>
               </Card>
             ) : (
-              tickets.map((ticket) => (
+              filteredAndSortedTickets.map((ticket) => (
                 <motion.div
                   key={ticket._id}
                   initial={{ opacity: 0, y: 10 }}
@@ -234,6 +367,14 @@ export default function DiscrepancyTickets() {
                           <CardDescription>
                             Created by {ticket.creator?.name || ticket.creator?.email || "Unknown"} on{" "}
                             {new Date(ticket._creationTime).toLocaleDateString()}
+                            {ticket.dueDate && (
+                              <span className="block mt-1">
+                                Due: {new Date(ticket.dueDate).toLocaleDateString()}
+                                {ticket.dueDate < Date.now() && ticket.status !== "closed" && (
+                                  <Badge variant="destructive" className="ml-2">Overdue</Badge>
+                                )}
+                              </span>
+                            )}
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">

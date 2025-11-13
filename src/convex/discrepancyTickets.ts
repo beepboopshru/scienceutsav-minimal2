@@ -7,6 +7,7 @@ export const create = mutation({
     clientId: v.id("clients"),
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent")),
     discrepancy: v.string(),
+    dueDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -22,6 +23,7 @@ export const create = mutation({
       priority: args.priority,
       discrepancy: args.discrepancy,
       status: "open",
+      dueDate: args.dueDate,
       createdBy: userId,
     });
 
@@ -75,6 +77,11 @@ export const updateStatus = mutation({
     const user = await ctx.db.get(userId);
     if (!user || !["admin", "operations", "manager"].includes(user.role || "")) {
       throw new Error("Not authorized to update ticket status");
+    }
+
+    // Only admin and operations can mark as resolved
+    if (args.status === "resolved" && !["admin", "operations"].includes(user.role || "")) {
+      throw new Error("Only admins and operations members can mark tickets as resolved");
     }
 
     await ctx.db.patch(args.ticketId, {
