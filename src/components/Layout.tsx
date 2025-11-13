@@ -39,6 +39,7 @@ import {
   Send,
   Trash2,
   Package,
+  FileText,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode, useState, useEffect, useRef } from "react";
@@ -283,6 +284,14 @@ export function Layout({ children }: LayoutProps) {
     },
   ];
 
+  const kitInfoSection: NavItem[] = [
+    {
+      title: "Kit Statistics",
+      icon: FileText,
+      path: "/kit-statistics",
+    },
+  ];
+
   const adminSection: NavItem[] = [
     {
       title: "Admin Zone",
@@ -464,6 +473,30 @@ export function Layout({ children }: LayoutProps) {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {filterByRole(specializedTools).map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {/* Kit Info Section */}
+            {filterByRole(kitInfoSection).length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Kit Info</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(kitInfoSection).map((item) => (
                       <SidebarMenuItem key={item.path}>
                         <SidebarMenuButton
                           asChild
