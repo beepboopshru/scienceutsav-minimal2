@@ -112,9 +112,9 @@ export default function KitBuilder() {
           description: kitForm.description || undefined,
           isStructured: kitForm.isStructured,
           packingRequirements: kitForm.packingRequirements || undefined,
-          spareKits: kitForm.spareKits.length > 0 ? kitForm.spareKits : undefined,
-          bulkMaterials: kitForm.bulkMaterials.length > 0 ? kitForm.bulkMaterials : undefined,
-          miscellaneous: kitForm.miscellaneous.length > 0 ? kitForm.miscellaneous : undefined,
+          spareKits: kitForm.spareKits.filter(s => s.name && s.name.trim()).length > 0 ? kitForm.spareKits.filter(s => s.name && s.name.trim()) : undefined,
+          bulkMaterials: kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length > 0 ? kitForm.bulkMaterials.filter(b => b.name && b.name.trim()) : undefined,
+          miscellaneous: kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length > 0 ? kitForm.miscellaneous.filter(m => m.name && m.name.trim()) : undefined,
         });
         toast.success("Kit updated successfully");
       } else {

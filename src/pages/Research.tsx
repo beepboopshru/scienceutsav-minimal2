@@ -940,11 +940,11 @@ export default function Research() {
                                 )}
                               </div>
 
-                              {kit.spareKits && kit.spareKits.length > 0 && (
+                              {kit.spareKits && kit.spareKits.filter((s: any) => s.name && s.name.trim()).length > 0 && (
                                 <div>
                                   <div className="text-sm font-semibold mb-2 text-primary">Spare Kits</div>
                                   <div className="space-y-2">
-                                    {kit.spareKits.map((spare: any, idx: number) => (
+                                    {kit.spareKits.filter((s: any) => s.name && s.name.trim()).map((spare: any, idx: number) => (
                                       <div key={idx} className="border rounded p-3 bg-background">
                                         <div className="font-medium text-sm">{spare.name}</div>
                                         <div className="text-xs text-muted-foreground mt-1">Quantity: {spare.quantity}</div>
@@ -954,11 +954,11 @@ export default function Research() {
                                 </div>
                               )}
 
-                              {kit.bulkMaterials && kit.bulkMaterials.length > 0 && (
+                              {kit.bulkMaterials && kit.bulkMaterials.filter((b: any) => b.name && b.name.trim()).length > 0 && (
                                 <div>
                                   <div className="text-sm font-semibold mb-2 text-primary">Bulk Materials</div>
                                   <div className="space-y-2">
-                                    {kit.bulkMaterials.map((bulk: any, idx: number) => (
+                                    {kit.bulkMaterials.filter((b: any) => b.name && b.name.trim()).map((bulk: any, idx: number) => (
                                       <div key={idx} className="border rounded p-3 bg-background">
                                         <div className="font-medium text-sm">{bulk.name}</div>
                                         <div className="text-xs text-muted-foreground mt-1">
