@@ -110,15 +110,16 @@ export default function BillRecords() {
     }
 
     try {
-      const url = await fetch(
-        `${import.meta.env.VITE_CONVEX_URL}/api/storage/${billImport.billImageId}`
-      );
+      // Use Convex storage URL directly
+      const storageUrl = `${import.meta.env.VITE_CONVEX_URL}/api/storage/${billImport.billImageId}`;
       
-      if (!url.ok) {
+      const response = await fetch(storageUrl);
+      
+      if (!response.ok) {
         throw new Error("Failed to fetch bill image");
       }
 
-      const blob = await url.blob();
+      const blob = await response.blob();
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -127,6 +128,7 @@ export default function BillRecords() {
       URL.revokeObjectURL(downloadUrl);
       toast.success("Bill image downloaded");
     } catch (error: any) {
+      console.error("Download error:", error);
       toast.error(error.message || "Failed to download bill image");
     }
   };
