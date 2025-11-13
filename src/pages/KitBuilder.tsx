@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
@@ -31,10 +32,12 @@ export default function KitBuilder() {
   const programs = useQuery(api.programs.list);
   const kits = useQuery(api.kits.list);
   const inventory = useQuery(api.inventory.list);
+  const categories = useQuery(api.inventoryCategories.list);
   const editingKit = editKitId ? useQuery(api.kits.get, { id: editKitId }) : null;
 
   const createKit = useMutation(api.kits.create);
   const updateKit = useMutation(api.kits.update);
+  const createInventoryItem = useMutation(api.inventory.create);
 
   const [kitForm, setKitForm] = useState({
     name: "",
@@ -49,6 +52,36 @@ export default function KitBuilder() {
     miscellaneous: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
   });
   const [didInitFromEdit, setDidInitFromEdit] = useState(false);
+  
+  // Quick add inventory dialog state
+  const [quickAddInventoryOpen, setQuickAddInventoryOpen] = useState(false);
+  const [quickAddForm, setQuickAddForm] = useState({
+    name: "",
+    description: "",
+    type: "raw" as "raw" | "pre_processed" | "finished" | "sealed_packet",
+    unit: "",
+    subcategory: "",
+    notes: "",
+  });
+  const [quickAddContext, setQuickAddContext] = useState<{
+    section: "pouch" | "packet" | "spare" | "bulk";
+    pouchIdx?: number;
+    packetIdx?: number;
+    itemIdx?: number;
+  } | null>(null);
+
+  // Subcategory selection state for each section
+  const [selectedSubcategories, setSelectedSubcategories] = useState<{
+    pouch: Record<number, string>;
+    packet: Record<number, string>;
+    spare: string;
+    bulk: string;
+  }>({
+    pouch: {},
+    packet: {},
+    spare: "",
+    bulk: "",
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -67,7 +100,6 @@ export default function KitBuilder() {
         serialNumber: editingKit.serialNumber || "",
         category: editingKit.category || "",
         description: editingKit.description || "",
-        // Fix boolean defaulting to not override false
         isStructured: editingKit.isStructured ?? true,
         packingRequirements: editingKit.packingRequirements || "",
         spareKits: editingKit.spareKits || [],
@@ -76,15 +108,15 @@ export default function KitBuilder() {
       });
       setDidInitFromEdit(true);
     } else if (!editingKit && programIdFromUrl && !kitForm.programId) {
-      setKitForm({ ...kitForm, programId: programIdFromUrl });
+      setKitForm((prev) => ({ ...prev, programId: programIdFromUrl }));
     }
-  }, [editingKit, programIdFromUrl, didInitFromEdit]);
+  }, [editingKit, programIdFromUrl, didInitFromEdit, kitForm.programId]);
 
   useEffect(() => {
     setDidInitFromEdit(false);
   }, [editKitId]);
 
-  if (isLoading || !user || !programs || !kits || !inventory) {
+  if (isLoading || !user || !programs || !kits || !inventory || !categories) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
@@ -95,6 +127,45 @@ export default function KitBuilder() {
   const activePrograms = programs.filter((p) => p.status !== "archived");
   const selectedProgram = programs.find((p) => p._id === kitForm.programId);
   const structure = parsePackingRequirements(kitForm.packingRequirements);
+
+  // Helper to get inventory items by subcategory
+  const getInventoryBySubcategory = (subcategory: string) => {
+    if (!subcategory) return [];
+    return inventory.filter((item) => item.subcategory === subcategory);
+  };
+
+  const handleQuickAddInventory = async () => {
+    if (!quickAddForm.name || !quickAddForm.unit || !quickAddForm.subcategory) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      await createInventoryItem({
+        name: quickAddForm.name,
+        description: quickAddForm.description || undefined,
+        type: quickAddForm.type,
+        quantity: 0,
+        unit: quickAddForm.unit,
+        subcategory: quickAddForm.subcategory,
+        notes: quickAddForm.notes || undefined,
+      });
+
+      toast.success("Inventory item created successfully");
+      setQuickAddInventoryOpen(false);
+      setQuickAddForm({
+        name: "",
+        description: "",
+        type: "raw",
+        unit: "",
+        subcategory: "",
+        notes: "",
+      });
+    } catch (error) {
+      toast.error("Failed to create inventory item");
+      console.error(error);
+    }
+  };
 
   const handleSave = async () => {
     if (!kitForm.name || !kitForm.programId) {
@@ -380,6 +451,33 @@ export default function KitBuilder() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
+                          
+                          {/* Subcategory selector */}
+                          <div className="space-y-2">
+                            <Label>Select Subcategory</Label>
+                            <Select
+                              value={selectedSubcategories.pouch[pouchIdx] || ""}
+                              onValueChange={(value) => {
+                                setSelectedSubcategories({
+                                  ...selectedSubcategories,
+                                  pouch: { ...selectedSubcategories.pouch, [pouchIdx]: value },
+                                });
+                              }}
+                              disabled={!canEdit}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choose subcategory first" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                                  <SelectItem key={cat._id} value={cat.value}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
                           {pouch.materials.map((material, matIdx) => (
                             <div key={matIdx} className="flex items-center gap-2">
                               <Popover>
@@ -387,7 +485,7 @@ export default function KitBuilder() {
                                   <Button
                                     variant="outline"
                                     role="combobox"
-                                    disabled={!canEdit}
+                                    disabled={!canEdit || !selectedSubcategories.pouch[pouchIdx]}
                                     className="flex-1 justify-between"
                                   >
                                     {material.name || "Select item"}
@@ -398,9 +496,24 @@ export default function KitBuilder() {
                                   <Command>
                                     <CommandInput placeholder="Search inventory..." />
                                     <CommandList>
-                                      <CommandEmpty>No item found.</CommandEmpty>
+                                      <CommandEmpty>
+                                        <div className="p-2 text-center">
+                                          <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              setQuickAddContext({ section: "pouch", pouchIdx, itemIdx: matIdx });
+                                              setQuickAddForm({ ...quickAddForm, subcategory: selectedSubcategories.pouch[pouchIdx] || "" });
+                                              setQuickAddInventoryOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add New Item
+                                          </Button>
+                                        </div>
+                                      </CommandEmpty>
                                       <CommandGroup>
-                                        {inventory.map((item) => (
+                                        {getInventoryBySubcategory(selectedSubcategories.pouch[pouchIdx] || "").map((item) => (
                                           <CommandItem
                                             key={item._id}
                                             value={item.name}
@@ -458,7 +571,7 @@ export default function KitBuilder() {
                             size="sm"
                             variant="outline"
                             onClick={() => addMaterialToPouch(pouchIdx)}
-                            disabled={!canEdit}
+                            disabled={!canEdit || !selectedSubcategories.pouch[pouchIdx]}
                           >
                             <Plus className="mr-2 h-4 w-4" />
                             Add Material
@@ -490,6 +603,33 @@ export default function KitBuilder() {
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
+                          
+                          {/* Subcategory selector */}
+                          <div className="space-y-2">
+                            <Label>Select Subcategory</Label>
+                            <Select
+                              value={selectedSubcategories.packet[packetIdx] || ""}
+                              onValueChange={(value) => {
+                                setSelectedSubcategories({
+                                  ...selectedSubcategories,
+                                  packet: { ...selectedSubcategories.packet, [packetIdx]: value },
+                                });
+                              }}
+                              disabled={!canEdit}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choose subcategory first" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                                  <SelectItem key={cat._id} value={cat.value}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
                           {packet.materials.map((material, matIdx) => (
                             <div key={matIdx} className="flex items-center gap-2">
                               <Popover>
@@ -497,7 +637,7 @@ export default function KitBuilder() {
                                   <Button
                                     variant="outline"
                                     role="combobox"
-                                    disabled={!canEdit}
+                                    disabled={!canEdit || !selectedSubcategories.packet[packetIdx]}
                                     className="flex-1 justify-between"
                                   >
                                     {material.name || "Select item"}
@@ -508,9 +648,24 @@ export default function KitBuilder() {
                                   <Command>
                                     <CommandInput placeholder="Search inventory..." />
                                     <CommandList>
-                                      <CommandEmpty>No item found.</CommandEmpty>
+                                      <CommandEmpty>
+                                        <div className="p-2 text-center">
+                                          <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              setQuickAddContext({ section: "packet", packetIdx, itemIdx: matIdx });
+                                              setQuickAddForm({ ...quickAddForm, subcategory: selectedSubcategories.packet[packetIdx] || "" });
+                                              setQuickAddInventoryOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add New Item
+                                          </Button>
+                                        </div>
+                                      </CommandEmpty>
                                       <CommandGroup>
-                                        {inventory.map((item) => (
+                                        {getInventoryBySubcategory(selectedSubcategories.packet[packetIdx] || "").map((item) => (
                                           <CommandItem
                                             key={item._id}
                                             value={item.name}
@@ -568,7 +723,7 @@ export default function KitBuilder() {
                             size="sm"
                             variant="outline"
                             onClick={() => addMaterialToPacket(packetIdx)}
-                            disabled={!canEdit}
+                            disabled={!canEdit || !selectedSubcategories.packet[packetIdx]}
                           >
                             <Plus className="mr-2 h-4 w-4" />
                             Add Material
@@ -579,7 +734,31 @@ export default function KitBuilder() {
 
                     {/* Spare Materials Tab */}
                     <TabsContent value="spare" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addSpareKit} disabled={!canEdit}>
+                      <div className="space-y-2">
+                        <Label>Select Subcategory</Label>
+                        <Select
+                          value={selectedSubcategories.spare}
+                          onValueChange={(value) => {
+                            setSelectedSubcategories({
+                              ...selectedSubcategories,
+                              spare: value,
+                            });
+                          }}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose subcategory first" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                              <SelectItem key={cat._id} value={cat.value}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button size="sm" onClick={addSpareKit} disabled={!canEdit || !selectedSubcategories.spare}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Spare Material
                       </Button>
@@ -590,7 +769,7 @@ export default function KitBuilder() {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                disabled={!canEdit}
+                                disabled={!canEdit || !selectedSubcategories.spare}
                                 className="flex-1 justify-between"
                               >
                                 {spare.name || "Select item"}
@@ -601,9 +780,24 @@ export default function KitBuilder() {
                               <Command>
                                 <CommandInput placeholder="Search inventory..." />
                                 <CommandList>
-                                  <CommandEmpty>No item found.</CommandEmpty>
+                                  <CommandEmpty>
+                                    <div className="p-2 text-center">
+                                      <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          setQuickAddContext({ section: "spare", itemIdx: idx });
+                                          setQuickAddForm({ ...quickAddForm, subcategory: selectedSubcategories.spare });
+                                          setQuickAddInventoryOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add New Item
+                                      </Button>
+                                    </div>
+                                  </CommandEmpty>
                                   <CommandGroup>
-                                    {inventory.map((item) => (
+                                    {getInventoryBySubcategory(selectedSubcategories.spare).map((item) => (
                                       <CommandItem
                                         key={item._id}
                                         value={item.name}
@@ -658,7 +852,31 @@ export default function KitBuilder() {
 
                     {/* Bulk Materials Tab */}
                     <TabsContent value="bulk" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addBulkMaterial} disabled={!canEdit}>
+                      <div className="space-y-2">
+                        <Label>Select Subcategory</Label>
+                        <Select
+                          value={selectedSubcategories.bulk}
+                          onValueChange={(value) => {
+                            setSelectedSubcategories({
+                              ...selectedSubcategories,
+                              bulk: value,
+                            });
+                          }}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose subcategory first" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                              <SelectItem key={cat._id} value={cat.value}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button size="sm" onClick={addBulkMaterial} disabled={!canEdit || !selectedSubcategories.bulk}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Bulk Material
                       </Button>
@@ -669,7 +887,7 @@ export default function KitBuilder() {
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                disabled={!canEdit}
+                                disabled={!canEdit || !selectedSubcategories.bulk}
                                 className="flex-1 justify-between"
                               >
                                 {bulk.name || "Select item"}
@@ -680,9 +898,24 @@ export default function KitBuilder() {
                               <Command>
                                 <CommandInput placeholder="Search inventory..." />
                                 <CommandList>
-                                  <CommandEmpty>No item found.</CommandEmpty>
+                                  <CommandEmpty>
+                                    <div className="p-2 text-center">
+                                      <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          setQuickAddContext({ section: "bulk", itemIdx: idx });
+                                          setQuickAddForm({ ...quickAddForm, subcategory: selectedSubcategories.bulk });
+                                          setQuickAddInventoryOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add New Item
+                                      </Button>
+                                    </div>
+                                  </CommandEmpty>
                                   <CommandGroup>
-                                    {inventory.map((item) => (
+                                    {getInventoryBySubcategory(selectedSubcategories.bulk).map((item) => (
                                       <CommandItem
                                         key={item._id}
                                         value={item.name}
@@ -844,13 +1077,13 @@ export default function KitBuilder() {
                   )}
 
                   {/* Spare Materials */}
-                  {kitForm.spareKits.length > 0 && (
+                  {kitForm.spareKits.filter(s => s.name && s.name.trim()).length > 0 && (
                     <>
                       <Separator />
                       <div>
-                        <h4 className="font-semibold text-sm mb-2">Spare Materials ({kitForm.spareKits.length})</h4>
+                        <h4 className="font-semibold text-sm mb-2">Spare Materials ({kitForm.spareKits.filter(s => s.name && s.name.trim()).length})</h4>
                         <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {kitForm.spareKits.map((spare, idx) => (
+                          {kitForm.spareKits.filter(s => s.name && s.name.trim()).map((spare, idx) => (
                             <li key={idx}>
                               • {spare.name} - {spare.quantity} {spare.unit}
                             </li>
@@ -861,13 +1094,13 @@ export default function KitBuilder() {
                   )}
 
                   {/* Bulk Materials */}
-                  {kitForm.bulkMaterials.length > 0 && (
+                  {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length > 0 && (
                     <>
                       <Separator />
                       <div>
-                        <h4 className="font-semibold text-sm mb-2">Bulk Materials ({kitForm.bulkMaterials.length})</h4>
+                        <h4 className="font-semibold text-sm mb-2">Bulk Materials ({kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length})</h4>
                         <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {kitForm.bulkMaterials.map((bulk, idx) => (
+                          {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).map((bulk, idx) => (
                             <li key={idx}>
                               • {bulk.name} - {bulk.quantity} {bulk.unit}
                             </li>
@@ -878,13 +1111,13 @@ export default function KitBuilder() {
                   )}
 
                   {/* Misc Materials */}
-                  {kitForm.miscellaneous.length > 0 && (
+                  {kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length > 0 && (
                     <>
                       <Separator />
                       <div>
-                        <h4 className="font-semibold text-sm mb-2">Misc Materials ({kitForm.miscellaneous.length})</h4>
+                        <h4 className="font-semibold text-sm mb-2">Misc Materials ({kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length})</h4>
                         <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {kitForm.miscellaneous.map((misc, idx) => (
+                          {kitForm.miscellaneous.filter(m => m.name && m.name.trim()).map((misc, idx) => (
                             <li key={idx}>
                               • {misc.name} - {misc.quantity} {misc.unit}
                             </li>
@@ -898,6 +1131,100 @@ export default function KitBuilder() {
             </div>
           </div>
         </motion.div>
+        
+        {/* Quick Add Inventory Dialog */}
+        <Dialog open={quickAddInventoryOpen} onOpenChange={setQuickAddInventoryOpen}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Add New Inventory Item</DialogTitle>
+              <DialogDescription>
+                Create a new inventory item and use it in your kit
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={quickAddForm.name}
+                  onChange={(e) => setQuickAddForm({ ...quickAddForm, name: e.target.value })}
+                  placeholder="Enter item name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={quickAddForm.description}
+                  onChange={(e) => setQuickAddForm({ ...quickAddForm, description: e.target.value })}
+                  placeholder="Brief description"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type *</Label>
+                  <Select
+                    value={quickAddForm.type}
+                    onValueChange={(value: any) => setQuickAddForm({ ...quickAddForm, type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="raw">Raw Material</SelectItem>
+                      <SelectItem value="pre_processed">Pre-Processed</SelectItem>
+                      <SelectItem value="finished">Finished</SelectItem>
+                      <SelectItem value="sealed_packet">Sealed Packet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Unit *</Label>
+                  <Input
+                    value={quickAddForm.unit}
+                    onChange={(e) => setQuickAddForm({ ...quickAddForm, unit: e.target.value })}
+                    placeholder="e.g., kg, pcs, meters"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Subcategory *</Label>
+                <Select
+                  value={quickAddForm.subcategory}
+                  onValueChange={(value) => setQuickAddForm({ ...quickAddForm, subcategory: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                      <SelectItem key={cat._id} value={cat.value}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={quickAddForm.notes}
+                  onChange={(e) => setQuickAddForm({ ...quickAddForm, notes: e.target.value })}
+                  placeholder="Additional notes"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setQuickAddInventoryOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleQuickAddInventory}
+                disabled={!quickAddForm.name || !quickAddForm.unit || !quickAddForm.subcategory}
+              >
+                Add Item
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
