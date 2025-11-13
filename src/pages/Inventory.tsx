@@ -280,23 +280,34 @@ export default function Inventory() {
           canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
         });
 
-        // Upload to Convex storage
+        // Generate upload URL from Convex
         const uploadUrl = await fetch(
-          `${import.meta.env.VITE_CONVEX_URL}/api/storage/upload`,
+          `${import.meta.env.VITE_CONVEX_URL}/api/storage/generateUploadUrl`,
           {
             method: 'POST',
-            headers: {
-              'Content-Type': 'image/webp',
-            },
-            body: webpBlob,
           }
         );
 
         if (!uploadUrl.ok) {
+          throw new Error('Failed to generate upload URL');
+        }
+
+        const { uploadUrl: url } = await uploadUrl.json();
+
+        // Upload the WebP image to the generated URL
+        const uploadResponse = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'image/webp',
+          },
+          body: webpBlob,
+        });
+
+        if (!uploadResponse.ok) {
           throw new Error('Failed to upload bill image');
         }
 
-        const { storageId } = await uploadUrl.json();
+        const { storageId } = await uploadResponse.json();
         billImageId = storageId;
       }
 
