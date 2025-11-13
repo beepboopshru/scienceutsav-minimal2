@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, Eye, Building2, User, Mail, Phone, MapPin } from "lucide-react";
+import { Loader2, Search, ChevronDown, Eye, Building2, User, Mail, Phone, MapPin, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -41,10 +41,12 @@ export default function OrderRecords() {
   const clients = useQuery(api.clients.list, {});
   const b2cClients = useQuery(api.b2cClients.list, {});
   const programs = useQuery(api.programs.list);
+  const batches = useQuery(api.batches.list, {});
   const updateStatus = useMutation(api.orderHistory.updateStatus);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
+  const [selectedBatch, setSelectedBatch] = useState<string>("all");
   const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
   const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
 
@@ -72,6 +74,11 @@ export default function OrderRecords() {
 
   // Filter orders
   let filteredOrders = orders || [];
+
+  // Apply batch filter
+  if (selectedBatch !== "all") {
+    filteredOrders = filteredOrders.filter((o) => o.batchId === selectedBatch);
+  }
 
   // Apply customer type filter
   if (customerTypeFilter !== "all") {
@@ -125,7 +132,8 @@ export default function OrderRecords() {
       const clientName = o.clientType === "b2b"
         ? (o.client as any)?.organization?.toLowerCase() || (o.client as any)?.name?.toLowerCase() || ""
         : (o.client as any)?.buyerName?.toLowerCase() || "";
-      return kitName.includes(query) || clientName.includes(query);
+      const batchName = o.batch?.batchId?.toLowerCase() || "";
+      return kitName.includes(query) || clientName.includes(query) || batchName.includes(query);
     });
   }
 
@@ -146,6 +154,7 @@ export default function OrderRecords() {
   const handleClearAllFilters = () => {
     setCustomerTypeFilter("all");
     setSearchQuery("");
+    setSelectedBatch("all");
     setSelectedPrograms([]);
     setSelectedKitCategories([]);
     setSelectedKits([]);
@@ -194,7 +203,7 @@ export default function OrderRecords() {
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by kit name or client name..."
+                  placeholder="Search by kit name, client name, or batch ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -209,6 +218,19 @@ export default function OrderRecords() {
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="b2b">B2B</SelectItem>
                 <SelectItem value="b2c">B2C</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+              <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filter by Batch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Batches</SelectItem>
+                {batches?.map((batch) => (
+                  <SelectItem key={batch._id} value={batch._id}>
+                    {batch.batchId}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -254,6 +276,7 @@ export default function OrderRecords() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr className="border-b">
+                  <th className="text-left p-4 font-semibold">Batch</th>
                   <th className="text-left p-4 font-semibold">Customer</th>
                   <th className="text-left p-4 font-semibold">Kit</th>
                   <th className="text-left p-4 font-semibold">Quantity</th>
@@ -267,6 +290,16 @@ export default function OrderRecords() {
               <tbody>
                 {filteredOrders.map((order) => (
                   <tr key={order._id} className="border-b hover:bg-muted/30">
+                    <td className="p-4">
+                      {order.batch ? (
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{order.batch.batchId}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">No batch</span>
+                      )}
+                    </td>
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="font-medium">
