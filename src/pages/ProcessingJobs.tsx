@@ -37,6 +37,7 @@ export default function ProcessingJobs() {
   const createProcessingJob = useMutation(api.processingJobs.create);
 
   const [preProcessingOpen, setPreProcessingOpen] = useState(false);
+  const [sealingPacketOpen, setSealingPacketOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "assigned" | "in_progress" | "completed">("all");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [processingForm, setProcessingForm] = useState({
@@ -48,9 +49,17 @@ export default function ProcessingJobs() {
     notes: "",
   });
 
-  // Combobox open states
-  const [sourceComboboxOpen, setSourceComboboxOpen] = useState<Record<number, boolean>>({});
-  const [targetComboboxOpen, setTargetComboboxOpen] = useState<Record<number, boolean>>({});
+  const [sealingForm, setSealingForm] = useState({
+    name: "",
+    targetItemId: "" as Id<"inventory">,
+    targetQuantity: 1,
+    sources: [] as Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }>,
+    processedBy: "",
+    processedByType: "in_house" as "vendor" | "service" | "in_house",
+    notes: "",
+  });
+
+  const [sealingPacketComboboxOpen, setSealingPacketComboboxOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -143,6 +152,120 @@ export default function ProcessingJobs() {
       });
     } else {
       setProcessingForm({ ...processingForm, targets: newTargets });
+    }
+  };
+
+  const handleSealingPacketSelection = (itemId: Id<"inventory">) => {
+    const selectedItem = inventory.find((i) => i._id === itemId);
+    
+    if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
+      const autoFilledSources = selectedItem.components.map((component) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * sealingForm.targetQuantity,
+      }));
+      
+      setSealingForm({
+        ...sealingForm,
+        targetItemId: itemId,
+        sources: autoFilledSources,
+      });
+      toast.success("Source materials auto-filled from sealed packet BOM");
+    } else {
+      setSealingForm({
+        ...sealingForm,
+        targetItemId: itemId,
+        sources: [],
+      });
+      toast.error("Selected sealed packet has no BOM defined");
+    }
+    
+    setSealingPacketComboboxOpen(false);
+  };
+
+  const handleSealingQuantityChange = (quantity: number) => {
+    const selectedItem = inventory.find((i) => i._id === sealingForm.targetItemId);
+    
+    if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
+      const updatedSources = selectedItem.components.map((component) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * quantity,
+      }));
+      
+      setSealingForm({
+        ...sealingForm,
+        targetQuantity: quantity,
+        sources: updatedSources,
+      });
+    } else {
+      setSealingForm({
+        ...sealingForm,
+        targetQuantity: quantity,
+      });
+    }
+  };
+
+  const validateSealingJobMaterials = (): boolean => {
+    for (const source of sealingForm.sources) {
+      const inventoryItem = inventory.find((i) => i._id === source.sourceItemId);
+      if (!inventoryItem) {
+        toast.error(`Source material not found`);
+        return false;
+      }
+      if (inventoryItem.quantity < source.sourceQuantity) {
+        toast.error(`Insufficient stock for ${inventoryItem.name}. Available: ${inventoryItem.quantity} ${inventoryItem.unit}, Required: ${source.sourceQuantity} ${inventoryItem.unit}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleCreateSealingJob = async () => {
+    if (!sealingForm.targetItemId) {
+      toast.error("Please select a sealed packet");
+      return;
+    }
+    
+    if (sealingForm.sources.length === 0) {
+      toast.error("No source materials defined. Please select a sealed packet with BOM.");
+      return;
+    }
+
+    if (!validateSealingJobMaterials()) {
+      return;
+    }
+
+    try {
+      const jobData: any = {
+        name: sealingForm.name,
+        sources: sealingForm.sources,
+        targets: [{ targetItemId: sealingForm.targetItemId, targetQuantity: sealingForm.targetQuantity }],
+      };
+      
+      if (sealingForm.processedBy) {
+        jobData.processedBy = sealingForm.processedBy;
+      }
+      if (sealingForm.processedByType) {
+        jobData.processedByType = sealingForm.processedByType;
+      }
+      if (sealingForm.notes) {
+        jobData.notes = sealingForm.notes;
+      }
+      
+      await createProcessingJob(jobData);
+      toast.success("Sealing packet job created");
+      setSealingPacketOpen(false);
+      setSealingForm({
+        name: "",
+        targetItemId: "" as Id<"inventory">,
+        targetQuantity: 1,
+        sources: [],
+        processedBy: "",
+        processedByType: "in_house",
+        notes: "",
+      });
+      setSealingPacketComboboxOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create sealing packet job");
     }
   };
 
@@ -492,6 +615,165 @@ export default function ProcessingJobs() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+
+              <Dialog open={sealingPacketOpen} onOpenChange={setSealingPacketOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="secondary">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Start Sealing Packet Job
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Create Sealing Packet Job</DialogTitle>
+                    <DialogDescription>Package materials into sealed packets</DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Job Name</Label>
+                      <Input
+                        value={sealingForm.name}
+                        onChange={(e) => setSealingForm({ ...sealingForm, name: e.target.value })}
+                      />
+                    </div>
+                    <Separator />
+                    <Label>Target Sealed Packet</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Popover 
+                          open={sealingPacketComboboxOpen} 
+                          onOpenChange={setSealingPacketComboboxOpen}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={sealingPacketComboboxOpen}
+                              className="w-full justify-between"
+                            >
+                              {sealingForm.targetItemId
+                                ? (() => {
+                                    const item = inventory.find((i) => i._id === sealingForm.targetItemId);
+                                    return item ? item.name : "Select sealed packet";
+                                  })()
+                                : "Select sealed packet"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[400px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search sealed packets..." />
+                              <CommandList>
+                                <CommandEmpty>No sealed packet found.</CommandEmpty>
+                                <CommandGroup>
+                                  {inventory?.filter((item) => item.type === "sealed_packet").map((item) => (
+                                    <CommandItem
+                                      key={item._id}
+                                      value={`${item.name} ${item._id}`}
+                                      onSelect={() => handleSealingPacketSelection(item._id)}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          sealingForm.targetItemId === item._id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {item.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <Input
+                          type="number"
+                          placeholder="Quantity"
+                          value={sealingForm.targetQuantity}
+                          onChange={(e) => handleSealingQuantityChange(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <Separator />
+                    <Label>Source Materials (Auto-filled from BOM)</Label>
+                    {sealingForm.sources.length > 0 ? (
+                      <div className="space-y-2">
+                        {sealingForm.sources.map((source, index) => {
+                          const item = inventory.find((i) => i._id === source.sourceItemId);
+                          return (
+                            <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex-1">
+                                <p className="font-medium">{item?.name || "Unknown"}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Required: {source.sourceQuantity} {item?.unit || ""} | Available: {item?.quantity || 0} {item?.unit || ""}
+                                </p>
+                              </div>
+                              {item && item.quantity < source.sourceQuantity && (
+                                <Badge variant="destructive">Insufficient</Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Select a sealed packet to view required materials</p>
+                    )}
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Processed By Type</Label>
+                        <Select
+                          value={sealingForm.processedByType}
+                          onValueChange={(value: any) => setSealingForm({ ...sealingForm, processedByType: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="in_house">In-House</SelectItem>
+                            <SelectItem value="vendor">Vendor</SelectItem>
+                            <SelectItem value="service">Service</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {sealingForm.processedByType !== "in_house" && (
+                        <div className="space-y-2">
+                          <Label>Select {sealingForm.processedByType === "vendor" ? "Vendor" : "Service"}</Label>
+                          <Select
+                            value={sealingForm.processedBy}
+                            onValueChange={(value) => setSealingForm({ ...sealingForm, processedBy: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder={`Select ${sealingForm.processedByType}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(sealingForm.processedByType === "vendor" ? vendors : services)?.map((item) => (
+                                <SelectItem key={item._id} value={item._id}>
+                                  {item.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={sealingForm.notes}
+                        onChange={(e) => setSealingForm({ ...sealingForm, notes: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setSealingPacketOpen(false)}>Cancel</Button>
+                    <Button onClick={handleCreateSealingJob}>Create Job</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Button onClick={() => navigate("/inventory")} variant="outline">
                 Back to Inventory
               </Button>
