@@ -34,6 +34,7 @@ export default function Packing() {
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list, {});
   const inventory = useQuery(api.inventory.list, {});
+  const procurementJobs = useQuery(api.procurementJobs.list);
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
@@ -269,6 +270,21 @@ export default function Packing() {
   };
 
   const handleRequestProcurement = () => {
+    // Check if any selected assignments already have procurement jobs
+    const selectedAssignmentIds = Array.from(selectedAssignments);
+    const existingJobs = procurementJobs?.filter((job: any) => 
+      job.status !== "completed" && 
+      job.assignmentIds.some((id: Id<"assignments">) => selectedAssignmentIds.includes(id))
+    );
+
+    if (existingJobs && existingJobs.length > 0) {
+      const jobIds = existingJobs.map((j: any) => j.jobId).join(", ");
+      toast.error("Procurement request already exists", {
+        description: `Some selected assignments already have active procurement jobs: ${jobIds}`,
+      });
+      return;
+    }
+
     setProcurementDialog(true);
   };
 
