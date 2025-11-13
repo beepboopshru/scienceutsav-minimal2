@@ -26,6 +26,13 @@ export const getByVendor = query({
   },
 });
 
+export const getBillImageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 export const create = mutation({
   args: {
     vendorId: v.id("vendors"),

@@ -110,10 +110,24 @@ export default function BillRecords() {
     }
 
     try {
-      // Use Convex storage URL directly
-      const storageUrl = `${import.meta.env.VITE_CONVEX_URL}/api/storage/${billImport.billImageId}`;
-      
-      const response = await fetch(storageUrl);
+      // Get the signed URL from Convex
+      const imageUrl = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          path: 'vendorImports:getBillImageUrl',
+          args: { storageId: billImport.billImageId },
+          format: 'json',
+        }),
+      }).then(res => res.json()).then(data => data.value);
+
+      if (!imageUrl) {
+        throw new Error("Failed to get image URL");
+      }
+
+      const response = await fetch(imageUrl);
       
       if (!response.ok) {
         throw new Error("Failed to fetch bill image");
