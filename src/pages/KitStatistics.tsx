@@ -214,8 +214,9 @@ export default function KitStatistics() {
                     <TableHead>Kit Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Program</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Actions</TableHead>
+                            <TableHead>Stock</TableHead>
+                            <TableHead>File Status</TableHead>
+                            <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -257,6 +258,38 @@ export default function KitStatistics() {
                               <Badge variant={kit.stockCount > 0 ? "default" : "secondary"}>
                                 {kit.stockCount}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Badge 
+                                  variant={kit.kitImageFiles && kit.kitImageFiles.length > 0 ? "default" : "outline"}
+                                  className="text-xs"
+                                  title="Kit Images"
+                                >
+                                  <ImageIcon className="h-3 w-3" />
+                                </Badge>
+                                <Badge 
+                                  variant={kit.laserFiles && kit.laserFiles.length > 0 ? "default" : "outline"}
+                                  className="text-xs"
+                                  title="Laser Files"
+                                >
+                                  <FileText className="h-3 w-3" />
+                                </Badge>
+                                <Badge 
+                                  variant={kit.componentFiles && kit.componentFiles.length > 0 ? "default" : "outline"}
+                                  className="text-xs"
+                                  title="Component Pictures"
+                                >
+                                  <File className="h-3 w-3" />
+                                </Badge>
+                                <Badge 
+                                  variant={kit.workbookFiles && kit.workbookFiles.length > 0 ? "default" : "outline"}
+                                  className="text-xs"
+                                  title="Workbooks"
+                                >
+                                  <FileText className="h-3 w-3" />
+                                </Badge>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
