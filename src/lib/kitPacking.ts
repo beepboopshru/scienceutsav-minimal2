@@ -2,6 +2,7 @@ export interface Material {
   name: string;
   quantity: number;
   unit: string;
+  subcategory?: string;
   notes?: string;
 }
 
