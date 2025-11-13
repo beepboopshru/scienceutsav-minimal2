@@ -90,6 +90,36 @@ export default function KitBuilder() {
     if (!isLoading && isAuthenticated && user && !user.isApproved) {
       navigate("/pending-approval");
     }
+=======
+  useEffect(() => {
+    if (editingKit && !didInitFromEdit) {
+      setKitForm({
+        name: editingKit.name || "",
+        programId: editingKit.programId || ("" as Id<"programs">),
+        serialNumber: editingKit.serialNumber || "",
+        category: editingKit.category || "",
+        description: editingKit.description || "",
+        isStructured: editingKit.isStructured ?? true,
+        packingRequirements: editingKit.packingRequirements || "",
+        spareKits: editingKit.spareKits || [],
+        bulkMaterials: editingKit.bulkMaterials || [],
+        miscellaneous: editingKit.miscellaneous || [],
+      });
+      setDidInitFromEdit(true);
+    } else if (!editingKit && programIdFromUrl && !kitForm.programId) {
+      setKitForm((prev) => ({ ...prev, programId: programIdFromUrl }));
+    }
+  }, [editingKit, programIdFromUrl, didInitFromEdit, kitForm.programId]);
+
+  useEffect(() => {
+    if (editKitId) {
+      setDidInitFromEdit(false);
+    }
+  }, [editKitId]);
+=======
+=======
+>>>>>>> REPLACE
+=======
   }, [isLoading, isAuthenticated, user, navigate]);
 
   useEffect(() => {
@@ -430,7 +460,38 @@ export default function KitBuilder() {
 
                     {/* Main Pouch Tab */}
                     <TabsContent value="main-pouch" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addPouch} disabled={!canEdit}>
+                      {/* Subcategory selector at the top */}
+                      <div className="space-y-2 bg-muted/50 p-3 rounded-lg">
+                        <Label>Select Subcategory for Main Pouch Items</Label>
+                        <Select
+                          value={selectedSubcategories.pouch[0] || ""}
+                          onValueChange={(value) => {
+                            // Set the same subcategory for all pouches
+                            const newPouchSubcategories: Record<number, string> = {};
+                            structure.pouches.forEach((_, idx) => {
+                              newPouchSubcategories[idx] = value;
+                            });
+                            setSelectedSubcategories({
+                              ...selectedSubcategories,
+                              pouch: newPouchSubcategories,
+                            });
+                          }}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose subcategory first" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                              <SelectItem key={cat._id} value={cat.value}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button size="sm" onClick={addPouch} disabled={!canEdit || !selectedSubcategories.pouch[0]}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Main Pouch Item
                       </Button>
@@ -450,32 +511,6 @@ export default function KitBuilder() {
                             <Button size="sm" variant="ghost" onClick={() => removePouch(pouchIdx)} disabled={!canEdit}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                          
-                          {/* Subcategory selector */}
-                          <div className="space-y-2">
-                            <Label>Select Subcategory</Label>
-                            <Select
-                              value={selectedSubcategories.pouch[pouchIdx] || ""}
-                              onValueChange={(value) => {
-                                setSelectedSubcategories({
-                                  ...selectedSubcategories,
-                                  pouch: { ...selectedSubcategories.pouch, [pouchIdx]: value },
-                                });
-                              }}
-                              disabled={!canEdit}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Choose subcategory first" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                                  <SelectItem key={cat._id} value={cat.value}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
                           </div>
 
                           {pouch.materials.map((material, matIdx) => (
@@ -582,7 +617,38 @@ export default function KitBuilder() {
 
                     {/* Sealed Packets Tab */}
                     <TabsContent value="sealed-packets" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addPacket} disabled={!canEdit}>
+                      {/* Subcategory selector at the top */}
+                      <div className="space-y-2 bg-muted/50 p-3 rounded-lg">
+                        <Label>Select Subcategory for Sealed Packets</Label>
+                        <Select
+                          value={selectedSubcategories.packet[0] || ""}
+                          onValueChange={(value) => {
+                            // Set the same subcategory for all packets
+                            const newPacketSubcategories: Record<number, string> = {};
+                            structure.packets.forEach((_, idx) => {
+                              newPacketSubcategories[idx] = value;
+                            });
+                            setSelectedSubcategories({
+                              ...selectedSubcategories,
+                              packet: newPacketSubcategories,
+                            });
+                          }}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose subcategory first" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                              <SelectItem key={cat._id} value={cat.value}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Button size="sm" onClick={addPacket} disabled={!canEdit || !selectedSubcategories.packet[0]}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Sealed Packet
                       </Button>
@@ -602,32 +668,6 @@ export default function KitBuilder() {
                             <Button size="sm" variant="ghost" onClick={() => removePacket(packetIdx)} disabled={!canEdit}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
-                          </div>
-                          
-                          {/* Subcategory selector */}
-                          <div className="space-y-2">
-                            <Label>Select Subcategory</Label>
-                            <Select
-                              value={selectedSubcategories.packet[packetIdx] || ""}
-                              onValueChange={(value) => {
-                                setSelectedSubcategories({
-                                  ...selectedSubcategories,
-                                  packet: { ...selectedSubcategories.packet, [packetIdx]: value },
-                                });
-                              }}
-                              disabled={!canEdit}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Choose subcategory first" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                                  <SelectItem key={cat._id} value={cat.value}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
                           </div>
 
                           {packet.materials.map((material, matIdx) => (

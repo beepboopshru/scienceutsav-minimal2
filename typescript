@@ -1,8 +1,1 @@
-// On a pre-processed item
-{
-  name: "Cut MDF Sheet 12x12",
-  type: "pre_processed",
-  components: [
-    { rawMaterialId: Id<"inventory">, quantityRequired: 1.2, unit: "sq ft", wastageNotes: "10% cutting waste" }
-  ]
-}
+const createInventoryItem = useMutation(api.inventory.create);
