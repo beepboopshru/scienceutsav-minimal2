@@ -90,36 +90,6 @@ export default function KitBuilder() {
     if (!isLoading && isAuthenticated && user && !user.isApproved) {
       navigate("/pending-approval");
     }
-=======
-  useEffect(() => {
-    if (editingKit && !didInitFromEdit) {
-      setKitForm({
-        name: editingKit.name || "",
-        programId: editingKit.programId || ("" as Id<"programs">),
-        serialNumber: editingKit.serialNumber || "",
-        category: editingKit.category || "",
-        description: editingKit.description || "",
-        isStructured: editingKit.isStructured ?? true,
-        packingRequirements: editingKit.packingRequirements || "",
-        spareKits: editingKit.spareKits || [],
-        bulkMaterials: editingKit.bulkMaterials || [],
-        miscellaneous: editingKit.miscellaneous || [],
-      });
-      setDidInitFromEdit(true);
-    } else if (!editingKit && programIdFromUrl && !kitForm.programId) {
-      setKitForm((prev) => ({ ...prev, programId: programIdFromUrl }));
-    }
-  }, [editingKit, programIdFromUrl, didInitFromEdit, kitForm.programId]);
-
-  useEffect(() => {
-    if (editKitId) {
-      setDidInitFromEdit(false);
-    }
-  }, [editKitId]);
-=======
-=======
->>>>>>> REPLACE
-=======
   }, [isLoading, isAuthenticated, user, navigate]);
 
   useEffect(() => {
