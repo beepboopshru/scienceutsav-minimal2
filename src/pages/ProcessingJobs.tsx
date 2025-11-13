@@ -36,6 +36,7 @@ export default function ProcessingJobs() {
   const completeJob = useMutation(api.processingJobs.complete);
   const startJob = useMutation(api.processingJobs.startJob);
   const cancelJob = useMutation(api.processingJobs.cancel);
+  const createInventoryItem = useMutation(api.inventory.create);
 
   // Create virtual packet items from kits
   const virtualPackets: any[] = [];
@@ -280,10 +281,37 @@ export default function ProcessingJobs() {
     }
 
     try {
+      // Check if the target is a virtual packet (from kit)
+      const selectedItem = combinedInventory.find((i) => i._id === sealingForm.targetItemId);
+      let targetInventoryId = sealingForm.targetItemId;
+      
+      // If it's a virtual packet, create a real inventory item for it
+      if (selectedItem && selectedItem.isKitPacket) {
+        const existingInventoryItem = inventory?.find(
+          (inv) => inv.name === selectedItem.name && inv.type === "sealed_packet"
+        );
+        
+        if (existingInventoryItem) {
+          targetInventoryId = existingInventoryItem._id;
+        } else {
+          // Create the sealed packet inventory item
+          const newItemId = await createInventoryItem({
+            name: selectedItem.name,
+            description: selectedItem.description || `Sealed packet from ${selectedItem.sourceKit?.name}`,
+            type: "sealed_packet",
+            quantity: 0,
+            unit: selectedItem.unit || "packet",
+            components: selectedItem.components || [],
+          });
+          targetInventoryId = newItemId;
+          toast.success(`Created inventory item for ${selectedItem.name}`);
+        }
+      }
+      
       const jobData: any = {
         name: sealingForm.name,
         sources: sealingForm.sources,
-        targets: [{ targetItemId: sealingForm.targetItemId, targetQuantity: sealingForm.targetQuantity }],
+        targets: [{ targetItemId: targetInventoryId, targetQuantity: sealingForm.targetQuantity }],
       };
       
       if (sealingForm.processedBy) {
