@@ -48,11 +48,12 @@ export default function Inventory() {
   const createCategory = useMutation(api.inventoryCategories.create);
   const removeCategory = useMutation(api.inventoryCategories.remove);
   const createVendorImport = useMutation(api.vendorImports.create);
+  const updateKit = useMutation(api.kits.update);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterSubcategory, setFilterSubcategory] = useState<string>("all");
-  const [editingQuantity, setEditingQuantity] = useState<Id<"inventory"> | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<Id<"inventory"> | string | null>(null);
   const [tempQuantity, setTempQuantity] = useState<number>(0);
   const [viewPacketOpen, setViewPacketOpen] = useState(false);
   const [selectedPacket, setSelectedPacket] = useState<any>(null);
@@ -231,10 +232,21 @@ export default function Inventory() {
     setTempQuantity(item.quantity);
   };
 
-  const handleQuantitySave = async (itemId: Id<"inventory">) => {
+  const handleQuantitySave = async (itemId: Id<"inventory"> | string, item: any) => {
     try {
-      await updateQuantity({ id: itemId, quantity: tempQuantity });
-      toast.success("Quantity updated");
+      if (item.isKitPacket && item.sourceKit) {
+        // For virtual packets, update the kit's stockCount
+        const updateKit = useMutation(api.kits.update);
+        await updateKit({ 
+          id: item.sourceKit._id, 
+          stockCount: tempQuantity 
+        });
+        toast.success("Kit stock count updated");
+      } else {
+        // For real inventory items
+        await updateQuantity({ id: itemId as Id<"inventory">, quantity: tempQuantity });
+        toast.success("Quantity updated");
+      }
       setEditingQuantity(null);
     } catch (error: any) {
       toast.error(error.message || "Failed to update quantity");
@@ -846,9 +858,7 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell>{item.subcategory || "-"}</TableCell>
                       <TableCell>
-                        {item.isKitPacket ? (
-                          <span>{item.quantity}</span>
-                        ) : editingQuantity === item._id ? (
+                        {editingQuantity === item._id ? (
                           <div className="flex gap-2">
                             <Input
                               type="number"
@@ -856,7 +866,7 @@ export default function Inventory() {
                               onChange={(e) => setTempQuantity(Number(e.target.value))}
                               className="w-20"
                             />
-                            <Button size="sm" onClick={() => handleQuantitySave(item._id)}>
+                            <Button size="sm" onClick={() => handleQuantitySave(item._id, item)}>
                               Save
                             </Button>
                           </div>
@@ -864,6 +874,7 @@ export default function Inventory() {
                           <span
                             className="cursor-pointer hover:underline"
                             onClick={() => handleQuantityEdit(item)}
+                            title={item.isKitPacket ? "Click to edit kit stock count" : "Click to edit quantity"}
                           >
                             {item.quantity}
                           </span>
