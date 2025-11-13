@@ -196,10 +196,11 @@ export default function ProcessingJobs() {
   };
 
   const handleSealingPacketSelection = (itemId: Id<"inventory">) => {
-    const selectedItem = inventory.find((i) => i._id === itemId);
+    // Check both real inventory and virtual packets
+    const selectedItem = combinedInventory.find((i) => i._id === itemId);
     
     if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
-      const autoFilledSources = selectedItem.components.map((component) => ({
+      const autoFilledSources = selectedItem.components.map((component: any) => ({
         sourceItemId: component.rawMaterialId,
         sourceQuantity: component.quantityRequired * sealingForm.targetQuantity,
       }));
@@ -209,14 +210,18 @@ export default function ProcessingJobs() {
         targetItemId: itemId,
         sources: autoFilledSources,
       });
-      toast.success("Source materials auto-filled from sealed packet BOM");
+      toast.success(`Source materials auto-filled from sealed packet BOM (${selectedItem.components.length} items)`);
     } else {
       setSealingForm({
         ...sealingForm,
         targetItemId: itemId,
         sources: [],
       });
-      toast.error("Selected sealed packet has no BOM defined");
+      const errorMsg = selectedItem 
+        ? `Selected sealed packet "${selectedItem.name}" has no BOM defined. Please check the kit's packing requirements.`
+        : "Selected sealed packet has no BOM defined";
+      toast.error(errorMsg);
+      console.error("Selected item:", selectedItem);
     }
     
     setSealingPacketComboboxOpen(false);
