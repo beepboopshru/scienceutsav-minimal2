@@ -30,6 +30,7 @@ export default function BillTracking() {
   const vendorImports = useQuery(api.vendorImports.list);
   const createBill = useMutation(api.billTracking.create);
   const updateStatus = useMutation(api.billTracking.updateStatus);
+  const updateVendorPaymentStatus = useMutation(api.vendorImports.updatePaymentStatus);
   const generateUploadUrl = useMutation(api.billTracking.generateUploadUrl);
 
   useEffect(() => {
@@ -102,6 +103,19 @@ export default function BillTracking() {
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleVendorPaymentStatusChange = async (vendorImportId: Id<"vendorImports">, newStatus: string) => {
+    try {
+      await updateVendorPaymentStatus({
+        id: vendorImportId,
+        status: newStatus as "requested" | "acknowledged" | "in_progress" | "done",
+      });
+      toast.success("Payment status updated successfully");
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast.error("Failed to update payment status");
     }
   };
 
@@ -335,7 +349,9 @@ export default function BillTracking() {
                           <TableHead>Bill Date</TableHead>
                           <TableHead>Total Amount</TableHead>
                           <TableHead>Items</TableHead>
+                          <TableHead>Payment Status</TableHead>
                           <TableHead>Bill Image</TableHead>
+                          {canUpdateStatus && <TableHead>Actions</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -346,10 +362,33 @@ export default function BillTracking() {
                             <TableCell>₹{vendorImport.totalAmount.toLocaleString()}</TableCell>
                             <TableCell>{vendorImport.items.length} items</TableCell>
                             <TableCell>
+                              <Badge variant={getStatusColor(vendorImport.paymentStatus || "requested")}>
+                                {(vendorImport.paymentStatus || "requested").replace("_", " ")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
                               {vendorImport.billImageId && (
                                 <VendorBillDownload storageId={vendorImport.billImageId} />
                               )}
                             </TableCell>
+                            {canUpdateStatus && (
+                              <TableCell>
+                                <Select
+                                  value={vendorImport.paymentStatus || "requested"}
+                                  onValueChange={(value) => handleVendorPaymentStatusChange(vendorImport._id, value)}
+                                >
+                                  <SelectTrigger className="w-[140px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="requested">Requested</SelectItem>
+                                    <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="done">Done</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ))}
                       </TableBody>

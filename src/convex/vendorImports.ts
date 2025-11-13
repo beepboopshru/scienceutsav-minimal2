@@ -52,9 +52,10 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Create the vendor import record
+    // Create the vendor import record with default payment status
     const importId = await ctx.db.insert("vendorImports", {
       ...args,
+      paymentStatus: "requested",
       createdBy: userId,
     });
 
@@ -89,5 +90,44 @@ export const remove = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     await ctx.db.delete(args.id);
+  },
+});
+
+export const updatePaymentStatus = mutation({
+  args: {
+    id: v.id("vendorImports"),
+    status: v.union(
+      v.literal("requested"),
+      v.literal("acknowledged"),
+      v.literal("in_progress"),
+      v.literal("done")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user?.role || !["admin", "finance"].includes(user.role)) {
+      throw new Error("Not authorized to update payment status");
+    }
+
+    const vendorImport = await ctx.db.get(args.id);
+    if (!vendorImport) throw new Error("Vendor bill not found");
+
+    await ctx.db.patch(args.id, {
+      paymentStatus: args.status,
+      lastUpdatedBy: userId,
+      lastUpdatedAt: Date.now(),
+    });
+
+    await ctx.db.insert("activityLogs", {
+      userId: vendorImport.createdBy,
+      actionType: "vendor_bill_payment_status_updated",
+      details: `Vendor bill ${vendorImport.billNumber} payment status updated to ${args.status}`,
+      performedBy: userId,
+    });
+
+    return args.id;
   },
 });

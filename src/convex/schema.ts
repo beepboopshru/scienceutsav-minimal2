@@ -394,10 +394,19 @@ const schema = defineSchema(
         })
       ),
       totalAmount: v.number(),
+      paymentStatus: v.optional(v.union(
+        v.literal("requested"),
+        v.literal("acknowledged"),
+        v.literal("in_progress"),
+        v.literal("done")
+      )),
       createdBy: v.id("users"),
+      lastUpdatedBy: v.optional(v.id("users")),
+      lastUpdatedAt: v.optional(v.number()),
     })
       .index("by_vendor", ["vendorId"])
-      .index("by_created_by", ["createdBy"]),
+      .index("by_created_by", ["createdBy"])
+      .index("by_payment_status", ["paymentStatus"]),
 
     // Laser files for kits
     laserFiles: defineTable({
