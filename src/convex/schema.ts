@@ -526,6 +526,16 @@ const schema = defineSchema(
       .index("by_created_by", ["createdBy"])
       .index("by_status", ["status"])
       .index("by_priority", ["priority"]),
+
+    discrepancyTickets: defineTable({
+      clientId: v.id("clients"),
+      priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent")),
+      discrepancy: v.string(),
+      status: v.union(v.literal("open"), v.literal("in_progress"), v.literal("resolved"), v.literal("closed")),
+      createdBy: v.id("users"),
+    }).index("by_client", ["clientId"])
+      .index("by_status", ["status"])
+      .index("by_created_by", ["createdBy"]),
   },
   {
     schemaValidation: false,

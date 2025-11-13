@@ -40,6 +40,7 @@ import {
   Trash2,
   Package,
   FileText,
+  AlertTriangle,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode, useState, useEffect, useRef } from "react";
@@ -234,6 +235,12 @@ export function Layout({ children }: LayoutProps) {
       icon: Package,
       path: "/dispatch",
       roles: ["admin", "manager", "operations", "dispatch"],
+    },
+    {
+      title: "Discrepancy Tickets",
+      icon: AlertTriangle,
+      path: "/discrepancy-tickets",
+      roles: ["admin", "manager", "operations"],
     },
   ];
 

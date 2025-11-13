@@ -33,6 +33,7 @@ import Packing from "@/pages/Packing.tsx";
 import Dispatch from "@/pages/Dispatch.tsx";
 import OperationsInventoryRelations from "@/pages/OperationsInventoryRelations.tsx";
 import KitStatistics from "./pages/KitStatistics";
+import DiscrepancyTickets from "./pages/DiscrepancyTickets";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -96,6 +97,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/vendor-contacts" element={<VendorContacts />} />
             <Route path="/services" element={<Services />} />
             <Route path="/kit-statistics" element={<KitStatistics />} />
+            <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
