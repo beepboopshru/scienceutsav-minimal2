@@ -6,7 +6,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 import Landing from "./pages/Landing.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -40,125 +40,6 @@ import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Landing />,
-  },
-  {
-    path: "/auth",
-    element: <AuthPage redirectAfterAuth="/dashboard" />,
-  },
-  {
-    path: "/dashboard",
-    element: <Dashboard />,
-  },
-  {
-    path: "/pending-approval",
-    element: <PendingApproval />,
-  },
-  {
-    path: "/research",
-    element: <Research />,
-  },
-  {
-    path: "/kit-builder",
-    element: <KitBuilder />,
-  },
-  {
-    path: "/clients",
-    element: <Clients />,
-  },
-  {
-    path: "/b2c-clients",
-    element: <B2CClients />,
-  },
-  {
-    path: "/b2b-assignments",
-    element: <B2BAssignments />,
-  },
-  {
-    path: "/b2c-assignments",
-    element: <B2CAssignments />,
-  },
-  {
-    path: "/packing",
-    element: <Packing />,
-  },
-  {
-    path: "/dispatch",
-    element: <Dispatch />,
-  },
-  {
-    path: "/operations",
-    element: <Operations />,
-  },
-  {
-    path: "/procurement",
-    element: <Procurement />,
-  },
-  {
-    path: "/operations-inventory-relations",
-    element: <OperationsInventoryRelations />,
-  },
-  {
-    path: "/laser-files",
-    element: <LaserFiles />,
-  },
-  {
-    path: "/view-kit-files",
-    element: <ViewKitFiles />,
-  },
-  {
-    path: "/user-management",
-    element: <UserManagement />,
-  },
-  {
-    path: "/admin-zone",
-    element: <AdminZone />,
-  },
-  {
-    path: "/inventory",
-    element: <Inventory />,
-  },
-  {
-    path: "/inventory/processing-jobs",
-    element: <ProcessingJobs />,
-  },
-  {
-    path: "/inventory/bill-records",
-    element: <BillRecords />,
-  },
-  {
-    path: "/vendor-contacts",
-    element: <VendorContacts />,
-  },
-  {
-    path: "/services",
-    element: <Services />,
-  },
-  {
-    path: "/kit-statistics",
-    element: <KitStatistics />,
-  },
-  {
-    path: "/discrepancy-tickets",
-    element: <DiscrepancyTickets />,
-  },
-  {
-    path: "/bill-tracking",
-    element: <BillTracking />,
-  },
-  {
-    path: "/order-records",
-    element: <OrderRecords />,
-  },
-  {
-    path: "*",
-    element: <NotFound />,
-  },
-]);
-
 function RouteSyncer() {
   const location = useLocation();
   useEffect(() => {
@@ -182,44 +63,46 @@ function RouteSyncer() {
   return null;
 }
 
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/pending-approval" element={<PendingApproval />} />
-          <Route path="/research" element={<Research />} />
-          <Route path="/kit-builder" element={<KitBuilder />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/b2c-clients" element={<B2CClients />} />
-          <Route path="/b2b-assignments" element={<B2BAssignments />} />
-          <Route path="/b2c-assignments" element={<B2CAssignments />} />
-          <Route path="/packing" element={<Packing />} />
-          <Route path="/dispatch" element={<Dispatch />} />
-          <Route path="/operations" element={<Operations />} />
-          <Route path="/procurement" element={<Procurement />} />
-          <Route path="/operations-inventory-relations" element={<OperationsInventoryRelations />} />
-          <Route path="/laser-files" element={<LaserFiles />} />
-          <Route path="/view-kit-files" element={<ViewKitFiles />} />
-          <Route path="/user-management" element={<UserManagement />} />
-          <Route path="/admin-zone" element={<AdminZone />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
-          <Route path="/inventory/bill-records" element={<BillRecords />} />
-          <Route path="/vendor-contacts" element={<VendorContacts />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/kit-statistics" element={<KitStatistics />} />
-          <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
-          <Route path="/bill-tracking" element={<BillTracking />} />
-          <Route path="/order-records" element={<OrderRecords />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
+        <BrowserRouter>
+          <RouteSyncer />
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/pending-approval" element={<PendingApproval />} />
+            <Route path="/research" element={<Research />} />
+            <Route path="/kit-builder" element={<KitBuilder />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/b2c-clients" element={<B2CClients />} />
+            <Route path="/b2b-assignments" element={<B2BAssignments />} />
+            <Route path="/b2c-assignments" element={<B2CAssignments />} />
+            <Route path="/packing" element={<Packing />} />
+            <Route path="/dispatch" element={<Dispatch />} />
+            <Route path="/operations" element={<Operations />} />
+            <Route path="/procurement" element={<Procurement />} />
+            <Route path="/operations-inventory-relations" element={<OperationsInventoryRelations />} />
+            <Route path="/laser-files" element={<LaserFiles />} />
+            <Route path="/view-kit-files" element={<ViewKitFiles />} />
+            <Route path="/user-management" element={<UserManagement />} />
+            <Route path="/admin-zone" element={<AdminZone />} />
+            <Route path="/inventory" element={<Inventory />} />
+            <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
+            <Route path="/inventory/bill-records" element={<BillRecords />} />
+            <Route path="/vendor-contacts" element={<VendorContacts />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/kit-statistics" element={<KitStatistics />} />
+            <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
+            <Route path="/bill-tracking" element={<BillTracking />} />
+            <Route path="/order-records" element={<OrderRecords />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
       </ConvexAuthProvider>
     </InstrumentationProvider>
   </StrictMode>,
