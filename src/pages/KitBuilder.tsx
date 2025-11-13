@@ -48,6 +48,7 @@ export default function KitBuilder() {
     bulkMaterials: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
     miscellaneous: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
   });
+  const [didInitFromEdit, setDidInitFromEdit] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -59,23 +60,29 @@ export default function KitBuilder() {
   }, [isLoading, isAuthenticated, user, navigate]);
 
   useEffect(() => {
-    if (editingKit) {
+    if (editingKit && !didInitFromEdit) {
       setKitForm({
         name: editingKit.name || "",
         programId: editingKit.programId || ("" as Id<"programs">),
         serialNumber: editingKit.serialNumber || "",
         category: editingKit.category || "",
         description: editingKit.description || "",
-        isStructured: editingKit.isStructured || true,
+        // Fix boolean defaulting to not override false
+        isStructured: editingKit.isStructured ?? true,
         packingRequirements: editingKit.packingRequirements || "",
         spareKits: editingKit.spareKits || [],
         bulkMaterials: editingKit.bulkMaterials || [],
         miscellaneous: editingKit.miscellaneous || [],
       });
-    } else if (programIdFromUrl && !kitForm.programId) {
+      setDidInitFromEdit(true);
+    } else if (!editingKit && programIdFromUrl && !kitForm.programId) {
       setKitForm({ ...kitForm, programId: programIdFromUrl });
     }
-  }, [editingKit, programIdFromUrl]);
+  }, [editingKit, programIdFromUrl, didInitFromEdit]);
+
+  useEffect(() => {
+    setDidInitFromEdit(false);
+  }, [editKitId]);
 
   if (isLoading || !user || !programs || !kits || !inventory) {
     return (
