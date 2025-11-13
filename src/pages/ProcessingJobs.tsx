@@ -26,15 +26,53 @@ export default function ProcessingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   
-  const allJobs = useQuery(api.processingJobs.list);
+  const jobs = useQuery(api.processingJobs.list);
   const inventory = useQuery(api.inventory.list);
   const vendors = useQuery(api.vendors.list);
   const services = useQuery(api.services.list);
-  
-  const completeJob = useMutation(api.processingJobs.complete);
-  const cancelJob = useMutation(api.processingJobs.cancel);
-  const startJob = useMutation(api.processingJobs.startJob);
+  const kits = useQuery(api.kits.list);
+
   const createProcessingJob = useMutation(api.processingJobs.create);
+  const completeJob = useMutation(api.processingJobs.complete);
+  const startJob = useMutation(api.processingJobs.startJob);
+  const cancelJob = useMutation(api.processingJobs.cancel);
+
+  // Create virtual packet items from kits
+  const virtualPackets: any[] = [];
+  if (kits && inventory) {
+    kits.forEach((kit) => {
+      if (kit.packingRequirements) {
+        try {
+          const packingData = JSON.parse(kit.packingRequirements);
+          if (packingData.packets && Array.isArray(packingData.packets)) {
+            packingData.packets.forEach((packet: any, index: number) => {
+              virtualPackets.push({
+                _id: `${kit._id}_packet_${index}`,
+                name: `[${kit.name}] ${packet.name}`,
+                description: `Sealed packet from ${kit.name}`,
+                type: "sealed_packet",
+                quantity: kit.stockCount,
+                unit: "packet",
+                isKitPacket: true,
+                sourceKit: kit,
+                componentData: packet,
+                components: packet.materials?.map((material: any) => ({
+                  rawMaterialId: inventory.find((inv: any) => inv.name === material.name)?._id || ("" as any),
+                  quantityRequired: material.quantity,
+                  unit: material.unit,
+                })).filter((comp: any) => comp.rawMaterialId) || [],
+              });
+            });
+          }
+        } catch (e) {
+          // Invalid JSON, skip
+        }
+      }
+    });
+  }
+
+  // Combine real inventory with virtual packets for sealed packet selection
+  const combinedInventory = inventory ? [...inventory, ...virtualPackets] : [];
 
   const [preProcessingOpen, setPreProcessingOpen] = useState(false);
   const [sealingPacketOpen, setSealingPacketOpen] = useState(false);
@@ -72,7 +110,7 @@ export default function ProcessingJobs() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (isLoading || !user || !allJobs || !inventory) {
+  if (isLoading || !user || !jobs || !inventory) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
@@ -80,7 +118,7 @@ export default function ProcessingJobs() {
     );
   }
 
-  const filteredJobs = allJobs.filter((job) => {
+  const filteredJobs = jobs.filter((job) => {
     if (statusFilter === "all") return true;
     return job.status === statusFilter;
   });
@@ -668,7 +706,7 @@ export default function ProcessingJobs() {
                               <CommandList>
                                 <CommandEmpty>No sealed packet found.</CommandEmpty>
                                 <CommandGroup>
-                                  {inventory?.filter((item) => item.type === "sealed_packet").map((item) => (
+                                  {combinedInventory.filter((item) => item.type === "sealed_packet").map((item) => (
                                     <CommandItem
                                       key={item._id}
                                       value={`${item.name} ${item._id}`}
