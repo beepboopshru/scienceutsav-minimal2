@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   File,
   Eye,
+  Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +55,15 @@ export default function KitStatistics() {
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
   const [fileViewerDialog, setFileViewerDialog] = useState<{
+    open: boolean;
+    kitId: Id<"kits"> | null;
+    kitName: string;
+  }>({
+    open: false,
+    kitId: null,
+    kitName: "",
+  });
+  const [capacityDialog, setCapacityDialog] = useState<{
     open: boolean;
     kitId: Id<"kits"> | null;
     kitName: string;
@@ -274,6 +284,21 @@ export default function KitStatistics() {
                                   <Eye className="h-4 w-4 mr-1" />
                                   Files
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setCapacityDialog({
+                                      open: true,
+                                      kitId: kit._id,
+                                      kitName: kit.name,
+                                    });
+                                  }}
+                                  title="Capacity & Pricing"
+                                >
+                                  <Calculator className="h-4 w-4 mr-1" />
+                                  Capacity
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -402,6 +427,26 @@ export default function KitStatistics() {
           {fileViewerDialog.kitId && <KitFileViewer kitId={fileViewerDialog.kitId} />}
         </DialogContent>
       </Dialog>
+
+      {/* Capacity & Pricing Dialog */}
+      <Dialog
+        open={capacityDialog.open}
+        onOpenChange={(open) =>
+          !open && setCapacityDialog({ open: false, kitId: null, kitName: "" })
+        }
+      >
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Capacity & Pricing: {capacityDialog.kitName}</DialogTitle>
+          </DialogHeader>
+          {capacityDialog.kitId && (
+            <CapacityPricingDialog
+              kit={programKits.find((k) => k._id === capacityDialog.kitId)}
+              inventory={inventory || []}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
@@ -476,4 +521,270 @@ function FileItem({ file }: { file: any }) {
   }
 
   return null;
+}
+
+function CapacityPricingDialog({
+  kit,
+  inventory,
+}: {
+  kit: any;
+  inventory: Array<any>;
+}) {
+  const vendorImports = useQuery(api.vendorImports.list);
+  const vendors = useQuery(api.vendors.list);
+
+  if (!kit || !vendorImports || !vendors) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-5 w-5 animate-spin text-foreground" />
+      </div>
+    );
+  }
+
+  // Build a normalized BOM aggregated by name
+  const buildAggregatedBOM = () => {
+    const agg = new Map<string, { name: string; quantity: number; unit: string }>();
+
+    const addLine = (name: string, qty: number, unit: string) => {
+      const key = name.trim().toLowerCase();
+      const existing = agg.get(key);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        agg.set(key, { name, quantity: qty, unit });
+      }
+    };
+
+    // From structured packing requirements
+    if (kit.isStructured && kit.packingRequirements) {
+      const structure = parsePackingRequirements(kit.packingRequirements);
+      for (const pouch of structure.pouches || []) {
+        for (const m of pouch.materials || []) {
+          addLine(m.name, m.quantity, m.unit);
+        }
+      }
+      for (const packet of structure.packets || []) {
+        for (const m of packet.materials || []) {
+          addLine(m.name, m.quantity, m.unit);
+        }
+      }
+    }
+
+    // From spareKits, bulkMaterials, miscellaneous
+    const extraSets = [kit.spareKits || [], kit.bulkMaterials || [], kit.miscellaneous || []];
+    for (const arr of extraSets) {
+      for (const m of arr) {
+        addLine(m.name, m.quantity, m.unit);
+      }
+    }
+
+    return Array.from(agg.values());
+  };
+
+  const bom = buildAggregatedBOM();
+
+  // Precompute price candidates by inventoryId
+  const importPricesByItem: Record<string, Array<number>> = {};
+  for (const imp of vendorImports) {
+    for (const it of imp.items) {
+      const key = it.inventoryId;
+      if (!importPricesByItem[key]) importPricesByItem[key] = [];
+      importPricesByItem[key].push(it.unitPrice);
+    }
+  }
+
+  const vendorAvgPricesByItem: Record<string, Array<number>> = {};
+  for (const v of vendors) {
+    const prices = v.itemPrices || [];
+    for (const p of prices) {
+      const key = p.itemId;
+      if (!vendorAvgPricesByItem[key]) vendorAvgPricesByItem[key] = [];
+      vendorAvgPricesByItem[key].push(p.averagePrice);
+    }
+  }
+
+  // Helpers
+  const findInventoryMatches = (name: string) => {
+    const key = name.trim().toLowerCase();
+    return (inventory || []).filter((i) => (i.name || "").trim().toLowerCase() === key);
+  };
+
+  const chooseForCapacity = (matches: Array<any>) => {
+    if (matches.length === 0) return null;
+    const sealed = matches.filter((m) => m.type === "sealed_packet");
+    const pool = sealed.length > 0 ? sealed : matches;
+    return pool.reduce((a, b) => (a.quantity >= b.quantity ? a : b));
+  };
+
+  const collectPriceCandidates = (matches: Array<any>): Array<number> => {
+    const prices: Array<number> = [];
+    for (const m of matches) {
+      const id = m._id;
+      const ip = importPricesByItem[String(id)] || [];
+      const vp = vendorAvgPricesByItem[String(id)] || [];
+      for (const v of ip) prices.push(v);
+      for (const v of vp) prices.push(v);
+    }
+    return prices;
+  };
+
+  // Compute capacity and costs
+  type LineResult = {
+    name: string;
+    unit: string;
+    perKitQty: number;
+    available: number;
+    kitsPossibleForLine: number;
+    hasMatch: boolean;
+    minUnitPrice?: number;
+    maxUnitPrice?: number;
+    minLineCost?: number;
+    maxLineCost?: number;
+  };
+
+  const lineResults: Array<LineResult> = bom.map((line) => {
+    const matches = findInventoryMatches(line.name);
+    const capItem = chooseForCapacity(matches);
+    const available = capItem ? Number(capItem.quantity || 0) : 0;
+    const kitsPossibleForLine = line.quantity > 0 ? Math.floor(available / line.quantity) : Infinity;
+
+    const priceCandidates = collectPriceCandidates(matches);
+    const minUnitPrice = priceCandidates.length > 0 ? Math.min(...priceCandidates) : undefined;
+    const maxUnitPrice = priceCandidates.length > 0 ? Math.max(...priceCandidates) : undefined;
+
+    const minLineCost =
+      minUnitPrice !== undefined ? Number((line.quantity * minUnitPrice).toFixed(2)) : undefined;
+    const maxLineCost =
+      maxUnitPrice !== undefined ? Number((line.quantity * maxUnitPrice).toFixed(2)) : undefined;
+
+    return {
+      name: line.name,
+      unit: line.unit,
+      perKitQty: line.quantity,
+      available,
+      kitsPossibleForLine: Number.isFinite(kitsPossibleForLine) ? kitsPossibleForLine : 0,
+      hasMatch: matches.length > 0,
+      minUnitPrice,
+      maxUnitPrice,
+      minLineCost,
+      maxLineCost,
+    };
+  });
+
+  const anyShort = lineResults.some((r) => r.available < r.perKitQty);
+  const maxKits = lineResults.length > 0 ? Math.min(...lineResults.map((r) => r.kitsPossibleForLine)) : 0;
+  const minKits = anyShort ? 0 : maxKits;
+
+  const totalMinCost = lineResults
+    .filter((r) => r.minLineCost !== undefined)
+    .reduce((sum, r) => sum + (r.minLineCost as number), 0);
+  const totalMaxCost = lineResults
+    .filter((r) => r.maxLineCost !== undefined)
+    .reduce((sum, r) => sum + (r.maxLineCost as number), 0);
+  const missingCostCount = lineResults.filter((r) => r.minUnitPrice === undefined || r.maxUnitPrice === undefined).length;
+
+  const shortages = lineResults
+    .filter((r) => r.available < r.perKitQty)
+    .map((r) => ({
+      name: r.name,
+      required: r.perKitQty,
+      available: r.available,
+      unit: r.unit,
+      shortage: Number((r.perKitQty - r.available).toFixed(2)),
+    }));
+
+  return (
+    <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
+      {/* Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="p-4 border rounded-lg">
+          <p className="text-xs text-muted-foreground">Max Kits (strict)</p>
+          <p className="text-2xl font-bold">{isFinite(maxKits) ? maxKits : 0}</p>
+        </div>
+        <div className="p-4 border rounded-lg">
+          <p className="text-xs text-muted-foreground">Min Kits (strict)</p>
+          <p className="text-2xl font-bold">{isFinite(minKits) ? minKits : 0}</p>
+        </div>
+        <div className="p-4 border rounded-lg">
+          <p className="text-xs text-muted-foreground">Cost Range per Kit (INR)</p>
+          <p className="text-lg font-semibold">
+            {missingCostCount > 0 ? (
+              <span>
+                ₹{totalMinCost.toFixed(2)} - ₹{totalMaxCost.toFixed(2)}{" "}
+                <span className="text-xs text-muted-foreground">(incomplete)</span>
+              </span>
+            ) : (
+              <>₹{totalMinCost.toFixed(2)} - ₹{totalMaxCost.toFixed(2)}</>
+            )}
+          </p>
+        </div>
+      </div>
+
+      {/* Shortages */}
+      {shortages.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold mb-2">Shortages</h3>
+          <div className="space-y-1">
+            {shortages.map((s, idx) => (
+              <div key={idx} className="text-sm text-muted-foreground">
+                • {s.name}: need {s.required} {s.unit}, have {s.available} {s.unit} (short {s.shortage} {s.unit})
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Breakdown */}
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Per-line Breakdown</h3>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Per Kit</TableHead>
+                <TableHead>Available</TableHead>
+                <TableHead>Kits by Item</TableHead>
+                <TableHead>Min Unit</TableHead>
+                <TableHead>Max Unit</TableHead>
+                <TableHead>Min Line</TableHead>
+                <TableHead>Max Line</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lineResults.map((r, idx) => (
+                <TableRow key={idx}>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell>
+                    {r.perKitQty} {r.unit}
+                  </TableCell>
+                  <TableCell>
+                    {r.available} {r.unit}
+                  </TableCell>
+                  <TableCell>{r.kitsPossibleForLine}</TableCell>
+                  <TableCell>
+                    {r.minUnitPrice !== undefined ? `₹${r.minUnitPrice.toFixed(2)}` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {r.maxUnitPrice !== undefined ? `₹${r.maxUnitPrice.toFixed(2)}` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {r.minLineCost !== undefined ? `₹${r.minLineCost.toFixed(2)}` : "-"}
+                  </TableCell>
+                  <TableCell>
+                    {r.maxLineCost !== undefined ? `₹${r.maxLineCost.toFixed(2)}` : "-"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        {missingCostCount > 0 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Note: {missingCostCount} line(s) missing cost data. Totals computed from known costs only.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 }
