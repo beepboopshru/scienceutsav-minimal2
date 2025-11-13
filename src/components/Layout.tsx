@@ -200,18 +200,6 @@ export function Layout({ children }: LayoutProps) {
       roles: ["admin", "manager", "operations"],
     },
     {
-      title: "Packing",
-      icon: Package,
-      path: "/packing",
-      roles: ["admin", "manager", "operations"],
-    },
-    {
-      title: "Dispatch",
-      icon: Package,
-      path: "/dispatch",
-      roles: ["admin", "manager", "operations", "dispatch"],
-    },
-    {
       title: "Clients",
       icon: Users,
       path: "/clients",
@@ -230,6 +218,21 @@ export function Layout({ children }: LayoutProps) {
         { title: "B2B Assignments", path: "/b2b-assignments" },
         { title: "B2C Assignments", path: "/b2c-assignments" },
       ],
+    },
+  ];
+
+  const packingDispatchSection: NavItem[] = [
+    {
+      title: "Packing",
+      icon: Package,
+      path: "/packing",
+      roles: ["admin", "manager", "operations"],
+    },
+    {
+      title: "Dispatch",
+      icon: Package,
+      path: "/dispatch",
+      roles: ["admin", "manager", "operations", "dispatch"],
     },
   ];
 
@@ -327,7 +330,7 @@ export function Layout({ children }: LayoutProps) {
             {/* Core Operations */}
             {filterByRole(coreOperations).length > 0 && (
               <SidebarGroup>
-                <SidebarGroupLabel>Operations</SidebarGroupLabel>
+                <SidebarGroupLabel>Core</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {filterByRole(coreOperations).map((item) => (
@@ -370,6 +373,30 @@ export function Layout({ children }: LayoutProps) {
                             </Link>
                           </SidebarMenuButton>
                         )}
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {/* Packing & Dispatch Operations */}
+            {filterByRole(packingDispatchSection).length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Operations</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(packingDispatchSection).map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
