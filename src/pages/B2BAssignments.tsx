@@ -1173,7 +1173,10 @@ export default function Assignments() {
                     <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {newRowClient ? clients.find(c => c._id === newRowClient)?.name : "Select Client"}
+                          {newRowClient ? (() => {
+                            const selectedClient = clients.find(c => c._id === newRowClient);
+                            return selectedClient?.organization || selectedClient?.name || "Select Client";
+                          })() : "Select Client"}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-[200px] p-0">
