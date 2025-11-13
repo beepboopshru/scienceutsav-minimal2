@@ -25,13 +25,15 @@ export default function DiscrepancyTickets() {
   const navigate = useNavigate();
 
   const tickets = useQuery(api.discrepancyTickets.list);
-  const clients = useQuery(api.clients.list);
+  const b2bClients = useQuery(api.clients.list);
+  const b2cClients = useQuery(api.b2cClients.list);
   const createTicket = useMutation(api.discrepancyTickets.create);
   const updateStatus = useMutation(api.discrepancyTickets.updateStatus);
   const deleteTicket = useMutation(api.discrepancyTickets.deleteTicket);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<Id<"clients"> | "">("");
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedClientType, setSelectedClientType] = useState<"b2b" | "b2c">("b2b");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
   const [discrepancy, setDiscrepancy] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
@@ -65,7 +67,8 @@ export default function DiscrepancyTickets() {
     setIsSubmitting(true);
     try {
       await createTicket({
-        clientId: selectedClientId as Id<"clients">,
+        clientId: selectedClientId,
+        clientType: selectedClientType,
         priority,
         discrepancy: discrepancy.trim(),
         dueDate: dueDate ? dueDate.getTime() : undefined,
@@ -73,6 +76,7 @@ export default function DiscrepancyTickets() {
       toast.success("Discrepancy ticket created");
       setCreateDialogOpen(false);
       setSelectedClientId("");
+      setSelectedClientType("b2b");
       setPriority("medium");
       setDiscrepancy("");
       setDueDate(undefined);
@@ -194,15 +198,35 @@ export default function DiscrepancyTickets() {
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
+                      <Label>Client Type</Label>
+                      <Select value={selectedClientType} onValueChange={(v: any) => {
+                        setSelectedClientType(v);
+                        setSelectedClientId("");
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="b2b">B2B Client</SelectItem>
+                          <SelectItem value="b2c">B2C Client</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <Label>Client</Label>
-                      <Select value={selectedClientId as string} onValueChange={(v) => setSelectedClientId(v as Id<"clients">)}>
+                      <Select value={selectedClientId} onValueChange={setSelectedClientId}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select client" />
                         </SelectTrigger>
                         <SelectContent>
-                          {clients?.map((client) => (
+                          {selectedClientType === "b2b" && b2bClients?.map((client) => (
                             <SelectItem key={client._id} value={client._id}>
-                              {client.name}
+                              {client.organization || client.name}
+                            </SelectItem>
+                          ))}
+                          {selectedClientType === "b2c" && b2cClients?.map((client) => (
+                            <SelectItem key={client._id} value={client._id}>
+                              {client.buyerName}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -317,9 +341,14 @@ export default function DiscrepancyTickets() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Clients</SelectItem>
-                      {clients?.map((client) => (
+                      {b2bClients?.map((client) => (
                         <SelectItem key={client._id} value={client._id}>
-                          {client.name}
+                          {client.organization || client.name} (B2B)
+                        </SelectItem>
+                      ))}
+                      {b2cClients?.map((client) => (
+                        <SelectItem key={client._id} value={client._id}>
+                          {client.buyerName} (B2C)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -362,7 +391,7 @@ export default function DiscrepancyTickets() {
                       <div className="flex items-start justify-between">
                         <div className="space-y-1">
                           <CardTitle className="text-lg">
-                            {ticket.client?.name || "Unknown Client"}
+                            {ticket.clientDisplayName}
                           </CardTitle>
                           <CardDescription>
                             Created by {ticket.creator?.name || ticket.creator?.email || "Unknown"} on{" "}

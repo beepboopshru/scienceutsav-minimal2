@@ -4,7 +4,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const create = mutation({
   args: {
-    clientId: v.id("clients"),
+    clientId: v.string(),
+    clientType: v.union(v.literal("b2b"), v.literal("b2c")),
     priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent")),
     discrepancy: v.string(),
     dueDate: v.optional(v.number()),
@@ -20,6 +21,7 @@ export const create = mutation({
 
     const ticketId = await ctx.db.insert("discrepancyTickets", {
       clientId: args.clientId,
+      clientType: args.clientType,
       priority: args.priority,
       discrepancy: args.discrepancy,
       status: "open",
@@ -45,12 +47,37 @@ export const list = query({
     
     const ticketsWithDetails = await Promise.all(
       tickets.map(async (ticket) => {
-        const client = await ctx.db.get(ticket.clientId);
+        let client = null;
+        let clientDisplayName = "Unknown Client";
+        
+        if (ticket.clientType === "b2b") {
+          try {
+            const b2bClient = await ctx.db.get(ticket.clientId as any);
+            if (b2bClient && "_id" in b2bClient) {
+              client = b2bClient;
+              clientDisplayName = (b2bClient as any).organization || (b2bClient as any).name || "Unknown Client";
+            }
+          } catch {
+            // Client not found
+          }
+        } else if (ticket.clientType === "b2c") {
+          try {
+            const b2cClient = await ctx.db.get(ticket.clientId as any);
+            if (b2cClient && "_id" in b2cClient) {
+              client = b2cClient;
+              clientDisplayName = (b2cClient as any).buyerName || "Unknown Client";
+            }
+          } catch {
+            // Client not found
+          }
+        }
+        
         const creator = await ctx.db.get(ticket.createdBy);
         
         return {
           ...ticket,
           client,
+          clientDisplayName,
           creator,
         };
       })
