@@ -1,7 +1,7 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 export default function BillRecords() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -102,6 +103,34 @@ export default function BillRecords() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadBillImage = async (billImport: any) => {
+    if (!billImport.billImageId) {
+      toast.error("No bill image available");
+      return;
+    }
+
+    try {
+      const url = await fetch(
+        `${import.meta.env.VITE_CONVEX_URL}/api/storage/${billImport.billImageId}`
+      );
+      
+      if (!url.ok) {
+        throw new Error("Failed to fetch bill image");
+      }
+
+      const blob = await url.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `bill_${billImport.billNumber}_image.webp`;
+      a.click();
+      URL.revokeObjectURL(downloadUrl);
+      toast.success("Bill image downloaded");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to download bill image");
+    }
+  };
+
   return (
     <Layout>
       <div className="p-8">
@@ -143,14 +172,26 @@ export default function BillRecords() {
                           {getVendorName(billImport.vendorId)} • {billImport.billDate}
                         </CardDescription>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadBillAsHTML(billImport)}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
+                      <div className="flex gap-2">
+                        {billImport.billImageId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadBillImage(billImport)}
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Image
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadBillAsHTML(billImport)}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          HTML
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">

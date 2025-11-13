@@ -105,6 +105,7 @@ export default function Inventory() {
     billNumber: "",
     billDate: new Date().toISOString().split('T')[0],
     items: [{ inventoryId: "" as Id<"inventory">, quantity: 0, unitPrice: 0 }],
+    billImageFile: null as File | null,
   });
 
   const [categoryForm, setCategoryForm] = useState({
@@ -255,14 +256,64 @@ export default function Inventory() {
 
   const handleBillImport = async () => {
     try {
+      let billImageId: Id<"_storage"> | undefined = undefined;
+
+      // Upload bill image if provided
+      if (billForm.billImageFile) {
+        // Convert image to WebP
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = URL.createObjectURL(billForm.billImageFile!);
+        });
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+
+        // Convert to WebP blob
+        const webpBlob = await new Promise<Blob>((resolve) => {
+          canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
+        });
+
+        // Upload to Convex storage
+        const uploadUrl = await fetch(
+          `${import.meta.env.VITE_CONVEX_URL}/api/storage/upload`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'image/webp',
+            },
+            body: webpBlob,
+          }
+        );
+
+        if (!uploadUrl.ok) {
+          throw new Error('Failed to upload bill image');
+        }
+
+        const { storageId } = await uploadUrl.json();
+        billImageId = storageId;
+      }
+
       const totalAmount = billForm.items.reduce(
         (sum, item) => sum + item.quantity * item.unitPrice,
         0
       );
+      
       await createVendorImport({
-        ...billForm,
+        vendorId: billForm.vendorId,
+        billNumber: billForm.billNumber,
+        billDate: billForm.billDate,
+        items: billForm.items,
         totalAmount,
+        billImageId,
       });
+      
       toast.success("Bill imported successfully");
       setBillImportOpen(false);
       setBillForm({
@@ -270,6 +321,7 @@ export default function Inventory() {
         billNumber: "",
         billDate: new Date().toISOString().split('T')[0],
         items: [{ inventoryId: "" as Id<"inventory">, quantity: 0, unitPrice: 0 }],
+        billImageFile: null,
       });
     } catch (error: any) {
       toast.error(error.message || "Failed to import bill");
@@ -545,7 +597,7 @@ export default function Inventory() {
                   Import Bill
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Import Vendor Bill</DialogTitle>
                   <DialogDescription>Record a purchase from a vendor</DialogDescription>
@@ -585,6 +637,28 @@ export default function Inventory() {
                         onChange={(e) => setBillForm({ ...billForm, billDate: e.target.value })}
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bill Image</Label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setBillForm({ ...billForm, billImageFile: file });
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Upload an image of the bill (any format, will be stored as WebP)
+                    </p>
+                    {billForm.billImageFile && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <FileText className="h-4 w-4" />
+                        {billForm.billImageFile.name}
+                      </div>
+                    )}
                   </div>
                   <Separator />
                   <Label>Items</Label>
