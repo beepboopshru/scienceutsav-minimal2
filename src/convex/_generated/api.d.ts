@@ -21,6 +21,7 @@ import type * as auth from "../auth.js";
 import type * as authCleanup from "../authCleanup.js";
 import type * as b2cClients from "../b2cClients.js";
 import type * as batches from "../batches.js";
+import type * as billTracking from "../billTracking.js";
 import type * as clients from "../clients.js";
 import type * as discrepancyTickets from "../discrepancyTickets.js";
 import type * as http from "../http.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   authCleanup: typeof authCleanup;
   b2cClients: typeof b2cClients;
   batches: typeof batches;
+  billTracking: typeof billTracking;
   clients: typeof clients;
   discrepancyTickets: typeof discrepancyTickets;
   http: typeof http;

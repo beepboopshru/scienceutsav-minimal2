@@ -276,6 +276,15 @@ export function Layout({ children }: LayoutProps) {
     },
   ];
 
+  const financeSection: NavItem[] = [
+    {
+      title: "Bill Tracking",
+      icon: FileText,
+      path: "/bill-tracking",
+      roles: ["admin", "finance", "operations", "manager"],
+    },
+  ];
+
   const specializedTools: NavItem[] = [
     {
       title: "Laser Files",
@@ -466,6 +475,54 @@ export function Layout({ children }: LayoutProps) {
                             </Link>
                           </SidebarMenuButton>
                         )}
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {/* Finance Section */}
+            {filterByRole(financeSection).length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Finance</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(financeSection).map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {/* Finance Section */}
+            {filterByRole(financeSection).length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Finance</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(financeSection).map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>

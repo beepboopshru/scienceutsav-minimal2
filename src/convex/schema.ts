@@ -10,6 +10,8 @@ export const ROLES = {
   OPERATIONS: "operations",
   INVENTORY: "inventory",
   DISPATCH: "dispatch",
+  FINANCE: "finance",
+  MANAGER: "manager",
 } as const;
 
 export const roleValidator = v.union(
@@ -19,6 +21,8 @@ export const roleValidator = v.union(
   v.literal(ROLES.OPERATIONS),
   v.literal(ROLES.INVENTORY),
   v.literal(ROLES.DISPATCH),
+  v.literal(ROLES.FINANCE),
+  v.literal("manager"),
 );
 export type Role = Infer<typeof roleValidator>;
 
@@ -540,6 +544,32 @@ const schema = defineSchema(
       .index("by_priority", ["priority"])
       .index("by_created_by", ["createdBy"])
       .index("by_clientType", ["clientType"]),
+
+    billTracking: defineTable({
+      companyName: v.string(),
+      projectName: v.string(),
+      requirement: v.string(),
+      billFileId: v.optional(v.id("_storage")),
+      priority: v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("urgent")
+      ),
+      status: v.union(
+        v.literal("requested"),
+        v.literal("acknowledged"),
+        v.literal("in_progress"),
+        v.literal("done")
+      ),
+      notes: v.optional(v.string()),
+      createdBy: v.id("users"),
+      lastUpdatedBy: v.optional(v.id("users")),
+      lastUpdatedAt: v.optional(v.number()),
+    })
+      .index("by_status", ["status"])
+      .index("by_priority", ["priority"])
+      .index("by_created_by", ["createdBy"]),
   },
   {
     schemaValidation: false,
