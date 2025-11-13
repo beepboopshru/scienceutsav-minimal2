@@ -229,10 +229,10 @@ export default function ProcessingJobs() {
   };
 
   const handleSealingQuantityChange = (quantity: number) => {
-    const selectedItem = inventory.find((i) => i._id === sealingForm.targetItemId);
+    const selectedItem = combinedInventory.find((i) => i._id === sealingForm.targetItemId);
     
     if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
-      const updatedSources = selectedItem.components.map((component) => ({
+      const updatedSources = selectedItem.components.map((component: any) => ({
         sourceItemId: component.rawMaterialId,
         sourceQuantity: component.quantityRequired * quantity,
       }));
@@ -726,7 +726,7 @@ export default function ProcessingJobs() {
                             >
                               {sealingForm.targetItemId
                                 ? (() => {
-                                    const item = inventory.find((i) => i._id === sealingForm.targetItemId);
+                                    const item = combinedInventory.find((i) => i._id === sealingForm.targetItemId);
                                     return item ? item.name : "Select sealed packet";
                                   })()
                                 : "Select sealed packet"}
@@ -769,8 +769,33 @@ export default function ProcessingJobs() {
                         />
                       </div>
                     </div>
+                    
+                    {sealingForm.targetItemId && (() => {
+                      const selectedItem = combinedInventory.find((i) => i._id === sealingForm.targetItemId);
+                      return selectedItem ? (
+                        <Card className="bg-muted/50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-medium">Selected Packet Preview</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">{selectedItem.name}</span>
+                              <Badge variant="secondary">{selectedItem.unit}</Badge>
+                            </div>
+                            {selectedItem.description && (
+                              <p className="text-xs text-muted-foreground">{selectedItem.description}</p>
+                            )}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>Will produce: {sealingForm.targetQuantity} {selectedItem.unit}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ) : null;
+                    })()}
+                    
                     <Separator />
                     <Label>Source Materials (Auto-filled from BOM)</Label>
+                    <p className="text-xs text-muted-foreground">These materials will be consumed to create the sealed packets</p>
                     {sealingForm.sources.length > 0 ? (
                       <div className="space-y-2">
                         {sealingForm.sources.map((source, index) => {
@@ -780,7 +805,7 @@ export default function ProcessingJobs() {
                               <div className="flex-1">
                                 <p className="font-medium">{item?.name || "Unknown"}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  Required: {source.sourceQuantity} {item?.unit || ""} | Available: {item?.quantity || 0} {item?.unit || ""}
+                                  Will consume: {source.sourceQuantity} {item?.unit || ""} | Available: {item?.quantity || 0} {item?.unit || ""}
                                 </p>
                               </div>
                               {item && item.quantity < source.sourceQuantity && (
