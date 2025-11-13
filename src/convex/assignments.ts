@@ -97,73 +97,77 @@ export const updateStatus = mutation({
   args: {
     id: v.id("assignments"),
     status: v.union(
-      v.literal("assigned"),
-      v.literal("in_progress"),
+      v.literal("pending"),
+      v.literal("in_production"),
+      v.literal("ready_for_packing"),
+      v.literal("packed"),
       v.literal("transferred_to_dispatch"),
       v.literal("dispatched"),
       v.literal("delivered")
     ),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), identity.email))
+      .first();
+
+    if (!user) throw new Error("User not found");
 
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
-    const updates: Record<string, unknown> = { 
-      status: args.status,
-    };
+    const updates: any = { status: args.status };
 
-    // If dispatching, set dispatch timestamp and deduct inventory
-    if (args.status === "dispatched") {
+    if (args.status === "dispatched" && !assignment.dispatchedAt) {
       updates.dispatchedAt = Date.now();
+    }
 
-      // Deduct inventory materials for structured kits
-      const kit = await ctx.db.get(assignment.kitId);
-      if (kit?.isStructured && kit.packingRequirements) {
-        try {
-          const packingData = JSON.parse(kit.packingRequirements);
-          const materials: Array<{ name: string; quantity: number }> = [];
-
-          // Extract materials from all pouches/packets
-          if (packingData.pouches) {
-            for (const pouch of packingData.pouches) {
-              if (pouch.items) {
-                for (const item of pouch.items) {
-                  materials.push({
-                    name: item.name,
-                    quantity: item.quantity * assignment.quantity,
-                  });
-                }
-              }
-            }
-          }
-
-          // Deduct materials from inventory
-          for (const material of materials) {
-            const inventoryItems = await ctx.db.query("inventory").collect();
-            const matchingItem = inventoryItems.find(
-              (item) => item.name.toLowerCase() === material.name.toLowerCase()
-            );
-
-            if (matchingItem) {
-              const newQuantity = Math.max(0, matchingItem.quantity - material.quantity);
-              if (newQuantity === 0 && matchingItem.quantity > 0) {
-                console.warn(`Material ${material.name} depleted to 0`);
-              }
-              await ctx.db.patch(matchingItem._id, { quantity: newQuantity });
-            } else {
-              console.warn(`Material ${material.name} not found in inventory`);
-            }
-          }
-        } catch (error) {
-          console.error("Error deducting inventory:", error);
-        }
-      }
+    if (args.status === "delivered" && !assignment.deliveredAt) {
+      updates.deliveredAt = Date.now();
     }
 
     await ctx.db.patch(args.id, updates);
+
+    // If status is dispatched or delivered, move to order history
+    if (args.status === "dispatched" || args.status === "delivered") {
+      // Create order history record
+      await ctx.db.insert("orderHistory", {
+        kitId: assignment.kitId,
+        clientId: assignment.clientId,
+        clientType: assignment.clientType,
+        quantity: assignment.quantity,
+        grade: assignment.grade,
+        productionMonth: assignment.productionMonth,
+        batchId: assignment.batchId,
+        dispatchedAt: updates.dispatchedAt || assignment.dispatchedAt || Date.now(),
+        dispatchedBy: user._id,
+        status: args.status as "dispatched" | "delivered",
+        deliveredAt: updates.deliveredAt || assignment.deliveredAt,
+        notes: assignment.notes,
+        originalAssignmentId: args.id,
+      });
+
+      // Delete the assignment
+      await ctx.db.delete(args.id);
+
+      await ctx.db.insert("activityLogs", {
+        userId: user._id,
+        actionType: "assignment_archived",
+        details: `Assignment ${args.id} moved to order history with status ${args.status}`,
+      });
+    } else {
+      await ctx.db.insert("activityLogs", {
+        userId: user._id,
+        actionType: "assignment_status_updated",
+        details: `Assignment ${args.id} status updated to ${args.status}`,
+      });
+    }
+
+    return args.id;
   },
 });
 

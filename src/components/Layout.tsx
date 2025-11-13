@@ -285,6 +285,15 @@ export function Layout({ children }: LayoutProps) {
     },
   ];
 
+  const orderRecordsSection: NavItem[] = [
+    {
+      title: "Order Records",
+      icon: Package,
+      path: "/order-records",
+      roles: ["admin", "operations", "manager", "dispatch"],
+    },
+  ];
+
   const specializedTools: NavItem[] = [
     {
       title: "Laser Files",
@@ -489,6 +498,30 @@ export function Layout({ children }: LayoutProps) {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {filterByRole(financeSection).map((item) => (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.path)}
+                        >
+                          <Link to={item.path}>
+                            <item.icon />
+                            <span>{item.title}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            )}
+
+            {/* Order Records Section */}
+            {filterByRole(orderRecordsSection).length > 0 && (
+              <SidebarGroup>
+                <SidebarGroupLabel>Order Records</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {filterByRole(orderRecordsSection).map((item) => (
                       <SidebarMenuItem key={item.path}>
                         <SidebarMenuButton
                           asChild

@@ -341,7 +341,7 @@ export default function Assignments() {
     try {
       await updateStatus({
         id: selectedAssignment._id,
-          status: "in_progress",
+        status: "packed",
       });
       toast.success("Marked as packed");
       setPackingDialogOpen(false);

@@ -241,6 +241,7 @@ const schema = defineSchema(
       ),
       notes: v.optional(v.string()),
       dispatchedAt: v.optional(v.number()),
+      deliveredAt: v.optional(v.number()),
       productionMonth: v.optional(v.string()),
       createdBy: v.id("users"),
       batchId: v.optional(v.id("batches")),
@@ -553,6 +554,35 @@ const schema = defineSchema(
       .index("by_priority", ["priority"])
       .index("by_created_by", ["createdBy"])
       .index("by_clientType", ["clientType"]),
+
+    orderHistory: defineTable({
+      kitId: v.id("kits"),
+      clientId: v.string(),
+      clientType: v.union(v.literal("b2b"), v.literal("b2c")),
+      quantity: v.number(),
+      grade: v.optional(
+        v.union(
+          v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+          v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+        )
+      ),
+      productionMonth: v.optional(v.string()),
+      batchId: v.optional(v.id("batches")),
+      dispatchedAt: v.number(),
+      dispatchedBy: v.id("users"),
+      status: v.union(
+        v.literal("dispatched"),
+        v.literal("delivered"),
+        v.literal("cancelled")
+      ),
+      deliveredAt: v.optional(v.number()),
+      notes: v.optional(v.string()),
+      originalAssignmentId: v.id("assignments"),
+    })
+      .index("by_client", ["clientId"])
+      .index("by_kit", ["kitId"])
+      .index("by_clientType", ["clientType"])
+      .index("by_status", ["status"]),
 
     billTracking: defineTable({
       companyName: v.string(),
