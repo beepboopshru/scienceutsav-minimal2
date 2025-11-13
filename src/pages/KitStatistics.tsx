@@ -14,6 +14,7 @@ import {
   FileText,
   Image as ImageIcon,
   File,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements } from "@/lib/kitPacking";
@@ -51,6 +53,15 @@ export default function KitStatistics() {
 
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
+  const [fileViewerDialog, setFileViewerDialog] = useState<{
+    open: boolean;
+    kitId: Id<"kits"> | null;
+    kitName: string;
+  }>({
+    open: false,
+    kitId: null,
+    kitName: "",
+  });
 
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
 
@@ -89,24 +100,6 @@ export default function KitStatistics() {
       toast.success("Kit sheet downloaded successfully");
     } catch (error) {
       toast.error("Failed to generate kit sheet");
-    }
-  };
-
-  const handleDownloadFile = async (storageId: Id<"_storage">, fileName: string) => {
-    try {
-      const url = await useQuery(api.kits.getFileUrl, { storageId });
-      if (url) {
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        a.target = "_blank";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast.success(`Downloading ${fileName}`);
-      }
-    } catch (error) {
-      toast.error("Failed to download file");
     }
   };
 
@@ -270,28 +263,15 @@ export default function KitStatistics() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
-                                    // Download all files
-                                    const allFiles = [
-                                      ...(kit.kitImageFiles || []),
-                                      ...(kit.laserFiles || []),
-                                      ...(kit.componentFiles || []),
-                                      ...(kit.workbookFiles || []),
-                                    ];
-                                    if (allFiles.length === 0) {
-                                      toast.info("No files available for this kit");
-                                      return;
-                                    }
-                                    allFiles.forEach((file) => {
-                                      if (file.type === "storage") {
-                                        handleDownloadFile(file.storageId, `${kit.name}-file`);
-                                      } else if (file.type === "link") {
-                                        window.open(file.url, "_blank");
-                                      }
+                                    setFileViewerDialog({
+                                      open: true,
+                                      kitId: kit._id,
+                                      kitName: kit.name,
                                     });
                                   }}
-                                  title="Download All Files"
+                                  title="View Kit Files"
                                 >
-                                  <Download className="h-4 w-4 mr-1" />
+                                  <Eye className="h-4 w-4 mr-1" />
                                   Files
                                 </Button>
                               </div>
@@ -412,6 +392,88 @@ export default function KitStatistics() {
           </Card>
         </motion.div>
       </div>
+
+      {/* File Viewer Dialog */}
+      <Dialog open={fileViewerDialog.open} onOpenChange={(open) => !open && setFileViewerDialog({ open: false, kitId: null, kitName: "" })}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Kit Files: {fileViewerDialog.kitName}</DialogTitle>
+          </DialogHeader>
+          {fileViewerDialog.kitId && <KitFileViewer kitId={fileViewerDialog.kitId} />}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
+}
+
+function KitFileViewer({ kitId }: { kitId: Id<"kits"> }) {
+  const kit = useQuery(api.kits.get, { id: kitId });
+
+  if (!kit) return <div className="text-center py-8">Loading...</div>;
+
+  const fileCategories = [
+    { label: "Kit Images", files: kit.kitImageFiles || [] },
+    { label: "Laser Files", files: kit.laserFiles || [] },
+    { label: "Component Pictures", files: kit.componentFiles || [] },
+    { label: "Workbooks & Misc", files: kit.workbookFiles || [] },
+  ];
+
+  return (
+    <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
+      {fileCategories.map((category) => (
+        <div key={category.label}>
+          <h3 className="text-sm font-semibold mb-3">{category.label}</h3>
+          {category.files.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No files uploaded</p>
+          ) : (
+            <div className="space-y-2">
+              {category.files.map((file: any, idx: number) => (
+                <FileItem key={idx} file={file} />
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FileItem({ file }: { file: any }) {
+  const getFileUrl = useQuery(api.kits.getFileUrl, 
+    file.type === "storage" && file.storageId ? { storageId: file.storageId } : "skip"
+  );
+
+  if (file.type === "link") {
+    return (
+      <div className="flex items-center justify-between p-3 border rounded">
+        <span className="text-sm truncate flex-1">{file.name}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.open(file.url, "_blank")}
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          View
+        </Button>
+      </div>
+    );
+  }
+
+  if (file.type === "storage" && getFileUrl) {
+    return (
+      <div className="flex items-center justify-between p-3 border rounded">
+        <span className="text-sm truncate flex-1">File {file.storageId}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => window.open(getFileUrl, "_blank")}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download
+        </Button>
+      </div>
+    );
+  }
+
+  return null;
 }
