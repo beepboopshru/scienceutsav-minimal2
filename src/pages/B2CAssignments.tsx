@@ -1,6 +1,7 @@
 import React from "react";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +71,7 @@ import { BatchAssignmentDialog } from "@/components/assignments/BatchAssignmentD
 
 export default function Assignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   const assignments = useQuery(api.assignments.list, { clientType: "b2c" });
@@ -84,6 +86,10 @@ export default function Assignments() {
   const deleteAssignment = useMutation(api.assignments.deleteAssignment);
   const createBatch = useMutation(api.batches.create);
   const deleteBatch = useMutation(api.batches.deleteBatch);
+
+  // Permission checks
+  const canEdit = hasPermission("assignments", "edit");
+  const canView = hasPermission("assignments", "view");
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -743,24 +749,26 @@ export default function Assignments() {
               Manage B2C kit assignments, track packing status, and monitor material shortages
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleAddNewRow} 
-              variant="outline" 
-              disabled={isAddingNewRow || batchesInProgress.length > 0}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add New Assignment
-            </Button>
-            <Button onClick={handleStartBatch} variant="outline">
-              <Plus className="mr-2 h-4 w-4" />
-              Start Batch
-            </Button>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Assignment
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleAddNewRow} 
+                variant="outline" 
+                disabled={isAddingNewRow || batchesInProgress.length > 0}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add New Assignment
+              </Button>
+              <Button onClick={handleStartBatch} variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                Start Batch
+              </Button>
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Assignment
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Filter Bar */}
@@ -803,7 +811,7 @@ export default function Assignments() {
                 <TableHead>Production Month</TableHead>
                 <TableHead>Order Created On</TableHead>
                 <TableHead>Notes</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1572,28 +1580,32 @@ export default function Assignments() {
                                   </TableCell>
                                   <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => handleStartEditRow(assignment)}
-                                      >
-                                        <Edit2 className="h-4 w-4" />
-                                      </Button>
-                                      {assignment.status === "in_progress" && (
-                                        <Button
-                                          size="sm"
-                                          onClick={() => handleDispatch(assignment._id)}
-                                        >
-                                          Dispatch
-                                        </Button>
+                                      {canEdit && (
+                                        <>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => handleStartEditRow(assignment)}
+                                          >
+                                            <Edit2 className="h-4 w-4" />
+                                          </Button>
+                                          {assignment.status === "in_progress" && (
+                                            <Button
+                                              size="sm"
+                                              onClick={() => handleDispatch(assignment._id)}
+                                            >
+                                              Dispatch
+                                            </Button>
+                                          )}
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => handleDeleteClick(assignment)}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        </>
                                       )}
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => handleDeleteClick(assignment)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
                                     </div>
                                   </TableCell>
                                 </>
@@ -1816,28 +1828,32 @@ export default function Assignments() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleStartEditRow(assignment)}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              {assignment.status === "in_progress" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleDispatch(assignment._id)}
-                                >
-                                  Dispatch
-                                </Button>
+                              {canEdit && (
+                                <>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleStartEditRow(assignment)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  {assignment.status === "in_progress" && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleDispatch(assignment._id)}
+                                    >
+                                      Dispatch
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteClick(assignment)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
                               )}
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleDeleteClick(assignment)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
                             </div>
                           </TableCell>
                         </>
