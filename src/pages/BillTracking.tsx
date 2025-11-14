@@ -25,6 +25,8 @@ export default function BillTracking() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentRequestsStatusFilter, setPaymentRequestsStatusFilter] = useState<string>("all");
+  const [vendorBillsStatusFilter, setVendorBillsStatusFilter] = useState<string>("all");
 
   const bills = useQuery(api.billTracking.list);
   const vendorImports = useQuery(api.vendorImports.list);
@@ -138,6 +140,15 @@ export default function BillTracking() {
       default: return "secondary";
     }
   };
+
+  // Filter bills based on status
+  const filteredBills = bills?.filter(bill => 
+    paymentRequestsStatusFilter === "all" || bill.status === paymentRequestsStatusFilter
+  );
+
+  const filteredVendorImports = vendorImports?.filter(vendorImport => 
+    vendorBillsStatusFilter === "all" || (vendorImport.paymentStatus || "requested") === vendorBillsStatusFilter
+  );
 
   return (
     <Layout>
@@ -253,17 +264,36 @@ export default function BillTracking() {
             <TabsContent value="payment-requests" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Payment Requests</CardTitle>
-                  <CardDescription>Bills submitted for payment processing</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Payment Requests</CardTitle>
+                      <CardDescription>Bills submitted for payment processing</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="payment-status-filter" className="text-sm">Filter by Status:</Label>
+                      <Select value={paymentRequestsStatusFilter} onValueChange={setPaymentRequestsStatusFilter}>
+                        <SelectTrigger id="payment-status-filter" className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="requested">Requested</SelectItem>
+                          <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="done">Done</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {!bills ? (
                     <div className="flex justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-                  ) : bills.length === 0 ? (
+                  ) : filteredBills && filteredBills.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      No bills found
+                      No bills found for the selected filter
                     </div>
                   ) : (
                     <Table>
@@ -279,7 +309,7 @@ export default function BillTracking() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {bills.map((bill) => (
+                        {filteredBills?.map((bill) => (
                           <TableRow key={bill._id}>
                             <TableCell className="font-medium">{bill.companyName}</TableCell>
                             <TableCell>{bill.projectName}</TableCell>
@@ -329,17 +359,36 @@ export default function BillTracking() {
             <TabsContent value="vendor-bills" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Vendor Bills from Inventory</CardTitle>
-                  <CardDescription>Bills imported through inventory management</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Vendor Bills from Inventory</CardTitle>
+                      <CardDescription>Bills imported through inventory management</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="vendor-status-filter" className="text-sm">Filter by Status:</Label>
+                      <Select value={vendorBillsStatusFilter} onValueChange={setVendorBillsStatusFilter}>
+                        <SelectTrigger id="vendor-status-filter" className="w-[160px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="requested">Requested</SelectItem>
+                          <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                          <SelectItem value="in_progress">In Progress</SelectItem>
+                          <SelectItem value="done">Done</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {!vendorImports ? (
                     <div className="flex justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-                  ) : vendorImports.length === 0 ? (
+                  ) : filteredVendorImports && filteredVendorImports.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      No vendor bills found
+                      No vendor bills found for the selected filter
                     </div>
                   ) : (
                     <Table>
@@ -355,7 +404,7 @@ export default function BillTracking() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {vendorImports.map((vendorImport) => (
+                        {filteredVendorImports?.map((vendorImport) => (
                           <TableRow key={vendorImport._id}>
                             <TableCell className="font-medium">{vendorImport.billNumber}</TableCell>
                             <TableCell>{vendorImport.billDate}</TableCell>
