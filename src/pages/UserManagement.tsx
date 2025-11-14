@@ -136,8 +136,9 @@ export default function UserManagement() {
       });
       toast.success("Permissions updated successfully");
       setPermissionsDialog({ open: false, userId: null, userName: "" });
-    } catch (error) {
-      toast.error("Failed to update permissions");
+    } catch (error: any) {
+      console.error("Permission update error:", error);
+      toast.error(error?.message || "Failed to update permissions");
     }
   };
 
