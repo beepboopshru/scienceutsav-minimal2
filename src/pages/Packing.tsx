@@ -788,6 +788,7 @@ export default function Packing() {
                             transition={{ delay: index * 0.02 }}
                             className="border-b hover:bg-muted/30 bg-background"
                           >
+                            <td className="px-4 py-3"></td>
                             {canEdit && (
                               <td className="px-4 py-3">
                                 <Checkbox
@@ -796,8 +797,6 @@ export default function Packing() {
                                 />
                               </td>
                             )}
-                            {!canEdit && <td className="px-4 py-3"></td>}
-                            <td className="px-4 py-3"></td>
                             <td className="px-4 py-3">
                               <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
                                 {assignment.clientType?.toUpperCase() || "N/A"}
