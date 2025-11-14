@@ -441,16 +441,26 @@ export default function OperationsInventoryRelations() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
                   <Download className="h-4 w-4 mr-2" />
-                  Download Components Report
+                  Download Components Shortage
                   <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleDownloadComponentsReport(false)}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log("All Pending Jobs clicked");
+                    handleDownloadComponentsReport(false);
+                  }}
+                >
                   All Pending Jobs ({pendingJobsCount})
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => handleDownloadComponentsReport(true)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log("Selected Pending Jobs clicked");
+                    handleDownloadComponentsReport(true);
+                  }}
                   disabled={selectedJobs.size === 0}
                 >
                   Selected Pending Jobs ({selectedJobs.size})
