@@ -17,6 +17,13 @@ export const update = mutation({
     userId: v.id("users"),
     permissions: v.object({
       dashboard: v.optional(v.object({ view: v.boolean() })),
+      programs: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        delete: v.boolean(),
+        archive: v.boolean(),
+      })),
       kits: v.optional(v.object({
         view: v.boolean(),
         create: v.boolean(),
@@ -27,6 +34,18 @@ export const update = mutation({
         clone: v.boolean(),
       })),
       clients: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        delete: v.boolean(),
+      })),
+      b2cClients: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        delete: v.boolean(),
+      })),
+      batches: v.optional(v.object({
         view: v.boolean(),
         create: v.boolean(),
         edit: v.boolean(),
@@ -59,6 +78,57 @@ export const update = mutation({
         create: v.boolean(),
         edit: v.boolean(),
         delete: v.boolean(),
+      })),
+      processingJobs: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        complete: v.boolean(),
+        delete: v.boolean(),
+      })),
+      procurementJobs: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        complete: v.boolean(),
+        delete: v.boolean(),
+      })),
+      packing: v.optional(v.object({
+        view: v.boolean(),
+        initiate: v.boolean(),
+        validate: v.boolean(),
+        transfer: v.boolean(),
+      })),
+      dispatch: v.optional(v.object({
+        view: v.boolean(),
+        verify: v.boolean(),
+        dispatch: v.boolean(),
+        updateStatus: v.boolean(),
+      })),
+      discrepancyTickets: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        resolve: v.boolean(),
+        delete: v.boolean(),
+      })),
+      billTracking: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        updateStatus: v.boolean(),
+        delete: v.boolean(),
+      })),
+      vendorImports: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        updatePaymentStatus: v.boolean(),
+        delete: v.boolean(),
+      })),
+      orderHistory: v.optional(v.object({
+        view: v.boolean(),
+        export: v.boolean(),
       })),
       laserFiles: v.optional(v.object({
         view: v.boolean(),
