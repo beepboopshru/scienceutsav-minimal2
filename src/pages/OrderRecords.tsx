@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,11 @@ import {
 
 export default function OrderRecords() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  
+  const canView = hasPermission("orderHistory", "view");
+  const canEdit = hasPermission("orderHistory", "edit");
   const orders = useQuery(api.orderHistory.list, {});
   const kits = useQuery(api.kits.list, {});
   const clients = useQuery(api.clients.list, {});
@@ -69,6 +74,16 @@ export default function OrderRecords() {
     if (!isLoading && !isAuthenticated) navigate("/auth");
     if (!isLoading && isAuthenticated && user && !user.isApproved) navigate("/pending-approval");
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading || !user) {
     return (
@@ -409,34 +424,36 @@ export default function OrderRecords() {
                                   >
                                     <Eye className="h-4 w-4" />
                                   </Button>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm">
-                                        Change Status
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(order._id, "dispatched")}
-                                        disabled={order.status === "dispatched"}
-                                      >
-                                        Dispatched
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(order._id, "delivered")}
-                                        disabled={order.status === "delivered"}
-                                      >
-                                        Delivered
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(order._id, "cancelled")}
-                                        disabled={order.status === "cancelled"}
-                                      >
-                                        Cancelled
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                  {canEdit && (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                          Change Status
+                                          <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => handleStatusChange(order._id, "dispatched")}
+                                          disabled={order.status === "dispatched"}
+                                        >
+                                          Dispatched
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleStatusChange(order._id, "delivered")}
+                                          disabled={order.status === "delivered"}
+                                        >
+                                          Delivered
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleStatusChange(order._id, "cancelled")}
+                                          disabled={order.status === "cancelled"}
+                                        >
+                                          Cancelled
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  )}
                                 </div>
                               </td>
                             </tr>
