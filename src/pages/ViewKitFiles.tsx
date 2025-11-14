@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -25,9 +26,12 @@ import { api } from "@/convex/_generated/api";
 
 export default function ViewKitFiles() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const canView = hasPermission("laserFiles", "view");
 
   const laserFilesData = useQuery(api.laserFiles.listWithKitDetails, {
     fileType: filterType === "all" ? undefined : filterType as any,
@@ -114,6 +118,16 @@ export default function ViewKitFiles() {
     };
     return variants[type] || "default";
   };
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading || !user) {
     return (

@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,11 +46,15 @@ import { Id } from "@/convex/_generated/dataModel";
 
 export default function LaserFiles() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>("laser");
   const [uploadType, setUploadType] = useState<"storage" | "link">("storage");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const canView = hasPermission("laserFiles", "view");
+  const canEdit = hasPermission("laserFiles", "edit");
 
   const laserFilesData = useQuery(api.laserFiles.listWithKitDetails, {
     fileType: filterType === "all" ? undefined : filterType as any,
@@ -207,6 +212,16 @@ export default function LaserFiles() {
     return variants[type] || "default";
   };
 
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
+
   if (isLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -225,99 +240,101 @@ export default function LaserFiles() {
               Manage laser cutting files
             </p>
           </div>
-          <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Upload File
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Upload File</DialogTitle>
-                <DialogDescription>
-                  Upload a new file or link to external storage
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleUpload} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="kitId">Kit *</Label>
-                  <Select name="kitId" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select kit" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {kits?.map((kit) => (
-                        <SelectItem key={kit._id} value={kit._id}>
-                          {kit.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fileName">File Name *</Label>
-                  <Input id="fileName" name="fileName" required />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fileType">File Type *</Label>
-                  <Select name="fileType" required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="laser">Laser File</SelectItem>
-                      <SelectItem value="component">Component File</SelectItem>
-                      <SelectItem value="workbook">Workbook</SelectItem>
-                      <SelectItem value="kitImage">Kit Image</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Upload Method</Label>
-                  <Select value={uploadType} onValueChange={(v) => setUploadType(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="storage">Upload File</SelectItem>
-                      <SelectItem value="link">External Link</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {uploadType === "storage" ? (
+          {canEdit && (
+            <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Upload File
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Upload File</DialogTitle>
+                  <DialogDescription>
+                    Upload a new file or link to external storage
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleUpload} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="file">File *</Label>
-                    <Input id="file" name="file" type="file" required />
+                    <Label htmlFor="kitId">Kit *</Label>
+                    <Select name="kitId" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select kit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {kits?.map((kit) => (
+                          <SelectItem key={kit._id} value={kit._id}>
+                            {kit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                ) : (
+
                   <div className="space-y-2">
-                    <Label htmlFor="externalLink">External Link *</Label>
-                    <Input
-                      id="externalLink"
-                      name="externalLink"
-                      type="url"
-                      placeholder="https://..."
-                      required
-                    />
+                    <Label htmlFor="fileName">File Name *</Label>
+                    <Input id="fileName" name="fileName" required />
                   </div>
-                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" name="notes" rows={3} />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="fileType">File Type *</Label>
+                    <Select name="fileType" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="laser">Laser File</SelectItem>
+                        <SelectItem value="component">Component File</SelectItem>
+                        <SelectItem value="workbook">Workbook</SelectItem>
+                        <SelectItem value="kitImage">Kit Image</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <DialogFooter>
-                  <Button type="submit">Upload</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="space-y-2">
+                    <Label>Upload Method</Label>
+                    <Select value={uploadType} onValueChange={(v) => setUploadType(v as any)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="storage">Upload File</SelectItem>
+                        <SelectItem value="link">External Link</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {uploadType === "storage" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="file">File *</Label>
+                      <Input id="file" name="file" type="file" required />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="externalLink">External Link *</Label>
+                      <Input
+                        id="externalLink"
+                        name="externalLink"
+                        type="url"
+                        placeholder="https://..."
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <Textarea id="notes" name="notes" rows={3} />
+                  </div>
+
+                  <DialogFooter>
+                    <Button type="submit">Upload</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -407,7 +424,7 @@ export default function LaserFiles() {
                               Download
                             </DropdownMenuItem>
                           )}
-                          {!file.isFromKitField && (
+                          {canEdit && !file.isFromKitField && (
                             <DropdownMenuItem
                               onClick={() => handleDelete(file._id)}
                               className="text-destructive"
