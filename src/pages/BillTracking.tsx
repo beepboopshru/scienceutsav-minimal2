@@ -18,9 +18,11 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function BillTracking() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -52,8 +54,8 @@ export default function BillTracking() {
     );
   }
 
-  const canCreate = ["admin", "operations", "manager"].includes(user.role || "");
-  const canUpdateStatus = ["admin", "finance"].includes(user.role || "");
+  const canCreate = hasPermission("billTracking", "create");
+  const canUpdateStatus = hasPermission("billTracking", "updateStatus");
 
   const handleCreateBill = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 export default function KitBuilder() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editKitId = searchParams.get("edit") as Id<"kits"> | null;
@@ -271,7 +273,7 @@ export default function KitBuilder() {
     });
   };
 
-  const canEdit = user.role === "admin" || user.role === "research_development";
+  const canEdit = hasPermission("kits", "edit");
 
   return (
     <Layout>

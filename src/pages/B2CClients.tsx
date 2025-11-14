@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import { toast } from "sonner";
 
 export default function B2CClients() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const clients = useQuery(api.b2cClients.list);
   const createClient = useMutation(api.b2cClients.create);
@@ -77,7 +79,7 @@ export default function B2CClients() {
     );
   }
 
-  const canEdit = user.role === "admin" || user.role === "operations";
+  const canEdit = hasPermission("b2cClients", "edit");
 
   const handleOpenDialog = (clientId?: Id<"b2cClients">) => {
     if (clientId && clients) {

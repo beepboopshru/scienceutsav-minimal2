@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import { Label } from "@/components/ui/label";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const assignments = useQuery(api.assignments.list, {});
   const kits = useQuery(api.kits.list, {});
@@ -85,7 +87,7 @@ export default function Dispatch() {
     );
   }
 
-  const canAccess = user.role === "admin" || user.role === "manager" || user.role === "operations";
+  const canAccess = hasPermission("dispatch", "view");
 
   if (!canAccess) {
     return (
