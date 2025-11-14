@@ -301,7 +301,9 @@ export default function OperationsInventoryRelations() {
                       <TableCell>
                         <Select
                           value={job.status}
-                          onValueChange={(value) => handleStatusChange(job._id, value)}
+                          onValueChange={(value) => {
+                            handleStatusChange(job._id, value);
+                          }}
                         >
                           <SelectTrigger className="h-8 w-[140px]">
                             <SelectValue />
@@ -316,7 +318,9 @@ export default function OperationsInventoryRelations() {
                       <TableCell>
                         <Select
                           value={job.priority}
-                          onValueChange={(value) => handlePriorityChange(job._id, value)}
+                          onValueChange={(value) => {
+                            handlePriorityChange(job._id, value);
+                          }}
                         >
                           <SelectTrigger className="h-8 w-[120px]">
                             <SelectValue />
