@@ -827,18 +827,11 @@ export default function Inventory() {
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
                     <Label>Add New Category</Label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        placeholder="Name (e.g., Electronics)"
-                        value={categoryForm.name}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                      />
-                      <Input
-                        placeholder="Value (e.g., electronics)"
-                        value={categoryForm.value}
-                        onChange={(e) => setCategoryForm({ ...categoryForm, value: e.target.value })}
-                      />
-                    </div>
+                    <Input
+                      placeholder="Category Name (e.g., Electronics)"
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value, value: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
+                    />
                     <Select
                       value={categoryForm.categoryType}
                       onValueChange={(value: any) => setCategoryForm({ ...categoryForm, categoryType: value })}
