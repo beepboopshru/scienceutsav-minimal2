@@ -753,6 +753,15 @@ export default function Packing() {
                             )}
                           </td>
                         )}
+                        {!canEdit && (
+                          <td className="px-4 py-3">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
                             {firstAssignment.clientType?.toUpperCase() || "N/A"}
@@ -769,7 +778,7 @@ export default function Packing() {
                         <td className="px-4 py-3 text-sm">
                           Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
                         </td>
-                        <td colSpan={9}></td>
+                        <td colSpan={canEdit ? 10 : 9}></td>
                       </motion.tr>
                       {isExpanded && batchAssignments.map((assignment, index) => {
                         const kit = kits?.find((k) => k._id === assignment.kitId);
@@ -786,12 +795,15 @@ export default function Packing() {
                             transition={{ delay: index * 0.02 }}
                             className="border-b hover:bg-muted/30 bg-background"
                           >
-                            <td className="px-4 py-3">
-                              <Checkbox
-                                checked={selectedAssignments.has(assignment._id)}
-                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                              />
-                            </td>
+                            {canEdit && (
+                              <td className="px-4 py-3">
+                                <Checkbox
+                                  checked={selectedAssignments.has(assignment._id)}
+                                  onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                />
+                              </td>
+                            )}
+                            {!canEdit && <td className="px-4 py-3"></td>}
                             <td className="px-4 py-3"></td>
                             <td className="px-4 py-3">
                               <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
@@ -810,10 +822,10 @@ export default function Packing() {
                             <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
                             <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
                             <td className="px-4 py-3">
-                            <Badge variant={
-                              assignment.status === "dispatched" ? "default" :
-                              assignment.status === "in_progress" ? "secondary" : "outline"
-                            }>
+                              <Badge variant={
+                                assignment.status === "dispatched" ? "default" :
+                                assignment.status === "in_progress" ? "secondary" : "outline"
+                              }>
                                 {assignment.status}
                               </Badge>
                             </td>
@@ -829,21 +841,23 @@ export default function Packing() {
                             <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
                               {assignment.notes || "—"}
                             </td>
-                            <td className="px-4 py-3">
-                              <Select
-                                value={assignment.status || "assigned"}
-                                onValueChange={(value) => handleStatusChange(assignment._id, value)}
-                              >
-                                <SelectTrigger className="h-8 w-[180px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="assigned">Assigned</SelectItem>
-                                  <SelectItem value="in_progress">In Progress</SelectItem>
-                                  <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </td>
+                            {canEdit && (
+                              <td className="px-4 py-3">
+                                <Select
+                                  value={assignment.status || "assigned"}
+                                  onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                                >
+                                  <SelectTrigger className="h-8 w-[180px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="assigned">Assigned</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            )}
                             <td className="px-4 py-3">
                               <div className="flex gap-2">
                                 <Button
