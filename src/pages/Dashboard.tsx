@@ -1,6 +1,7 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { motion } from "framer-motion";
 import { 
   Package, 
@@ -19,6 +20,7 @@ import { useNavigate } from "react-router";
 
 export default function Dashboard() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,49 +46,49 @@ export default function Dashboard() {
       description: "Manage programs and kit specifications",
       icon: Beaker,
       path: "/research",
-      roles: ["admin", "research_development"],
+      permission: { resource: "programs" as const, action: "view" },
     },
     {
       title: "Clients",
       description: "Manage client database",
       icon: Users,
       path: "/clients",
-      roles: ["admin", "operations"],
+      permission: { resource: "clients" as const, action: "view" },
     },
     {
       title: "B2B Assignments",
       description: "Track B2B kit assignments",
       icon: ClipboardList,
       path: "/b2b-assignments",
-      roles: ["admin", "operations"],
+      permission: { resource: "assignments" as const, action: "view" },
     },
     {
       title: "B2C Assignments",
       description: "Track B2C kit assignments",
       icon: ClipboardList,
       path: "/b2c-assignments",
-      roles: ["admin", "operations"],
+      permission: { resource: "assignments" as const, action: "view" },
     },
     {
       title: "Inventory",
       description: "Manage materials and stock",
       icon: Warehouse,
       path: "/inventory",
-      roles: ["admin", "inventory", "operations"],
+      permission: { resource: "inventory" as const, action: "view" },
     },
     {
       title: "Vendor Contacts",
       description: "Manage vendor relationships",
       icon: Contact,
       path: "/vendor-contacts",
-      roles: ["admin", "inventory"],
+      permission: { resource: "vendors" as const, action: "view" },
     },
     {
       title: "Services",
       description: "Manage service providers",
       icon: Wrench,
       path: "/services",
-      roles: ["admin", "inventory"],
+      permission: { resource: "services" as const, action: "view" },
     },
   ];
 
@@ -96,17 +98,23 @@ export default function Dashboard() {
       description: "Approve users and manage roles",
       icon: UserCog,
       path: "/user-management",
+      permission: { resource: "userManagement" as const, action: "view" },
     },
     {
       title: "Admin Zone",
       description: "System configuration",
       icon: Settings,
       path: "/admin-zone",
+      permission: { resource: "adminZone" as const, action: "view" },
     },
   ];
 
-  const filteredActions = quickActions.filter(
-    (action) => !action.roles || action.roles.includes(user.role || "")
+  const filteredActions = quickActions.filter((action) =>
+    hasPermission(action.permission.resource, action.permission.action)
+  );
+
+  const filteredAdminActions = adminActions.filter((action) =>
+    hasPermission(action.permission.resource, action.permission.action)
   );
 
   return (
@@ -126,37 +134,39 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <section>
-            <h2 className="text-xl font-bold tracking-tight mb-6">Quick Actions</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredActions.map((action, index) => (
-                <motion.div
-                  key={action.path}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * (index + 1) }}
-                >
-                  <Card
-                    className="cursor-pointer hover:border-foreground transition-colors"
-                    onClick={() => navigate(action.path)}
+          {filteredActions.length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold tracking-tight mb-6">Quick Actions</h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredActions.map((action, index) => (
+                  <motion.div
+                    key={action.path}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * (index + 1) }}
                   >
-                    <CardHeader>
-                      <action.icon className="h-8 w-8 mb-2" />
-                      <CardTitle className="text-lg">{action.title}</CardTitle>
-                      <CardDescription>{action.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          </section>
+                    <Card
+                      className="cursor-pointer hover:border-foreground transition-colors"
+                      onClick={() => navigate(action.path)}
+                    >
+                      <CardHeader>
+                        <action.icon className="h-8 w-8 mb-2" />
+                        <CardTitle className="text-lg">{action.title}</CardTitle>
+                        <CardDescription>{action.description}</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Admin Section */}
-          {user.role === "admin" && (
+          {filteredAdminActions.length > 0 && (
             <section>
               <h2 className="text-xl font-bold tracking-tight mb-6">Administration</h2>
               <div className="grid md:grid-cols-2 gap-6">
-                {adminActions.map((action, index) => (
+                {filteredAdminActions.map((action, index) => (
                   <motion.div
                     key={action.path}
                     initial={{ opacity: 0, y: 20 }}
