@@ -23,7 +23,6 @@ import Clients from "@/pages/Clients.tsx";
 import B2CClients from "@/pages/B2CClients.tsx";
 import B2BAssignments from "@/pages/B2BAssignments.tsx";
 import B2CAssignments from "@/pages/B2CAssignments.tsx";
-import Operations from "@/pages/Operations.tsx";
 import LaserFiles from "@/pages/LaserFiles.tsx";
 import ViewKitFiles from "@/pages/ViewKitFiles.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
@@ -83,7 +82,6 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/b2c-assignments" element={<B2CAssignments />} />
             <Route path="/packing" element={<Packing />} />
             <Route path="/dispatch" element={<Dispatch />} />
-            <Route path="/operations" element={<Operations />} />
             <Route path="/procurement" element={<Procurement />} />
             <Route path="/operations-inventory-relations" element={<OperationsInventoryRelations />} />
             <Route path="/laser-files" element={<LaserFiles />} />
