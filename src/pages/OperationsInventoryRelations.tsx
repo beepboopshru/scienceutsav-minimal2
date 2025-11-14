@@ -214,6 +214,9 @@ export default function OperationsInventoryRelations() {
     // Aggregate materials from all jobs
     const materialMap = new Map<string, {
       name: string;
+      subcategory: string;
+      description: string;
+      inventoryType: string;
       category: string;
       unit: string;
       required: number;
@@ -225,6 +228,10 @@ export default function OperationsInventoryRelations() {
     jobsToProcess.forEach((job) => {
       job.materialShortages.forEach((mat: any) => {
         const key = `${mat.name}-${mat.unit}`;
+        
+        // Find the inventory item to get subcategory, description, and type
+        const inventoryItem = inventory.find((inv) => inv.name === mat.name);
+        
         if (materialMap.has(key)) {
           const existing = materialMap.get(key)!;
           existing.required += mat.required;
@@ -233,6 +240,9 @@ export default function OperationsInventoryRelations() {
         } else {
           materialMap.set(key, {
             name: mat.name,
+            subcategory: inventoryItem?.subcategory || mat.subcategory || "N/A",
+            description: inventoryItem?.description || "N/A",
+            inventoryType: inventoryItem?.type || mat.inventoryType || "N/A",
             category: mat.category || "Uncategorized",
             unit: mat.unit,
             required: mat.required,
@@ -286,7 +296,10 @@ export default function OperationsInventoryRelations() {
         <table>
           <thead>
             <tr>
-              <th>Material Name</th>
+              <th>Subcategory</th>
+              <th>Item Name</th>
+              <th>Description</th>
+              <th>Category (Type)</th>
               <th>Current Stock</th>
               <th>Required</th>
               <th>Shortage</th>
@@ -300,7 +313,10 @@ export default function OperationsInventoryRelations() {
       materials.forEach((material) => {
         html += `
           <tr>
+            <td>${material.subcategory}</td>
             <td>${material.name}</td>
+            <td>${material.description}</td>
+            <td>${material.inventoryType}</td>
             <td>${material.currentStock}</td>
             <td>${material.required}</td>
             <td class="shortage">${material.shortage}</td>
