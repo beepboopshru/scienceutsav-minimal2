@@ -208,6 +208,7 @@ export const generateKitSheet = action({
         <table>
           <thead>
             <tr>
+              <th>Subcategory</th>
               <th>Material</th>
               <th>Quantity</th>
               <th>Unit</th>
@@ -217,6 +218,7 @@ export const generateKitSheet = action({
           <tbody>
             ${pouch.materials.map((material) => `
               <tr>
+                <td>${material.subcategory || "-"}</td>
                 <td>${material.name}</td>
                 <td>${material.quantity}</td>
                 <td>${material.unit}</td>
@@ -239,6 +241,7 @@ export const generateKitSheet = action({
         <table>
           <thead>
             <tr>
+              <th>Subcategory</th>
               <th>Material</th>
               <th>Quantity</th>
               <th>Unit</th>
@@ -248,6 +251,7 @@ export const generateKitSheet = action({
           <tbody>
             ${packet.materials.map((material) => `
               <tr>
+                <td>${material.subcategory || "-"}</td>
                 <td>${material.name}</td>
                 <td>${material.quantity}</td>
                 <td>${material.unit}</td>
@@ -267,6 +271,7 @@ export const generateKitSheet = action({
     <table>
       <thead>
         <tr>
+          <th>Subcategory</th>
           <th>Item</th>
           <th>Quantity</th>
           <th>Unit</th>
@@ -276,6 +281,7 @@ export const generateKitSheet = action({
       <tbody>
         ${kit.spareKits.map((spare: any) => `
           <tr>
+            <td>${spare.subcategory || "-"}</td>
             <td>${spare.name}</td>
             <td>${spare.quantity}</td>
             <td>${spare.unit}</td>
@@ -293,6 +299,7 @@ export const generateKitSheet = action({
     <table>
       <thead>
         <tr>
+          <th>Subcategory</th>
           <th>Item</th>
           <th>Quantity</th>
           <th>Unit</th>
@@ -302,6 +309,7 @@ export const generateKitSheet = action({
       <tbody>
         ${kit.bulkMaterials.map((bulk: any) => `
           <tr>
+            <td>${bulk.subcategory || "-"}</td>
             <td>${bulk.name}</td>
             <td>${bulk.quantity}</td>
             <td>${bulk.unit}</td>
