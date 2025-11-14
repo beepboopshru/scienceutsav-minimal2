@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { LogoDropdown } from "@/components/LogoDropdown";
 import {
   Sidebar,
@@ -80,6 +81,7 @@ interface StoredChat {
 
 export function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuth();
+  const { hasPermission } = usePermissions();
   const location = useLocation();
   const navigate = useNavigate();
   const [chatOpen, setChatOpen] = useState(false);
@@ -182,7 +184,7 @@ export function Layout({ children }: LayoutProps) {
     navigate("/");
   };
 
-  // Define navigation items with role-based visibility
+  // Define navigation items with permission-based visibility
   const coreOperations: NavItem[] = [
     {
       title: "Dashboard",
@@ -193,13 +195,13 @@ export function Layout({ children }: LayoutProps) {
       title: "Research",
       icon: Beaker,
       path: "/research",
-      roles: ["admin", "research_development"],
+      roles: [hasPermission("programs", "view") ? "allowed" : ""],
     },
     {
       title: "Clients",
       icon: Users,
       path: "/clients",
-      roles: ["admin", "operations"],
+      roles: [hasPermission("clients", "view") ? "allowed" : ""],
       subItems: [
         { title: "B2B Clients", path: "/clients" },
         { title: "B2C Clients", path: "/b2c-clients" },
@@ -209,7 +211,7 @@ export function Layout({ children }: LayoutProps) {
       title: "Assignments",
       icon: ClipboardList,
       path: "/b2b-assignments",
-      roles: ["admin", "operations"],
+      roles: [hasPermission("assignments", "view") ? "allowed" : ""],
       subItems: [
         { title: "B2B Assignments", path: "/b2b-assignments" },
         { title: "B2C Assignments", path: "/b2c-assignments" },
@@ -222,19 +224,19 @@ export function Layout({ children }: LayoutProps) {
       title: "Packing",
       icon: Package,
       path: "/packing",
-      roles: ["admin", "manager", "operations"],
+      roles: [hasPermission("packing", "view") ? "allowed" : ""],
     },
     {
       title: "Dispatch",
       icon: Package,
       path: "/dispatch",
-      roles: ["admin", "manager", "operations", "dispatch"],
+      roles: [hasPermission("dispatch", "view") ? "allowed" : ""],
     },
     {
       title: "Discrepancy Tickets",
       icon: AlertTriangle,
       path: "/discrepancy-tickets",
-      roles: ["admin", "manager", "operations"],
+      roles: [hasPermission("discrepancyTickets", "view") ? "allowed" : ""],
     },
   ];
 
@@ -243,7 +245,7 @@ export function Layout({ children }: LayoutProps) {
       title: "Inventory",
       icon: Warehouse,
       path: "/inventory",
-      roles: ["admin", "inventory", "operations", "research_development"],
+      roles: [hasPermission("inventory", "view") ? "allowed" : ""],
       subItems: [
         { title: "Processing Jobs", path: "/inventory/processing-jobs" },
         { title: "Bill Records", path: "/inventory/bill-records" },
@@ -254,19 +256,19 @@ export function Layout({ children }: LayoutProps) {
       title: "Operations-Inventory",
       icon: TrendingUp,
       path: "/operations-inventory-relations",
-      roles: ["admin", "inventory", "operations", "manager"],
+      roles: [hasPermission("procurementJobs", "view") ? "allowed" : ""],
     },
     {
       title: "Vendor Contacts",
       icon: Contact,
       path: "/vendor-contacts",
-      roles: ["admin", "inventory"],
+      roles: [hasPermission("vendors", "view") ? "allowed" : ""],
     },
     {
       title: "Services",
       icon: Wrench,
       path: "/services",
-      roles: ["admin", "inventory"],
+      roles: [hasPermission("services", "view") ? "allowed" : ""],
     },
   ];
 
@@ -275,7 +277,7 @@ export function Layout({ children }: LayoutProps) {
       title: "Bill Tracking",
       icon: FileText,
       path: "/bill-tracking",
-      roles: ["admin", "finance", "operations", "manager"],
+      roles: [hasPermission("billTracking", "view") ? "allowed" : ""],
     },
   ];
 
@@ -284,7 +286,7 @@ export function Layout({ children }: LayoutProps) {
       title: "Order Records",
       icon: Package,
       path: "/order-records",
-      roles: ["admin", "operations", "manager", "dispatch"],
+      roles: [hasPermission("orderHistory", "view") ? "allowed" : ""],
     },
   ];
 
@@ -293,13 +295,13 @@ export function Layout({ children }: LayoutProps) {
       title: "Laser Files",
       icon: Scissors,
       path: "/laser-files",
-      roles: ["admin", "laser_operator"],
+      roles: [hasPermission("laserFiles", "view") ? "allowed" : ""],
     },
     {
       title: "View Kit Files",
       icon: Home,
       path: "/view-kit-files",
-      roles: ["admin", "research_development", "operations"],
+      roles: [hasPermission("laserFiles", "view") ? "allowed" : ""],
     },
   ];
 
@@ -308,6 +310,7 @@ export function Layout({ children }: LayoutProps) {
       title: "Kit Statistics",
       icon: FileText,
       path: "/kit-statistics",
+      roles: [hasPermission("programs", "view") ? "allowed" : ""],
     },
   ];
 
@@ -316,21 +319,20 @@ export function Layout({ children }: LayoutProps) {
       title: "Admin Zone",
       icon: Settings,
       path: "/admin-zone",
-      roles: ["admin"],
+      roles: [hasPermission("adminZone", "view") ? "allowed" : ""],
     },
     {
       title: "User Management",
       icon: UserCog,
       path: "/user-management",
-      roles: ["admin"],
+      roles: [hasPermission("userManagement", "view") ? "allowed" : ""],
     },
   ];
 
-  // Filter items based on user role
+  // Filter items based on permissions
   const filterByRole = (items: NavItem[]) => {
-    if (!user?.role) return [];
     return items.filter(
-      (item) => !item.roles || item.roles.includes(user.role || "")
+      (item) => !item.roles || item.roles.includes("allowed")
     );
   };
 
