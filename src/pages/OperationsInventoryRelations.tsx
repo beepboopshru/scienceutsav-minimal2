@@ -298,14 +298,12 @@ export default function OperationsInventoryRelations() {
                       </TableCell>
                       <TableCell>{job.assignmentIds.length}</TableCell>
                       <TableCell>{job.materialShortages.length}</TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={job.status}
-                          onValueChange={(value) => {
-                            handleStatusChange(job._id, value);
-                          }}
+                          onValueChange={(value) => handleStatusChange(job._id, value)}
                         >
-                          <SelectTrigger className="h-8 w-[140px]">
+                          <SelectTrigger className="h-8 w-[140px]" onClick={(e) => e.stopPropagation()}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -315,14 +313,12 @@ export default function OperationsInventoryRelations() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={job.priority}
-                          onValueChange={(value) => {
-                            handlePriorityChange(job._id, value);
-                          }}
+                          onValueChange={(value) => handlePriorityChange(job._id, value)}
                         >
-                          <SelectTrigger className="h-8 w-[120px]">
+                          <SelectTrigger className="h-8 w-[120px]" onClick={(e) => e.stopPropagation()}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
