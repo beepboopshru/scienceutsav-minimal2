@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -44,6 +44,7 @@ export default function Dispatch() {
   const b2cClients = useQuery(api.b2cClients.list, {});
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list);
+  const inventory = useQuery(api.inventory.list, {});
   const updateStatus = useMutation(api.assignments.updateStatus);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,6 +52,7 @@ export default function Dispatch() {
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
   const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
+  const [selectedAssignments, setSelectedAssignments] = useState<Set<Id<"assignments">>>(new Set());
 
   // Checklist dialog state
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
@@ -191,6 +193,18 @@ export default function Dispatch() {
     });
   };
 
+  const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
+    setSelectedAssignments((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(assignmentId)) {
+        newSet.delete(assignmentId);
+      } else {
+        newSet.add(assignmentId);
+      }
+      return newSet;
+    });
+  };
+
   const handleViewClient = (assignment: any) => {
     setSelectedClientForView(assignment.client);
     setViewClientDialogOpen(true);
@@ -259,6 +273,347 @@ export default function Dispatch() {
     }
   };
 
+  const calculateAggregateComponents = (assignmentsToProcess: typeof filteredAssignments) => {
+    if (!inventory) return { byCategory: {}, all: [] };
+
+    const materialMap = new Map<string, any>();
+
+    assignmentsToProcess.forEach((assignment) => {
+      const kit = kits?.find((k) => k._id === assignment.kitId);
+      if (!kit) return;
+
+      const requiredQty = assignment.quantity;
+
+      // Process structured packing requirements
+      if (kit.isStructured && kit.packingRequirements) {
+        try {
+          const packingData = JSON.parse(kit.packingRequirements);
+          
+          if (packingData.pouches) {
+            packingData.pouches.forEach((pouch: any, pouchIndex: number) => {
+              if (pouch.materials) {
+                pouch.materials.forEach((material: any) => {
+                  const key = material.name.toLowerCase();
+                  const required = material.quantity * requiredQty;
+                  
+                  if (materialMap.has(key)) {
+                    const existing = materialMap.get(key);
+                    existing.required += required;
+                    if (!existing.sourceKits.includes(kit.name)) {
+                      existing.sourceKits.push(kit.name);
+                    }
+                    existing.traceability.push(`${kit.name} - Pouch ${pouchIndex + 1}`);
+                  } else {
+                    const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
+                    materialMap.set(key, {
+                      name: material.name,
+                      currentStock: invItem?.quantity || 0,
+                      required,
+                      unit: material.unit,
+                      category: "Main Component",
+                      sourceKits: [kit.name],
+                      traceability: [`${kit.name} - Pouch ${pouchIndex + 1}`],
+                    });
+                  }
+                });
+              }
+            });
+          }
+
+          if (packingData.packets) {
+            packingData.packets.forEach((packet: any, packetIndex: number) => {
+              if (packet.materials) {
+                packet.materials.forEach((material: any) => {
+                  const key = material.name.toLowerCase();
+                  const required = material.quantity * requiredQty;
+                  
+                  if (materialMap.has(key)) {
+                    const existing = materialMap.get(key);
+                    existing.required += required;
+                    if (!existing.sourceKits.includes(kit.name)) {
+                      existing.sourceKits.push(kit.name);
+                    }
+                    existing.traceability.push(`${kit.name} - Packet ${packetIndex + 1}`);
+                  } else {
+                    const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
+                    materialMap.set(key, {
+                      name: material.name,
+                      currentStock: invItem?.quantity || 0,
+                      required,
+                      unit: material.unit,
+                      category: "Main Component",
+                      sourceKits: [kit.name],
+                      traceability: [`${kit.name} - Packet ${packetIndex + 1}`],
+                    });
+                  }
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.error("Error parsing packing requirements:", error);
+        }
+      }
+
+      // Process spare kits
+      if (kit.spareKits) {
+        kit.spareKits.forEach((spare: any) => {
+          const key = spare.name.toLowerCase();
+          const required = spare.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            if (!existing.sourceKits.includes(kit.name)) {
+              existing.sourceKits.push(kit.name);
+            }
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === spare.name.toLowerCase());
+            materialMap.set(key, {
+              name: spare.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: spare.unit,
+              category: "Spare Kit",
+              sourceKits: [kit.name],
+              traceability: [`${kit.name} - Spare Kits`],
+            });
+          }
+        });
+      }
+
+      // Process bulk materials
+      if (kit.bulkMaterials) {
+        kit.bulkMaterials.forEach((bulk: any) => {
+          const key = bulk.name.toLowerCase();
+          const required = bulk.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            if (!existing.sourceKits.includes(kit.name)) {
+              existing.sourceKits.push(kit.name);
+            }
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === bulk.name.toLowerCase());
+            materialMap.set(key, {
+              name: bulk.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: bulk.unit,
+              category: "Bulk Material",
+              sourceKits: [kit.name],
+              traceability: [`${kit.name} - Bulk Materials`],
+            });
+          }
+        });
+      }
+
+      // Process miscellaneous
+      if (kit.miscellaneous) {
+        kit.miscellaneous.forEach((misc: any) => {
+          const key = misc.name.toLowerCase();
+          const required = misc.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            if (!existing.sourceKits.includes(kit.name)) {
+              existing.sourceKits.push(kit.name);
+            }
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === misc.name.toLowerCase());
+            materialMap.set(key, {
+              name: misc.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: misc.unit,
+              category: "Miscellaneous",
+              sourceKits: [kit.name],
+              traceability: [`${kit.name} - Miscellaneous`],
+            });
+          }
+        });
+      }
+    });
+
+    const allMaterials = Array.from(materialMap.values()).map((item) => ({
+      ...item,
+      shortage: Math.max(0, item.required - item.currentStock),
+    }));
+
+    const byCategory = allMaterials.reduce((acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = [];
+      }
+      acc[item.category].push(item);
+      return acc;
+    }, {} as Record<string, typeof allMaterials>);
+
+    return { byCategory, all: allMaterials };
+  };
+
+  const handleDownloadComponentsReport = (useSelected: boolean) => {
+    const assignmentsToProcess = useSelected 
+      ? filteredAssignments.filter((a) => selectedAssignments.has(a._id))
+      : filteredAssignments;
+
+    if (assignmentsToProcess.length === 0) {
+      toast.error(useSelected ? "No assignments selected" : "No assignments to process");
+      return;
+    }
+
+    const { byCategory } = calculateAggregateComponents(assignmentsToProcess);
+    
+    type MaterialItem = {
+      name: string;
+      currentStock: number;
+      required: number;
+      shortage: number;
+      unit: string;
+      sourceKits: string[];
+      traceability: string[];
+    };
+    
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Aggregate Components Report - Dispatch</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #2563eb;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #1e40af;
+      margin-top: 30px;
+      border-bottom: 2px solid #93c5fd;
+      padding-bottom: 5px;
+    }
+    .meta-info {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .meta-info p {
+      margin: 5px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    th {
+      background-color: #2563eb;
+      color: white;
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    tr:hover {
+      background-color: #f9fafb;
+    }
+    .shortage {
+      color: #dc2626;
+      font-weight: bold;
+    }
+    .sufficient {
+      color: #16a34a;
+    }
+    .category-summary {
+      background: #eff6ff;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-left: 4px solid #2563eb;
+    }
+    @media print {
+      body { margin: 0; }
+      h2 { page-break-before: always; }
+      h2:first-of-type { page-break-before: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Aggregate Components Report - Dispatch</h1>
+  
+  <div class="meta-info">
+    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+    <p><strong>Report Type:</strong> ${useSelected ? "Selected Assignments" : "All Filtered Assignments"}</p>
+    <p><strong>Total Assignments:</strong> ${assignmentsToProcess.length}</p>
+    <p><strong>Total Kits:</strong> ${assignmentsToProcess.reduce((sum, a) => sum + a.quantity, 0)}</p>
+  </div>
+
+  ${Object.entries(byCategory).map(([category, materials]) => {
+    const materialsList = materials as MaterialItem[];
+    return `
+    <h2>${category}</h2>
+    <div class="category-summary">
+      <strong>${materialsList.length}</strong> unique material(s) in this category
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Material Name</th>
+          <th>Current Stock</th>
+          <th>Required</th>
+          <th>Shortage</th>
+          <th>Unit</th>
+          <th>Source Kits</th>
+          <th>Component Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${materialsList.map((material) => `
+          <tr>
+            <td><strong>${material.name}</strong></td>
+            <td class="${material.shortage > 0 ? 'shortage' : 'sufficient'}">${material.currentStock}</td>
+            <td>${material.required}</td>
+            <td class="${material.shortage > 0 ? 'shortage' : ''}">${material.shortage > 0 ? material.shortage : '—'}</td>
+            <td>${material.unit}</td>
+            <td>${material.sourceKits.join(", ")}</td>
+            <td style="font-size: 0.9em;">${[...new Set(material.traceability)].join("; ")}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+  }).join("")}
+
+  <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 0.9em;">
+    <p>This report shows the aggregate components needed for dispatch operations.</p>
+    <p>Materials with shortages are highlighted in red.</p>
+  </div>
+</body>
+</html>
+    `;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dispatch-components-report-${new Date().toISOString().split("T")[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success("Components report downloaded");
+  };
+
   const totalQuantity = filteredAssignments.reduce((sum, a) => sum + a.quantity, 0);
 
   return (
@@ -274,7 +629,7 @@ export default function Dispatch() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="p-4 border rounded-lg bg-card">
             <div className="text-sm text-muted-foreground mb-1">Total Assignments</div>
             <div className="text-2xl font-bold">{filteredAssignments.length}</div>
@@ -283,6 +638,34 @@ export default function Dispatch() {
             <div className="text-sm text-muted-foreground mb-1">Total Quantity</div>
             <div className="text-2xl font-bold">{totalQuantity}</div>
           </div>
+          <div className="p-4 border rounded-lg bg-card">
+            <div className="text-sm text-muted-foreground mb-1">Selected</div>
+            <div className="text-2xl font-bold">{selectedAssignments.size}</div>
+          </div>
+        </div>
+
+        {/* Download Components Report Buttons */}
+        <div className="flex gap-2 mb-6">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Download Components Report
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => handleDownloadComponentsReport(false)}>
+                All Filtered Assignments ({filteredAssignments.length})
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleDownloadComponentsReport(true)}
+                disabled={selectedAssignments.size === 0}
+              >
+                Selected Assignments ({selectedAssignments.size})
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Filters */}
@@ -352,6 +735,18 @@ export default function Dispatch() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr className="border-b">
+                  <th className="text-left p-4 font-semibold w-10">
+                    <Checkbox
+                      checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
+                        } else {
+                          setSelectedAssignments(new Set());
+                        }
+                      }}
+                    />
+                  </th>
                   <th className="text-left p-4 font-semibold">Customer</th>
                   <th className="text-left p-4 font-semibold">Kit</th>
                   <th className="text-left p-4 font-semibold">Quantity</th>
@@ -370,6 +765,12 @@ export default function Dispatch() {
                   if (batchKey === "standalone") {
                     return batchAssignments.map((assignment) => (
                       <tr key={assignment._id} className="border-b hover:bg-muted/30">
+                        <td className="p-4">
+                          <Checkbox
+                            checked={selectedAssignments.has(assignment._id)}
+                            onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                          />
+                        </td>
                         <td className="p-4">
                           <div className="flex flex-col">
                             <span className="font-medium">
@@ -463,14 +864,16 @@ export default function Dispatch() {
                         className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
                         onClick={() => toggleBatch(batchKey)}
                       >
+                        <td className="p-4">
+                          {isExpanded ? (
+                            <ChevronDown className="h-5 w-5" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5" />
+                          )}
+                        </td>
                         <td colSpan={6} className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              {isExpanded ? (
-                                <ChevronDown className="h-5 w-5" />
-                              ) : (
-                                <ChevronRight className="h-5 w-5" />
-                              )}
                               <div>
                                 <span className="font-semibold">Batch: {batch?.batchId || batchKey}</span>
                                 <span className="text-sm text-muted-foreground ml-4">
@@ -484,6 +887,12 @@ export default function Dispatch() {
                       {isExpanded &&
                         batchAssignments.map((assignment) => (
                           <tr key={assignment._id} className="border-b hover:bg-muted/30">
+                            <td className="p-4">
+                              <Checkbox
+                                checked={selectedAssignments.has(assignment._id)}
+                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                              />
+                            </td>
                             <td className="p-4 pl-12">
                               <div className="flex flex-col">
                                 <span className="font-medium">
