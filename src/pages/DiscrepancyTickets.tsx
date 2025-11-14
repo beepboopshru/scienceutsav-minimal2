@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
@@ -22,7 +23,11 @@ import { Id } from "@/convex/_generated/dataModel";
 
 export default function DiscrepancyTickets() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+
+  const canView = hasPermission("discrepancyTickets", "view");
+  const canEdit = hasPermission("discrepancyTickets", "edit");
 
   const tickets = useQuery(api.discrepancyTickets.list);
   const b2bClients = useQuery(api.clients.list);
@@ -51,10 +56,6 @@ export default function DiscrepancyTickets() {
     }
     if (!isLoading && isAuthenticated && user && !user.isApproved) {
       navigate("/pending-approval");
-    }
-    if (!isLoading && isAuthenticated && user && user.role && !["admin", "operations", "manager"].includes(user.role)) {
-      toast.error("Access denied: Operations role required");
-      navigate("/dashboard");
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
@@ -166,6 +167,19 @@ export default function DiscrepancyTickets() {
     );
   }
 
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="p-8 max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to view this page.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="p-8">
@@ -181,7 +195,7 @@ export default function DiscrepancyTickets() {
                 Track and manage client discrepancies
               </p>
             </div>
-            {user.role === "admin" && (
+            {canEdit && (
               <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -410,7 +424,7 @@ export default function DiscrepancyTickets() {
                           <Badge variant={getPriorityColor(ticket.priority)}>
                             {ticket.priority}
                           </Badge>
-                          {user.role === "admin" && (
+                          {canEdit && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -429,23 +443,31 @@ export default function DiscrepancyTickets() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Label className="text-sm">Status:</Label>
-                        <Select
-                          value={ticket.status}
-                          onValueChange={(v: any) => handleStatusChange(ticket._id, v)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="resolved">Resolved</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Badge variant={getStatusColor(ticket.status)}>
-                          {ticket.status.replace("_", " ")}
-                        </Badge>
+                        {canEdit ? (
+                          <Select
+                            value={ticket.status}
+                            onValueChange={(v: any) => handleStatusChange(ticket._id, v)}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="open">Open</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="resolved">Resolved</SelectItem>
+                              <SelectItem value="closed">Closed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant={getStatusColor(ticket.status)}>
+                            {ticket.status.replace("_", " ")}
+                          </Badge>
+                        )}
+                        {canEdit && (
+                          <Badge variant={getStatusColor(ticket.status)}>
+                            {ticket.status.replace("_", " ")}
+                          </Badge>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
