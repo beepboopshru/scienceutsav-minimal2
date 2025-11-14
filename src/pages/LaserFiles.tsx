@@ -232,7 +232,19 @@ export default function LaserFiles() {
 
   return (
     <Layout>
-      <div className="p-8 space-y-6">
+      <div className="relative min-h-screen">
+        {/* Blurred Background */}
+        <div 
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{
+            backgroundImage: 'url(https://harmless-tapir-303.convex.cloud/api/storage/35f27a22-fb8f-4c6b-aca0-e423b71005b3)',
+            filter: 'blur(8px)',
+            transform: 'scale(1.1)',
+          }}
+        />
+        
+        {/* Content Overlay */}
+        <div className="relative z-10 p-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Laser Files</h1>
@@ -441,6 +453,7 @@ export default function LaserFiles() {
               )}
             </TableBody>
           </Table>
+        </div>
         </div>
       </div>
     </Layout>
