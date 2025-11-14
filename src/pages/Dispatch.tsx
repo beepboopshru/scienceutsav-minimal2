@@ -87,15 +87,16 @@ export default function Dispatch() {
     );
   }
 
-  const canAccess = hasPermission("dispatch", "view");
+  const canView = hasPermission("dispatch", "view");
+  const canEdit = hasPermission("dispatch", "edit");
 
-  if (!canAccess) {
+  if (!canView) {
     return (
       <Layout>
         <div className="p-8 max-w-6xl mx-auto">
           <div className="text-center py-12">
             <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground">You don't have permission to access this page.</p>
+            <p className="text-muted-foreground">You don't have permission to view this page.</p>
           </div>
         </div>
       </Layout>
@@ -371,18 +372,20 @@ export default function Dispatch() {
             <table className="w-full">
               <thead className="bg-muted/50">
                 <tr className="border-b">
-                  <th className="text-left p-4 font-semibold w-10">
-                    <Checkbox
-                      checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
-                        } else {
-                          setSelectedAssignments(new Set());
-                        }
-                      }}
-                    />
-                  </th>
+                  {canEdit && (
+                    <th className="text-left p-4 font-semibold w-10">
+                      <Checkbox
+                        checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
+                          } else {
+                            setSelectedAssignments(new Set());
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
                   <th className="text-left p-4 font-semibold">Customer</th>
                   <th className="text-left p-4 font-semibold">Kit</th>
                   <th className="text-left p-4 font-semibold">Quantity</th>
@@ -401,12 +404,14 @@ export default function Dispatch() {
                   if (batchKey === "standalone") {
                     return batchAssignments.map((assignment) => (
                       <tr key={assignment._id} className="border-b hover:bg-muted/30">
-                        <td className="p-4">
-                          <Checkbox
-                            checked={selectedAssignments.has(assignment._id)}
-                            onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                          />
-                        </td>
+                        {canEdit && (
+                          <td className="p-4">
+                            <Checkbox
+                              checked={selectedAssignments.has(assignment._id)}
+                              onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                            />
+                          </td>
+                        )}
                         <td className="p-4">
                           <div className="flex flex-col">
                             <span className="font-medium">
@@ -459,34 +464,36 @@ export default function Dispatch() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  Change Status
-                                  <ChevronDown className="ml-2 h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                  disabled={assignment.status === "transferred_to_dispatch"}
-                                >
-                                  Transferred to Dispatch
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                  disabled={assignment.status === "dispatched"}
-                                >
-                                  Dispatched
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                  disabled={assignment.status === "delivered"}
-                                >
-                                  Delivered
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            {canEdit && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    Change Status
+                                    <ChevronDown className="ml-2 h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                    disabled={assignment.status === "transferred_to_dispatch"}
+                                  >
+                                    Transferred to Dispatch
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                    disabled={assignment.status === "dispatched"}
+                                  >
+                                    Dispatched
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                    disabled={assignment.status === "delivered"}
+                                  >
+                                    Delivered
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -500,13 +507,15 @@ export default function Dispatch() {
                         className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
                         onClick={() => toggleBatch(batchKey)}
                       >
-                        <td className="p-4">
-                          {isExpanded ? (
-                            <ChevronDown className="h-5 w-5" />
-                          ) : (
-                            <ChevronRight className="h-5 w-5" />
-                          )}
-                        </td>
+                        {canEdit && (
+                          <td className="p-4">
+                            {isExpanded ? (
+                              <ChevronDown className="h-5 w-5" />
+                            ) : (
+                              <ChevronRight className="h-5 w-5" />
+                            )}
+                          </td>
+                        )}
                         <td colSpan={6} className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -523,12 +532,14 @@ export default function Dispatch() {
                       {isExpanded &&
                         batchAssignments.map((assignment) => (
                           <tr key={assignment._id} className="border-b hover:bg-muted/30">
-                            <td className="p-4">
-                              <Checkbox
-                                checked={selectedAssignments.has(assignment._id)}
-                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                              />
-                            </td>
+                            {canEdit && (
+                              <td className="p-4">
+                                <Checkbox
+                                  checked={selectedAssignments.has(assignment._id)}
+                                  onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                />
+                              </td>
+                            )}
                             <td className="p-4 pl-12">
                               <div className="flex flex-col">
                                 <span className="font-medium">
@@ -581,34 +592,36 @@ export default function Dispatch() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                      Change Status
-                                      <ChevronDown className="ml-2 h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                      disabled={assignment.status === "transferred_to_dispatch"}
-                                    >
-                                      Transferred to Dispatch
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                      disabled={assignment.status === "dispatched"}
-                                    >
-                                      Dispatched
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                      disabled={assignment.status === "delivered"}
-                                    >
-                                      Delivered
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                {canEdit && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="outline" size="sm">
+                                        Change Status
+                                        <ChevronDown className="ml-2 h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                        disabled={assignment.status === "transferred_to_dispatch"}
+                                      >
+                                        Transferred to Dispatch
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                        disabled={assignment.status === "dispatched"}
+                                      >
+                                        Dispatched
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                        disabled={assignment.status === "delivered"}
+                                      >
+                                        Delivered
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
                               </div>
                             </td>
                           </tr>
