@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
@@ -120,10 +121,7 @@ export default function Research() {
 
   const kits = useQuery(api.kits.list);
   const programs = useQuery(api.programs.list);
-  const userPermissions = useQuery(
-    api.userPermissions.get,
-    user?._id ? { userId: user._id } : "skip"
-  );
+  const { hasPermission } = usePermissions();
 
   const createKit = useMutation(api.kits.create);
   const updateKit = useMutation(api.kits.update);
@@ -141,66 +139,17 @@ export default function Research() {
   const [fileType, setFileType] = useState<"kitImage" | "laser" | "component" | "workbook">("kitImage");
   const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
-  // Permission checks
-  const canViewPrograms = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.programs;
-    return perms?.view ?? false;
-  }, [user, userPermissions]);
-
-  const canCreatePrograms = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.programs;
-    return perms?.create ?? false;
-  }, [user, userPermissions]);
-
-  const canEditPrograms = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.programs;
-    return perms?.edit ?? false;
-  }, [user, userPermissions]);
-
-  const canDeletePrograms = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.programs;
-    return perms?.delete ?? false;
-  }, [user, userPermissions]);
-
-  const canViewKits = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.kits;
-    return perms?.view ?? false;
-  }, [user, userPermissions]);
-
-  const canCreateKits = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.kits;
-    return perms?.create ?? false;
-  }, [user, userPermissions]);
-
-  const canEditKits = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.kits;
-    return perms?.edit ?? false;
-  }, [user, userPermissions]);
-
-  const canDeleteKits = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.kits;
-    return perms?.delete ?? false;
-  }, [user, userPermissions]);
-
-  const canCloneKits = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.kits;
-    return perms?.clone ?? false;
-  }, [user, userPermissions]);
-
-  const canUploadImages = useMemo(() => {
-    if (!user || !userPermissions) return false;
-    const perms = userPermissions.permissions?.kits;
-    return perms?.uploadImages ?? false;
-  }, [user, userPermissions]);
+  // Permission checks using centralized hook
+  const canViewPrograms = hasPermission("programs", "view");
+  const canCreatePrograms = hasPermission("programs", "create");
+  const canEditPrograms = hasPermission("programs", "edit");
+  const canDeletePrograms = hasPermission("programs", "delete");
+  const canViewKits = hasPermission("kits", "view");
+  const canCreateKits = hasPermission("kits", "create");
+  const canEditKits = hasPermission("kits", "edit");
+  const canDeleteKits = hasPermission("kits", "delete");
+  const canCloneKits = hasPermission("kits", "clone");
+  const canUploadImages = hasPermission("kits", "uploadImages");
 
   // View state
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
@@ -500,7 +449,7 @@ export default function Research() {
     }
   };
 
-  if (isLoading || !kits || !programs || !userPermissions) {
+  if (isLoading || !kits || !programs) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">Loading...</div>
