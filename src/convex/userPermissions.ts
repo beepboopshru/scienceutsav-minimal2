@@ -24,6 +24,7 @@ export const update = mutation({
         delete: v.boolean(),
         editStock: v.boolean(),
         uploadImages: v.boolean(),
+        clone: v.boolean(),
       })),
       clients: v.optional(v.object({
         view: v.boolean(),
@@ -36,8 +37,7 @@ export const update = mutation({
         create: v.boolean(),
         edit: v.boolean(),
         delete: v.boolean(),
-        pack: v.boolean(),
-        dispatch: v.boolean(),
+        updateStatus: v.boolean(),
       })),
       inventory: v.optional(v.object({
         view: v.boolean(),

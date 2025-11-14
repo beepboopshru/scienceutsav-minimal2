@@ -32,6 +32,7 @@ import type * as kits from "../kits.js";
 import type * as laserFiles from "../laserFiles.js";
 import type * as operations from "../operations.js";
 import type * as orderHistory from "../orderHistory.js";
+import type * as permissions from "../permissions.js";
 import type * as processingJobs from "../processingJobs.js";
 import type * as procurementJobs from "../procurementJobs.js";
 import type * as programs from "../programs.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   laserFiles: typeof laserFiles;
   operations: typeof operations;
   orderHistory: typeof orderHistory;
+  permissions: typeof permissions;
   processingJobs: typeof processingJobs;
   procurementJobs: typeof procurementJobs;
   programs: typeof programs;

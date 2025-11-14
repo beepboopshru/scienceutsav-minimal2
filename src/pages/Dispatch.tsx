@@ -85,7 +85,7 @@ export default function Dispatch() {
     );
   }
 
-  const canAccess = user.role === "admin" || user.role === "operations" || user.role === "dispatch";
+  const canAccess = user.role === "admin" || user.role === "manager" || user.role === "operations";
 
   if (!canAccess) {
     return (

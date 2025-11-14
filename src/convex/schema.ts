@@ -5,24 +5,28 @@ import { Infer, v } from "convex/values";
 // User roles for the system
 export const ROLES = {
   ADMIN: "admin",
-  CONTENT: "content",
+  MANAGER: "manager",
+  SALES: "sales",
+  FINANCE: "finance",
+  LASER_OPERATOR: "laser_operator",
+  RESEARCH_HEAD: "research_head",
   RESEARCH_DEVELOPMENT: "research_development",
   OPERATIONS: "operations",
   INVENTORY: "inventory",
-  DISPATCH: "dispatch",
-  FINANCE: "finance",
-  MANAGER: "manager",
+  CONTENT: "content",
 } as const;
 
 export const roleValidator = v.union(
   v.literal(ROLES.ADMIN),
-  v.literal(ROLES.CONTENT),
+  v.literal(ROLES.MANAGER),
+  v.literal(ROLES.SALES),
+  v.literal(ROLES.FINANCE),
+  v.literal(ROLES.LASER_OPERATOR),
+  v.literal(ROLES.RESEARCH_HEAD),
   v.literal(ROLES.RESEARCH_DEVELOPMENT),
   v.literal(ROLES.OPERATIONS),
   v.literal(ROLES.INVENTORY),
-  v.literal(ROLES.DISPATCH),
-  v.literal(ROLES.FINANCE),
-  v.literal("manager"),
+  v.literal(ROLES.CONTENT),
 );
 export type Role = Infer<typeof roleValidator>;
 
@@ -446,6 +450,13 @@ const schema = defineSchema(
       userId: v.id("users"),
       permissions: v.object({
         dashboard: v.optional(v.object({ view: v.boolean() })),
+        programs: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+          archive: v.boolean(),
+        })),
         kits: v.optional(v.object({
           view: v.boolean(),
           create: v.boolean(),
@@ -453,8 +464,21 @@ const schema = defineSchema(
           delete: v.boolean(),
           editStock: v.boolean(),
           uploadImages: v.boolean(),
+          clone: v.boolean(),
         })),
         clients: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+        })),
+        b2cClients: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+        })),
+        batches: v.optional(v.object({
           view: v.boolean(),
           create: v.boolean(),
           edit: v.boolean(),
@@ -465,8 +489,7 @@ const schema = defineSchema(
           create: v.boolean(),
           edit: v.boolean(),
           delete: v.boolean(),
-          pack: v.boolean(),
-          dispatch: v.boolean(),
+          updateStatus: v.boolean(),
         })),
         inventory: v.optional(v.object({
           view: v.boolean(),
@@ -489,6 +512,57 @@ const schema = defineSchema(
           edit: v.boolean(),
           delete: v.boolean(),
         })),
+        processingJobs: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          complete: v.boolean(),
+          delete: v.boolean(),
+        })),
+        procurementJobs: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          complete: v.boolean(),
+          delete: v.boolean(),
+        })),
+        packing: v.optional(v.object({
+          view: v.boolean(),
+          initiate: v.boolean(),
+          validate: v.boolean(),
+          transfer: v.boolean(),
+        })),
+        dispatch: v.optional(v.object({
+          view: v.boolean(),
+          verify: v.boolean(),
+          dispatch: v.boolean(),
+          updateStatus: v.boolean(),
+        })),
+        discrepancyTickets: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          resolve: v.boolean(),
+          delete: v.boolean(),
+        })),
+        billTracking: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          updateStatus: v.boolean(),
+          delete: v.boolean(),
+        })),
+        vendorImports: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          updatePaymentStatus: v.boolean(),
+          delete: v.boolean(),
+        })),
+        orderHistory: v.optional(v.object({
+          view: v.boolean(),
+          export: v.boolean(),
+        })),
         laserFiles: v.optional(v.object({
           view: v.boolean(),
           upload: v.boolean(),
@@ -500,14 +574,16 @@ const schema = defineSchema(
         })),
         adminZone: v.optional(v.object({
           view: v.boolean(),
-          manageUsers: v.boolean(),
-          manageRoles: v.boolean(),
-          managePermissions: v.boolean(),
-          approveUsers: v.boolean(),
-          deleteUsers: v.boolean(),
           clearAssignments: v.boolean(),
           viewActivityLogs: v.boolean(),
           deleteActivityLogs: v.boolean(),
+        })),
+        userManagement: v.optional(v.object({
+          view: v.boolean(),
+          approveUsers: v.boolean(),
+          manageRoles: v.boolean(),
+          managePermissions: v.boolean(),
+          deleteUsers: v.boolean(),
         })),
       }),
     }).index("by_user", ["userId"]),

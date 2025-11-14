@@ -102,15 +102,27 @@ export default function UserManagement() {
     setPermissionsDialog({ open: true, userId, userName });
     setPermissions({
       dashboard: { view: true },
-      kits: { view: false, create: false, edit: false, delete: false, editStock: false, uploadImages: false },
+      programs: { view: false, create: false, edit: false, delete: false, archive: false },
+      kits: { view: false, create: false, edit: false, delete: false, editStock: false, uploadImages: false, clone: false },
       clients: { view: false, create: false, edit: false, delete: false },
-      assignments: { view: false, create: false, edit: false, delete: false, pack: false, dispatch: false },
+      b2cClients: { view: false, create: false, edit: false, delete: false },
+      batches: { view: false, create: false, edit: false, delete: false },
+      assignments: { view: false, create: false, edit: false, delete: false, updateStatus: false },
       inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false },
       vendors: { view: false, create: false, edit: false, delete: false },
       services: { view: false, create: false, edit: false, delete: false },
+      processingJobs: { view: false, create: false, edit: false, complete: false, delete: false },
+      procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
+      packing: { view: false, initiate: false, validate: false, transfer: false },
+      dispatch: { view: false, verify: false, dispatch: false, updateStatus: false },
+      discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
+      billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+      vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
+      orderHistory: { view: false, export: false },
       laserFiles: { view: false, upload: false, delete: false },
       reports: { view: false, download: false },
-      adminZone: { view: false, manageUsers: false, manageRoles: false, managePermissions: false, approveUsers: false, deleteUsers: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
+      adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
+      userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     });
   };
 
@@ -133,6 +145,10 @@ export default function UserManagement() {
     switch (role) {
       case "admin": return <Shield className="h-4 w-4 text-red-500" />;
       case "manager": return <Shield className="h-4 w-4 text-orange-500" />;
+      case "sales": return <Shield className="h-4 w-4 text-yellow-500" />;
+      case "finance": return <Shield className="h-4 w-4 text-emerald-500" />;
+      case "laser_operator": return <Shield className="h-4 w-4 text-cyan-500" />;
+      case "research_head": return <Shield className="h-4 w-4 text-indigo-500" />;
       case "research_development": return <Shield className="h-4 w-4 text-blue-500" />;
       case "operations": return <Shield className="h-4 w-4 text-green-500" />;
       case "inventory": return <Shield className="h-4 w-4 text-purple-500" />;
@@ -194,6 +210,10 @@ export default function UserManagement() {
                                 <SelectContent>
                                   <SelectItem value="admin">Admin</SelectItem>
                                   <SelectItem value="manager">Manager</SelectItem>
+                                  <SelectItem value="sales">Sales</SelectItem>
+                                  <SelectItem value="finance">Finance</SelectItem>
+                                  <SelectItem value="laser_operator">Laser Operator</SelectItem>
+                                  <SelectItem value="research_head">Research Head</SelectItem>
                                   <SelectItem value="research_development">Research & Development</SelectItem>
                                   <SelectItem value="operations">Operations</SelectItem>
                                   <SelectItem value="inventory">Inventory</SelectItem>
@@ -259,6 +279,10 @@ export default function UserManagement() {
                                   <SelectContent>
                                     <SelectItem value="admin">Admin</SelectItem>
                                     <SelectItem value="manager">Manager</SelectItem>
+                                    <SelectItem value="sales">Sales</SelectItem>
+                                    <SelectItem value="finance">Finance</SelectItem>
+                                    <SelectItem value="laser_operator">Laser Operator</SelectItem>
+                                    <SelectItem value="research_head">Research Head</SelectItem>
                                     <SelectItem value="research_development">Research & Development</SelectItem>
                                     <SelectItem value="operations">Operations</SelectItem>
                                     <SelectItem value="inventory">Inventory</SelectItem>
@@ -312,27 +336,51 @@ export default function UserManagement() {
                 </div>
               </div>
               <div className="flex items-start gap-2">
+                <Shield className="h-4 w-4 text-yellow-500 mt-0.5" />
+                <div>
+                  <strong>Sales:</strong> Manage B2B/B2C clients and assignments
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Shield className="h-4 w-4 text-emerald-500 mt-0.5" />
+                <div>
+                  <strong>Finance:</strong> Bill tracking and vendor payment management
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Shield className="h-4 w-4 text-cyan-500 mt-0.5" />
+                <div>
+                  <strong>Laser Operator:</strong> View and access laser files only
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Shield className="h-4 w-4 text-indigo-500 mt-0.5" />
+                <div>
+                  <strong>Research Head:</strong> Create and manage programs and kits
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
                 <Shield className="h-4 w-4 text-blue-500 mt-0.5" />
                 <div>
-                  <strong>Research & Development:</strong> Kit management only
+                  <strong>Research & Development:</strong> Manage kits within programs (cannot create programs)
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Shield className="h-4 w-4 text-green-500 mt-0.5" />
                 <div>
-                  <strong>Operations:</strong> Inventory, vendors, and services
+                  <strong>Operations:</strong> Inventory, packing, dispatch, and operations management
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Shield className="h-4 w-4 text-purple-500 mt-0.5" />
                 <div>
-                  <strong>Inventory:</strong> Only inventory management
+                  <strong>Inventory:</strong> Inventory and vendor management only
                 </div>
               </div>
               <div className="flex items-start gap-2">
                 <Shield className="h-4 w-4 text-pink-500 mt-0.5" />
                 <div>
-                  <strong>Content:</strong> Can only view and upload images
+                  <strong>Content:</strong> View programs/kits and upload kit images only
                 </div>
               </div>
             </CardContent>
