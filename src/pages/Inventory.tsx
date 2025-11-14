@@ -243,7 +243,6 @@ export default function Inventory() {
     try {
       if (item.isKitPacket && item.sourceKit) {
         // For virtual packets, update the kit's stockCount
-        const updateKit = useMutation(api.kits.update);
         await updateKit({ 
           id: item.sourceKit._id, 
           stockCount: tempQuantity 
