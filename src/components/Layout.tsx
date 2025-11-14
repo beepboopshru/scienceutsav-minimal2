@@ -196,12 +196,6 @@ export function Layout({ children }: LayoutProps) {
       roles: ["admin", "research_development"],
     },
     {
-      title: "Operations",
-      icon: ClipboardList,
-      path: "/operations",
-      roles: ["admin", "manager", "operations"],
-    },
-    {
       title: "Clients",
       icon: Users,
       path: "/clients",
