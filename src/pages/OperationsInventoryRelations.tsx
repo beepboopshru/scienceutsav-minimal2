@@ -254,13 +254,14 @@ export default function OperationsInventoryRelations() {
       });
     });
 
-    // Group by category
+    // Group by subcategory
     const categorizedMaterials = new Map<string, typeof materialMap>();
     materialMap.forEach((material, key) => {
-      if (!categorizedMaterials.has(material.category)) {
-        categorizedMaterials.set(material.category, new Map());
+      const subcategoryKey = material.subcategory || "Uncategorized";
+      if (!categorizedMaterials.has(subcategoryKey)) {
+        categorizedMaterials.set(subcategoryKey, new Map());
       }
-      categorizedMaterials.get(material.category)!.set(key, material);
+      categorizedMaterials.get(subcategoryKey)!.set(key, material);
     });
 
     // Generate HTML
@@ -290,9 +291,9 @@ export default function OperationsInventoryRelations() {
         </div>
     `;
 
-    categorizedMaterials.forEach((materials, category) => {
+    categorizedMaterials.forEach((materials, subcategory) => {
       html += `
-        <h2>${category}</h2>
+        <h2>${subcategory}</h2>
         <table>
           <thead>
             <tr>
