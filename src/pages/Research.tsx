@@ -120,6 +120,10 @@ export default function Research() {
 
   const kits = useQuery(api.kits.list);
   const programs = useQuery(api.programs.list);
+  const userPermissions = useQuery(
+    api.userPermissions.get,
+    user?._id ? { userId: user._id } : "skip"
+  );
 
   const createKit = useMutation(api.kits.create);
   const updateKit = useMutation(api.kits.update);
@@ -137,7 +141,66 @@ export default function Research() {
   const [fileType, setFileType] = useState<"kitImage" | "laser" | "component" | "workbook">("kitImage");
   const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
-  const isAdminOrManager = user?.role === "research_development" || user?.role === "admin";
+  // Permission checks
+  const canViewPrograms = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.programs;
+    return perms?.view ?? false;
+  }, [user, userPermissions]);
+
+  const canCreatePrograms = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.programs;
+    return perms?.create ?? false;
+  }, [user, userPermissions]);
+
+  const canEditPrograms = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.programs;
+    return perms?.edit ?? false;
+  }, [user, userPermissions]);
+
+  const canDeletePrograms = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.programs;
+    return perms?.delete ?? false;
+  }, [user, userPermissions]);
+
+  const canViewKits = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.kits;
+    return perms?.view ?? false;
+  }, [user, userPermissions]);
+
+  const canCreateKits = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.kits;
+    return perms?.create ?? false;
+  }, [user, userPermissions]);
+
+  const canEditKits = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.kits;
+    return perms?.edit ?? false;
+  }, [user, userPermissions]);
+
+  const canDeleteKits = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.kits;
+    return perms?.delete ?? false;
+  }, [user, userPermissions]);
+
+  const canCloneKits = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.kits;
+    return perms?.clone ?? false;
+  }, [user, userPermissions]);
+
+  const canUploadImages = useMemo(() => {
+    if (!user || !userPermissions) return false;
+    const perms = userPermissions.permissions?.kits;
+    return perms?.uploadImages ?? false;
+  }, [user, userPermissions]);
 
   // View state
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
@@ -437,10 +500,24 @@ export default function Research() {
     }
   };
 
-  if (isLoading || !kits || !programs) {
+  if (isLoading || !kits || !programs || !userPermissions) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center text-muted-foreground">Loading...</div>
+      </Layout>
+    );
+  }
+
+  // Check view permission
+  if (!canViewPrograms && !canViewKits) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to view this page.</p>
+          </div>
+        </div>
       </Layout>
     );
   }
@@ -456,7 +533,7 @@ export default function Research() {
               <h1 className="text-3xl font-bold tracking-tight">Research & Development</h1>
               <p className="text-muted-foreground mt-2">Program Management and Kit Design Hub</p>
             </div>
-            {isAdminOrManager && (
+            {canCreatePrograms && (
               <Dialog open={isCreateProgramOpen} onOpenChange={setIsCreateProgramOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -534,32 +611,36 @@ export default function Research() {
                           <Box className="h-6 w-6" />
                           {program.name}
                         </CardTitle>
-                        {isAdminOrManager && (
+                        {(canEditPrograms || canDeletePrograms) && (
                           <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditProgram(program);
-                              }}
-                              title="Edit Program"
-                              className="h-8 w-8 p-0"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteProgram(program._id as Id<"programs">, program.name);
-                              }}
-                              title="Delete Program"
-                              className="h-8 w-8 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {canEditPrograms && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditProgram(program);
+                                }}
+                                title="Edit Program"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canDeletePrograms && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProgram(program._id as Id<"programs">, program.name);
+                                }}
+                                title="Delete Program"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -688,7 +769,7 @@ export default function Research() {
           </div>
 
           <div className="flex gap-2">
-            {isAdminOrManager && (
+            {canCreateKits && (
               <>
                 <Button onClick={() => navigate(`/kit-builder?program=${selectedProgramId}`)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -823,87 +904,91 @@ export default function Research() {
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex space-x-1">
-                            {isAdminOrManager && (
-                              <>
-                                <Dialog>
-                                  <DialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" title="Upload Files">
-                                      <Upload className="h-4 w-4" />
+                            {canUploadImages && (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" title="Upload Files">
+                                    <Upload className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-sm">
+                                  <DialogHeader>
+                                    <DialogTitle>Upload Files for '{kit.name}'</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-2">
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start"
+                                      onClick={() => setFileManager({ kitId: kit._id, fileType: "kitImage" })}
+                                    >
+                                      <ImageIcon className="h-4 w-4 mr-2" />
+                                      Kit Image
                                     </Button>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-sm">
-                                    <DialogHeader>
-                                      <DialogTitle>Upload Files for '{kit.name}'</DialogTitle>
-                                    </DialogHeader>
-                                    <div className="space-y-2">
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "kitImage" })}
-                                      >
-                                        <ImageIcon className="h-4 w-4 mr-2" />
-                                        Kit Image
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "laser" })}
-                                      >
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        Laser Files
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "component" })}
-                                      >
-                                        <ImageIcon className="h-4 w-4 mr-2" />
-                                        Component Pictures
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                        onClick={() => setFileManager({ kitId: kit._id, fileType: "workbook" })}
-                                      >
-                                        <FileText className="h-4 w-4 mr-2" />
-                                        Workbooks & Misc
-                                      </Button>
-                                    </div>
-                                  </DialogContent>
-                                </Dialog>
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleCloneKit(kit)}
-                                  title="Clone Kit"
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-
-                                <Button variant="ghost" size="sm" onClick={() => handleEditKit(kit)} title="Edit Kit">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDeleteKit(kit._id)}
-                                  title="Delete Kit"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDownloadKitSheet(kit._id)}
-                                  title="Download Kit Sheet"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start"
+                                      onClick={() => setFileManager({ kitId: kit._id, fileType: "laser" })}
+                                    >
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      Laser Files
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start"
+                                      onClick={() => setFileManager({ kitId: kit._id, fileType: "component" })}
+                                    >
+                                      <ImageIcon className="h-4 w-4 mr-2" />
+                                      Component Pictures
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start"
+                                      onClick={() => setFileManager({ kitId: kit._id, fileType: "workbook" })}
+                                    >
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      Workbooks & Misc
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                             )}
+
+                            {canCloneKits && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCloneKit(kit)}
+                                title="Clone Kit"
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {canEditKits && (
+                              <Button variant="ghost" size="sm" onClick={() => handleEditKit(kit)} title="Edit Kit">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {canDeleteKits && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteKit(kit._id)}
+                                title="Delete Kit"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadKitSheet(kit._id)}
+                              title="Download Kit Sheet"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
                           </div>
                         </td>
                       </motion.tr>
