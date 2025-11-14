@@ -982,7 +982,11 @@ export default function Inventory() {
                           {item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : item.type === "finished" ? "Finished" : "Sealed Packet"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{item.subcategory || "-"}</TableCell>
+                      <TableCell>
+                        {item.subcategory 
+                          ? categories?.find(cat => cat.value === item.subcategory)?.name || item.subcategory
+                          : "-"}
+                      </TableCell>
                       <TableCell>
                         {editingQuantity === item._id ? (
                           <div className="flex gap-2">
