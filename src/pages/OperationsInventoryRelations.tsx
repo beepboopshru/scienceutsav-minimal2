@@ -95,10 +95,19 @@ export default function OperationsInventoryRelations() {
   };
 
   const handleDownloadComponentsReport = (useSelected: boolean) => {
+    console.log("Download button clicked, useSelected:", useSelected);
+    console.log("Procurement jobs:", procurementJobs);
+    console.log("Inventory:", inventory);
+    
     const pendingJobs = procurementJobs.filter((j) => j.status === "pending");
+    console.log("Pending jobs:", pendingJobs);
+    
     const jobsToProcess = useSelected 
       ? pendingJobs.filter((j) => selectedJobs.has(j._id))
       : pendingJobs;
+    
+    console.log("Jobs to process:", jobsToProcess);
+    console.log("Selected jobs:", Array.from(selectedJobs));
 
     if (jobsToProcess.length === 0) {
       toast.error(useSelected ? "No pending jobs selected" : "No pending procurement jobs");
