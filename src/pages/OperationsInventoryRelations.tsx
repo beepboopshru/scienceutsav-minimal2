@@ -416,9 +416,9 @@ export default function OperationsInventoryRelations() {
   };
 
   const stats = {
-    pending: procurementJobs.filter((j) => j.status === "pending").length,
-    inProgress: procurementJobs.filter((j) => j.status === "in_progress").length,
-    completed: procurementJobs.filter((j) => j.status === "completed").length,
+    pending: procurementJobs?.filter((j) => j.status === "pending").length || 0,
+    inProgress: procurementJobs?.filter((j) => j.status === "in_progress").length || 0,
+    completed: procurementJobs?.filter((j) => j.status === "completed").length || 0,
   };
 
   const pendingJobsCount = stats.pending;
@@ -447,7 +447,7 @@ export default function OperationsInventoryRelations() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem 
-                  onClick={(e) => {
+                  onSelect={(e) => {
                     e.preventDefault();
                     console.log("All Pending Jobs clicked");
                     handleDownloadComponentsReport(false);
@@ -456,7 +456,7 @@ export default function OperationsInventoryRelations() {
                   All Pending Jobs ({pendingJobsCount})
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={(e) => {
+                  onSelect={(e) => {
                     e.preventDefault();
                     console.log("Selected Pending Jobs clicked");
                     handleDownloadComponentsReport(true);
