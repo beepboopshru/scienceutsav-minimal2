@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
@@ -39,7 +40,11 @@ import { cn } from "@/lib/utils";
 
 export default function Inventory() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  
+  const canView = hasPermission("inventory", "view");
+  const canEdit = hasPermission("inventory", "edit");
   
   const inventory = useQuery(api.inventory.list);
   const categories = useQuery(api.inventoryCategories.list, {});
@@ -134,6 +139,19 @@ export default function Inventory() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="p-8 max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to view this page.</p>
+          </div>
+        </div>
+      </Layout>
     );
   }
 
@@ -391,13 +409,14 @@ export default function Inventory() {
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Item
-                </Button>
-              </DialogTrigger>
+            {canEdit && (
+              <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Add Inventory Item</DialogTitle>
@@ -590,9 +609,11 @@ export default function Inventory() {
                   <Button onClick={handleAddItem}>Add Item</Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
 
-            <Dialog open={billImportOpen} onOpenChange={setBillImportOpen}>
+            {canEdit && (
+              <Dialog open={billImportOpen} onOpenChange={setBillImportOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Upload className="mr-2 h-4 w-4" />
@@ -809,9 +830,11 @@ export default function Inventory() {
                   <Button onClick={handleBillImport}>Import Bill</Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
 
-            <Dialog open={categoryManagementOpen} onOpenChange={setCategoryManagementOpen}>
+            {canEdit && (
+              <Dialog open={categoryManagementOpen} onOpenChange={setCategoryManagementOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
                   <Settings className="mr-2 h-4 w-4" />
@@ -880,7 +903,8 @@ export default function Inventory() {
                   </div>
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            )}
           </div>
 
           {/* Filters */}
@@ -987,7 +1011,7 @@ export default function Inventory() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        {editingQuantity === item._id ? (
+                        {editingQuantity === item._id && canEdit ? (
                           <div className="flex gap-2">
                             <Input
                               type="number"
@@ -1001,9 +1025,9 @@ export default function Inventory() {
                           </div>
                         ) : (
                           <span
-                            className="cursor-pointer hover:underline"
-                            onClick={() => handleQuantityEdit(item)}
-                            title={item.isKitPacket ? "Click to edit kit stock count" : "Click to edit quantity"}
+                            className={canEdit ? "cursor-pointer hover:underline" : ""}
+                            onClick={canEdit ? () => handleQuantityEdit(item) : undefined}
+                            title={canEdit ? (item.isKitPacket ? "Click to edit kit stock count" : "Click to edit quantity") : ""}
                           >
                             {item.quantity}
                           </span>
@@ -1061,31 +1085,35 @@ export default function Inventory() {
                                   <ListTree className="h-4 w-4" />
                                 </Button>
                               )}
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                onClick={() => openEditDialog(item)}
-                                title="Edit"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={async () => {
-                                  if (confirm("Delete this item?")) {
-                                    try {
-                                      await removeItem({ id: item._id });
-                                      toast.success("Item deleted");
-                                    } catch (error: any) {
-                                      toast.error(error.message);
-                                    }
-                                  }
-                                }}
-                                title="Delete"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              {canEdit && (
+                                <>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    onClick={() => openEditDialog(item)}
+                                    title="Edit"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={async () => {
+                                      if (confirm("Delete this item?")) {
+                                        try {
+                                          await removeItem({ id: item._id });
+                                          toast.success("Item deleted");
+                                        } catch (error: any) {
+                                          toast.error(error.message);
+                                        }
+                                      }
+                                    }}
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
                             </>
                           )}
                         </div>
