@@ -78,26 +78,28 @@ export default function OperationsInventoryRelations() {
     return true;
   });
 
-  const handleStatusChange = async (jobId: Id<"procurementJobs">, newStatus: string) => {
-    try {
-      await updateStatus({ id: jobId, status: newStatus as any });
-      toast.success("Status updated successfully");
-    } catch (error) {
-      toast.error("Failed to update status", {
-        description: error instanceof Error ? error.message : "Unknown error",
+  const handleStatusChange = (jobId: Id<"procurementJobs">, newStatus: string) => {
+    updateStatus({ id: jobId, status: newStatus as any })
+      .then(() => {
+        toast.success("Status updated successfully");
+      })
+      .catch((error) => {
+        toast.error("Failed to update status", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
       });
-    }
   };
 
-  const handlePriorityChange = async (jobId: Id<"procurementJobs">, newPriority: string) => {
-    try {
-      await updatePriority({ id: jobId, priority: newPriority as any });
-      toast.success("Priority updated successfully");
-    } catch (error) {
-      toast.error("Failed to update priority", {
-        description: error instanceof Error ? error.message : "Unknown error",
+  const handlePriorityChange = (jobId: Id<"procurementJobs">, newPriority: string) => {
+    updatePriority({ id: jobId, priority: newPriority as any })
+      .then(() => {
+        toast.success("Priority updated successfully");
+      })
+      .catch((error) => {
+        toast.error("Failed to update priority", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
       });
-    }
   };
 
   const handleNotesUpdate = async () => {
