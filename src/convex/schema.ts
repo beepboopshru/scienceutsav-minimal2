@@ -102,12 +102,14 @@ const schema = defineSchema(
         name: v.string(),
         quantity: v.number(),
         unit: v.string(),
+        subcategory: v.optional(v.string()),
         notes: v.optional(v.string()),
       }))),
       bulkMaterials: v.optional(v.array(v.object({
         name: v.string(),
         quantity: v.number(),
         unit: v.string(),
+        subcategory: v.optional(v.string()),
         notes: v.optional(v.string()),
       }))),
       miscellaneous: v.optional(v.array(v.object({
