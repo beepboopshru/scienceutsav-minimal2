@@ -439,9 +439,8 @@ export default function KitBuilder() {
                           </div>
 
                           {pouch.materials.map((material, matIdx) => (
-                            <div key={matIdx} className="space-y-2 border-l-2 border-muted pl-3">
+                            <div key={matIdx} className="border-l-2 border-muted pl-3 py-2">
                               <div className="flex items-center gap-2">
-                                <Label className="text-xs text-muted-foreground w-24">Subcategory</Label>
                                 <Select
                                   value={material.subcategory || ""}
                                   onValueChange={(value) => {
@@ -450,8 +449,8 @@ export default function KitBuilder() {
                                   }}
                                   disabled={!canEdit}
                                 >
-                                  <SelectTrigger className="flex-1">
-                                    <SelectValue placeholder="Select subcategory" />
+                                  <SelectTrigger className="w-[25%]">
+                                    <SelectValue placeholder="Subcategory" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
@@ -461,15 +460,13 @@ export default function KitBuilder() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </div>
-                              <div className="flex items-center gap-2">
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button
                                       variant="outline"
                                       role="combobox"
                                       disabled={!canEdit || !material.subcategory}
-                                      className="flex-1 justify-between"
+                                      className="w-[35%] justify-between"
                                     >
                                       {material.name || "Select item"}
                                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -532,19 +529,20 @@ export default function KitBuilder() {
                                     structure.pouches[pouchIdx].materials[matIdx].quantity = parseFloat(e.target.value);
                                     setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                   }}
-                                  className="w-20"
+                                  className="w-[15%]"
                                   disabled={!canEdit}
                                 />
                                 <Input
                                   value={material.unit}
-                                  className="w-20"
+                                  className="w-[15%]"
                                   disabled
                                 />
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
                                   onClick={() => removeMaterialFromPouch(pouchIdx, matIdx)}
                                   disabled={!canEdit}
+                                  className="w-[10%]"
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -589,9 +587,8 @@ export default function KitBuilder() {
                           </div>
 
                           {packet.materials.map((material, matIdx) => (
-                            <div key={matIdx} className="space-y-2 border-l-2 border-muted pl-3">
+                            <div key={matIdx} className="border-l-2 border-muted pl-3 py-2">
                               <div className="flex items-center gap-2">
-                                <Label className="text-xs text-muted-foreground w-24">Subcategory</Label>
                                 <Select
                                   value={material.subcategory || ""}
                                   onValueChange={(value) => {
@@ -600,8 +597,8 @@ export default function KitBuilder() {
                                   }}
                                   disabled={!canEdit}
                                 >
-                                  <SelectTrigger className="flex-1">
-                                    <SelectValue placeholder="Select subcategory" />
+                                  <SelectTrigger className="w-[25%]">
+                                    <SelectValue placeholder="Subcategory" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
@@ -611,15 +608,13 @@ export default function KitBuilder() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              </div>
-                              <div className="flex items-center gap-2">
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <Button
                                       variant="outline"
                                       role="combobox"
                                       disabled={!canEdit || !material.subcategory}
-                                      className="flex-1 justify-between"
+                                      className="w-[35%] justify-between"
                                     >
                                       {material.name || "Select item"}
                                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -682,19 +677,20 @@ export default function KitBuilder() {
                                     structure.packets[packetIdx].materials[matIdx].quantity = parseFloat(e.target.value);
                                     setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                   }}
-                                  className="w-20"
+                                  className="w-[15%]"
                                   disabled={!canEdit}
                                 />
                                 <Input
                                   value={material.unit}
-                                  className="w-20"
+                                  className="w-[15%]"
                                   disabled
                                 />
                                 <Button
-                                  size="sm"
+                                  size="icon"
                                   variant="ghost"
                                   onClick={() => removeMaterialFromPacket(packetIdx, matIdx)}
                                   disabled={!canEdit}
+                                  className="w-[10%]"
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
@@ -721,9 +717,8 @@ export default function KitBuilder() {
                         Add Spare Material
                       </Button>
                       {kitForm.spareKits.map((spare, idx) => (
-                        <div key={idx} className="space-y-2 border rounded-lg p-3">
+                        <div key={idx} className="border rounded-lg p-3">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground w-24">Subcategory</Label>
                             <Select
                               value={spare.subcategory || ""}
                               onValueChange={(value) => {
@@ -733,8 +728,8 @@ export default function KitBuilder() {
                               }}
                               disabled={!canEdit}
                             >
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Select subcategory" />
+                              <SelectTrigger className="w-[25%]">
+                                <SelectValue placeholder="Subcategory" />
                               </SelectTrigger>
                               <SelectContent>
                                 {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
@@ -744,15 +739,13 @@ export default function KitBuilder() {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
-                          <div className="flex items-center gap-2">
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
                                   role="combobox"
                                   disabled={!canEdit || !spare.subcategory}
-                                  className="flex-1 justify-between"
+                                  className="w-[35%] justify-between"
                                 >
                                   {spare.name || "Select item"}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -817,15 +810,15 @@ export default function KitBuilder() {
                                 updated[idx].quantity = parseFloat(e.target.value);
                                 setKitForm({ ...kitForm, spareKits: updated });
                               }}
-                              className="w-20"
+                              className="w-[15%]"
                               disabled={!canEdit}
                             />
                             <Input
                               value={spare.unit}
-                              className="w-20"
+                              className="w-[15%]"
                               disabled
                             />
-                            <Button size="sm" variant="ghost" onClick={() => removeSpareKit(idx)} disabled={!canEdit}>
+                            <Button size="icon" variant="ghost" onClick={() => removeSpareKit(idx)} disabled={!canEdit} className="w-[10%]">
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
@@ -840,9 +833,8 @@ export default function KitBuilder() {
                         Add Bulk Material
                       </Button>
                       {kitForm.bulkMaterials.map((bulk, idx) => (
-                        <div key={idx} className="space-y-2 border rounded-lg p-3">
+                        <div key={idx} className="border rounded-lg p-3">
                           <div className="flex items-center gap-2">
-                            <Label className="text-xs text-muted-foreground w-24">Subcategory</Label>
                             <Select
                               value={bulk.subcategory || ""}
                               onValueChange={(value) => {
@@ -852,8 +844,8 @@ export default function KitBuilder() {
                               }}
                               disabled={!canEdit}
                             >
-                              <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="Select subcategory" />
+                              <SelectTrigger className="w-[25%]">
+                                <SelectValue placeholder="Subcategory" />
                               </SelectTrigger>
                               <SelectContent>
                                 {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
@@ -863,15 +855,13 @@ export default function KitBuilder() {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
-                          <div className="flex items-center gap-2">
                             <Popover>
                               <PopoverTrigger asChild>
                                 <Button
                                   variant="outline"
                                   role="combobox"
                                   disabled={!canEdit || !bulk.subcategory}
-                                  className="flex-1 justify-between"
+                                  className="w-[35%] justify-between"
                                 >
                                   {bulk.name || "Select item"}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -936,15 +926,15 @@ export default function KitBuilder() {
                                 updated[idx].quantity = parseFloat(e.target.value);
                                 setKitForm({ ...kitForm, bulkMaterials: updated });
                               }}
-                              className="w-20"
+                              className="w-[15%]"
                               disabled={!canEdit}
                             />
                             <Input
                               value={bulk.unit}
-                              className="w-20"
+                              className="w-[15%]"
                               disabled
                             />
-                            <Button size="sm" variant="ghost" onClick={() => removeBulkMaterial(idx)} disabled={!canEdit}>
+                            <Button size="icon" variant="ghost" onClick={() => removeBulkMaterial(idx)} disabled={!canEdit} className="w-[10%]">
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1029,7 +1019,7 @@ export default function KitBuilder() {
                           <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                             {pouch.materials.map((mat, matIdx) => (
                               <li key={matIdx}>
-                                • {mat.name} - {mat.quantity} {mat.unit}
+                                • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} - {mat.quantity} {mat.unit}
                               </li>
                             ))}
                           </ul>
@@ -1050,7 +1040,7 @@ export default function KitBuilder() {
                             <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                               {packet.materials.map((mat, matIdx) => (
                                 <li key={matIdx}>
-                                  • {mat.name} - {mat.quantity} {mat.unit}
+                                  • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} - {mat.quantity} {mat.unit}
                                 </li>
                               ))}
                             </ul>
@@ -1069,7 +1059,7 @@ export default function KitBuilder() {
                         <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                           {kitForm.spareKits.filter(s => s.name && s.name.trim()).map((spare, idx) => (
                             <li key={idx}>
-                              • {spare.name} - {spare.quantity} {spare.unit}
+                              • {spare.subcategory ? `[${spare.subcategory}] ` : ""}{spare.name} - {spare.quantity} {spare.unit}
                             </li>
                           ))}
                         </ul>
@@ -1086,7 +1076,7 @@ export default function KitBuilder() {
                         <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                           {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).map((bulk, idx) => (
                             <li key={idx}>
-                              • {bulk.name} - {bulk.quantity} {bulk.unit}
+                              • {bulk.subcategory ? `[${bulk.subcategory}] ` : ""}{bulk.name} - {bulk.quantity} {bulk.unit}
                             </li>
                           ))}
                         </ul>
