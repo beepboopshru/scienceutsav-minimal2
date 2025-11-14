@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
@@ -24,6 +25,10 @@ import autoTable from "jspdf-autotable";
 export default function OperationsInventoryRelations() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  
+  const canView = hasPermission("procurementJobs", "view");
+  const canEdit = hasPermission("procurementJobs", "edit");
   
   const procurementJobs = useQuery(api.procurementJobs.list);
   const assignments = useQuery(api.assignments.listAll);
@@ -54,11 +59,17 @@ export default function OperationsInventoryRelations() {
     if (!isLoading && isAuthenticated && user && !user.isApproved) {
       navigate("/pending-approval");
     }
-    if (!isLoading && isAuthenticated && user && user.role && !["admin", "manager", "operations", "inventory"].includes(user.role)) {
-      toast.error("Access denied: This page requires admin, manager, operations, or inventory role");
-      navigate("/dashboard");
-    }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading || !procurementJobs || !assignments || !kits) {
     return (
@@ -441,49 +452,53 @@ export default function OperationsInventoryRelations() {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => handleDownloadComponentsReport("all")}
-              disabled={filteredJobs.length === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download All Components Report
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleDownloadComponentsReport("selected")}
-              disabled={selectedJobs.size === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Download Selected Components Report ({selectedJobs.size})
-            </Button>
-          </div>
+          {canEdit && (
+            <div className="flex gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadComponentsReport("all")}
+                disabled={filteredJobs.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download All Components Report
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadComponentsReport("selected")}
+                disabled={selectedJobs.size === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download Selected Components Report ({selectedJobs.size})
+              </Button>
+            </div>
+          )}
 
           <Card className="mt-6">
             <CardContent className="pt-6">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedJobs(new Set(filteredJobs.map((j) => j._id)));
-                          } else {
-                            setSelectedJobs(new Set());
-                          }
-                        }}
-                      />
-                    </TableHead>
+                    {canEdit && (
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedJobs(new Set(filteredJobs.map((j) => j._id)));
+                            } else {
+                              setSelectedJobs(new Set());
+                            }
+                          }}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Job ID</TableHead>
                     <TableHead>Created By</TableHead>
                     <TableHead>Created On</TableHead>
                     <TableHead>Assignments</TableHead>
                     <TableHead>Materials</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Priority</TableHead>
+                    {canEdit && <TableHead>Status</TableHead>}
+                    {canEdit && <TableHead>Priority</TableHead>}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -496,12 +511,14 @@ export default function OperationsInventoryRelations() {
                       transition={{ delay: idx * 0.02 }}
                       className="border-b"
                     >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedJobs.has(job._id)}
-                          onCheckedChange={() => toggleJobSelection(job._id)}
-                        />
-                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedJobs.has(job._id)}
+                            onCheckedChange={() => toggleJobSelection(job._id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">{job.jobId}</TableCell>
                       <TableCell>{job.creatorName}</TableCell>
                       <TableCell>
@@ -509,36 +526,40 @@ export default function OperationsInventoryRelations() {
                       </TableCell>
                       <TableCell>{job.assignmentIds.length}</TableCell>
                       <TableCell>{job.materialShortages.length}</TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={job.status}
-                          onValueChange={(value) => handleStatusChange(job._id, value)}
-                        >
-                          <SelectTrigger className="h-8 w-[140px]" onClick={(e) => e.stopPropagation()}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="in_progress">In Progress</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={job.priority}
-                          onValueChange={(value) => handlePriorityChange(job._id, value)}
-                        >
-                          <SelectTrigger className="h-8 w-[120px]" onClick={(e) => e.stopPropagation()}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="high">High</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      {canEdit && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Select
+                            value={job.status}
+                            onValueChange={(value) => handleStatusChange(job._id, value)}
+                          >
+                            <SelectTrigger className="h-8 w-[140px]" onClick={(e) => e.stopPropagation()}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="in_progress">In Progress</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
+                      {canEdit && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Select
+                            value={job.priority}
+                            onValueChange={(value) => handlePriorityChange(job._id, value)}
+                          >
+                            <SelectTrigger className="h-8 w-[120px]" onClick={(e) => e.stopPropagation()}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -557,22 +578,26 @@ export default function OperationsInventoryRelations() {
                           >
                             <Download className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openNotesDialog(job)}
-                            title="Edit Notes"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteJob(job._id)}
-                            title="Delete Job"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openNotesDialog(job)}
+                              title="Edit Notes"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteJob(job._id)}
+                              title="Delete Job"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </motion.tr>
