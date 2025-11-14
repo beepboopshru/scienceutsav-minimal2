@@ -744,24 +744,14 @@ export default function Packing() {
                         className="border-b bg-muted/20 hover:bg-muted/40 cursor-pointer"
                         onClick={() => toggleBatch(batchKey)}
                       >
-                        {canEdit && (
-                          <td className="px-4 py-3">
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </td>
-                        )}
-                        {!canEdit && (
-                          <td className="px-4 py-3">
-                            {isExpanded ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </td>
-                        )}
+                        <td className="px-4 py-3">
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </td>
+                        {canEdit && <td className="px-4 py-3"></td>}
                         <td className="px-4 py-3">
                           <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
                             {firstAssignment.clientType?.toUpperCase() || "N/A"}
@@ -778,7 +768,7 @@ export default function Packing() {
                         <td className="px-4 py-3 text-sm">
                           Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
                         </td>
-                        <td colSpan={canEdit ? 10 : 9}></td>
+                        <td colSpan={canEdit ? 9 : 8}></td>
                       </motion.tr>
                       {isExpanded && batchAssignments.map((assignment, index) => {
                         const kit = kits?.find((k) => k._id === assignment.kitId);
