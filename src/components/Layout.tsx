@@ -341,8 +341,20 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <Sidebar>
+      <div className="flex min-h-screen w-full relative">
+        {/* Blurred Background */}
+        <div 
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{
+            backgroundImage: 'url(https://harmless-tapir-303.convex.cloud/api/storage/35f27a22-fb8f-4c6b-aca0-e423b71005b3)',
+            filter: 'blur(8px)',
+            transform: 'scale(1.1)',
+          }}
+        />
+        
+        {/* Content Wrapper */}
+        <div className="flex min-h-screen w-full relative z-10">
+        <Sidebar className="bg-background/95 backdrop-blur-sm">
           <SidebarHeader className="border-b border-border">
             <div className="flex items-center gap-2 px-4 py-3">
               <div className="flex flex-col">
@@ -638,10 +650,11 @@ export function Layout({ children }: LayoutProps) {
         </Sidebar>
 
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-6">
+          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6">
             <SidebarTrigger />
           </header>
           <main className="flex-1 overflow-auto">{children}</main>
+        </div>
         </div>
 
         {/* AI Chat Button */}
