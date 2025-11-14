@@ -98,7 +98,7 @@ export const update = mutation({
         initiate: v.boolean(),
         validate: v.boolean(),
         transfer: v.boolean(),
-        edit: v.boolean(),
+        edit: v.optional(v.boolean()),
       })),
       dispatch: v.optional(v.object({
         view: v.boolean(),
