@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useAction } from "convex/react";
 import { useEffect, useState } from "react";
@@ -46,7 +47,10 @@ import { parsePackingRequirements } from "@/lib/kitPacking";
 
 export default function KitStatistics() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+
+  const canView = hasPermission("programs", "view");
 
   const programs = useQuery(api.programs.list);
   const allKits = useQuery(api.kits.list);
@@ -83,6 +87,24 @@ export default function KitStatistics() {
       navigate("/pending-approval");
     }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+      </div>
+    );
+  }
 
   const toggleKitExpansion = (kitId: string) => {
     const newExpanded = new Set(expandedKits);
