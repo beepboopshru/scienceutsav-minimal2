@@ -95,6 +95,8 @@ export default function Packing() {
   const { hasPermission } = usePermissions();
   const canView = hasPermission("packing", "view");
   const canEdit = hasPermission("packing", "edit");
+  
+  console.log("Packing permissions - canView:", canView, "canEdit:", canEdit);
 
   const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
     setSelectedAssignments((prev) => {
