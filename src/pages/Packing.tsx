@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMutation, useQuery, useAction } from "convex/react";
@@ -91,7 +92,9 @@ export default function Packing() {
     kitName: "",
   });
 
-  const hasAccess = user?.role === "admin" || user?.role === "operations";
+  const { hasPermission } = usePermissions();
+  const canView = hasPermission("packing", "view");
+  const canEdit = hasPermission("packing", "edit");
 
   const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
     setSelectedAssignments((prev) => {
@@ -472,11 +475,11 @@ export default function Packing() {
     );
   }
 
-  if (!hasAccess) {
+  if (!canView) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center">
-          <p className="text-muted-foreground">You do not have access to this page.</p>
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
         </div>
       </Layout>
     );
@@ -550,7 +553,7 @@ export default function Packing() {
           </div>
         </div>
 
-        {selectedAssignments.size > 0 && (
+        {selectedAssignments.size > 0 && canEdit && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -578,18 +581,20 @@ export default function Packing() {
             <table className="w-full">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium w-10">
-                    <Checkbox
-                      checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
-                        } else {
-                          setSelectedAssignments(new Set());
-                        }
-                      }}
-                    />
-                  </th>
+                  {canEdit && (
+                    <th className="px-4 py-3 text-left text-sm font-medium w-10">
+                      <Checkbox
+                        checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
+                          } else {
+                            setSelectedAssignments(new Set());
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 text-left text-sm font-medium w-10"></th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Customer Type</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Batch</th>
@@ -604,7 +609,7 @@ export default function Packing() {
                   <th className="px-4 py-3 text-left text-sm font-medium">Production Month</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Created On</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Notes</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Packing Status</th>
+                  {canEdit && <th className="px-4 py-3 text-left text-sm font-medium">Packing Status</th>}
                   <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
@@ -634,12 +639,14 @@ export default function Packing() {
                           transition={{ delay: index * 0.02 }}
                           className="border-b hover:bg-muted/30"
                         >
-                          <td className="px-4 py-3">
-                            <Checkbox
-                              checked={selectedAssignments.has(assignment._id)}
-                              onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                            />
-                          </td>
+                          {canEdit && (
+                            <td className="px-4 py-3">
+                              <Checkbox
+                                checked={selectedAssignments.has(assignment._id)}
+                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                              />
+                            </td>
+                          )}
                           <td className="px-4 py-3"></td>
                           <td className="px-4 py-3">
                             <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
@@ -677,21 +684,23 @@ export default function Packing() {
                           <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
                             {assignment.notes || "—"}
                           </td>
-                          <td className="px-4 py-3">
-                            <Select
-                              value={assignment.status || "assigned"}
-                              onValueChange={(value) => handleStatusChange(assignment._id, value)}
-                            >
-                              <SelectTrigger className="h-8 w-[180px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="assigned">Assigned</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </td>
+                          {canEdit && (
+                            <td className="px-4 py-3">
+                              <Select
+                                value={assignment.status || "assigned"}
+                                onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                              >
+                                <SelectTrigger className="h-8 w-[180px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="assigned">Assigned</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          )}
                           <td className="px-4 py-3">
                             <div className="flex gap-2">
                               <Button
@@ -735,13 +744,15 @@ export default function Packing() {
                         className="border-b bg-muted/20 hover:bg-muted/40 cursor-pointer"
                         onClick={() => toggleBatch(batchKey)}
                       >
-                        <td className="px-4 py-3">
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </td>
+                        {canEdit && (
+                          <td className="px-4 py-3">
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
                             {firstAssignment.clientType?.toUpperCase() || "N/A"}
