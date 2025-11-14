@@ -588,7 +588,7 @@ export default function OperationsInventoryRelations() {
                       </TableCell>
                       <TableCell>{job.assignmentIds.length}</TableCell>
                       <TableCell>{job.materialShortages.length}</TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={job.status}
                           onValueChange={(value) => handleStatusChange(job._id, value)}
@@ -603,7 +603,7 @@ export default function OperationsInventoryRelations() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={job.priority}
                           onValueChange={(value) => handlePriorityChange(job._id, value)}
