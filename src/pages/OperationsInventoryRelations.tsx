@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -42,6 +43,9 @@ export default function OperationsInventoryRelations() {
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [notesDialog, setNotesDialog] = useState(false);
   const [editingNotes, setEditingNotes] = useState("");
+  const [selectedJobs, setSelectedJobs] = useState<Set<Id<"procurementJobs">>>(new Set());
+
+  const inventory = useQuery(api.inventory.list);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -180,6 +184,157 @@ export default function OperationsInventoryRelations() {
     setNotesDialog(true);
   };
 
+  const toggleJobSelection = (jobId: Id<"procurementJobs">) => {
+    setSelectedJobs((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDownloadComponentsReport = (scope: "all" | "selected") => {
+    if (!inventory) {
+      toast.error("Inventory data not loaded");
+      return;
+    }
+
+    const jobsToProcess = scope === "all" 
+      ? filteredJobs 
+      : filteredJobs.filter((job) => selectedJobs.has(job._id));
+
+    if (jobsToProcess.length === 0) {
+      toast.error(scope === "all" ? "No jobs to process" : "No jobs selected");
+      return;
+    }
+
+    // Aggregate materials from all jobs
+    const materialMap = new Map<string, {
+      name: string;
+      category: string;
+      unit: string;
+      required: number;
+      currentStock: number;
+      shortage: number;
+      sourceJobs: string[];
+    }>();
+
+    jobsToProcess.forEach((job) => {
+      job.materialShortages.forEach((mat: any) => {
+        const key = `${mat.name}-${mat.unit}`;
+        if (materialMap.has(key)) {
+          const existing = materialMap.get(key)!;
+          existing.required += mat.required;
+          existing.shortage += mat.shortage;
+          existing.sourceJobs.push(job.jobId);
+        } else {
+          materialMap.set(key, {
+            name: mat.name,
+            category: mat.category || "Uncategorized",
+            unit: mat.unit,
+            required: mat.required,
+            currentStock: mat.currentStock,
+            shortage: mat.shortage,
+            sourceJobs: [job.jobId],
+          });
+        }
+      });
+    });
+
+    // Group by category
+    const categorizedMaterials = new Map<string, typeof materialMap>();
+    materialMap.forEach((material, key) => {
+      if (!categorizedMaterials.has(material.category)) {
+        categorizedMaterials.set(material.category, new Map());
+      }
+      categorizedMaterials.get(material.category)!.set(key, material);
+    });
+
+    // Generate HTML
+    let html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Procurement Components Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          h1 { color: #333; }
+          h2 { color: #555; margin-top: 30px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          .shortage { color: #dc2626; font-weight: bold; }
+          .meta { color: #666; font-size: 0.9em; margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <h1>Procurement Components Report</h1>
+        <div class="meta">
+          <p>Generated: ${new Date().toLocaleString()}</p>
+          <p>Scope: ${scope === "all" ? "All Filtered Jobs" : "Selected Jobs"}</p>
+          <p>Total Jobs: ${jobsToProcess.length}</p>
+          <p>Total Materials: ${materialMap.size}</p>
+        </div>
+    `;
+
+    categorizedMaterials.forEach((materials, category) => {
+      html += `
+        <h2>${category}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Material Name</th>
+              <th>Current Stock</th>
+              <th>Required</th>
+              <th>Shortage</th>
+              <th>Unit</th>
+              <th>Source Jobs</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      materials.forEach((material) => {
+        html += `
+          <tr>
+            <td>${material.name}</td>
+            <td>${material.currentStock}</td>
+            <td>${material.required}</td>
+            <td class="shortage">${material.shortage}</td>
+            <td>${material.unit}</td>
+            <td>${material.sourceJobs.join(", ")}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+          </tbody>
+        </table>
+      `;
+    });
+
+    html += `
+      </body>
+      </html>
+    `;
+
+    // Download
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `procurement-components-report-${scope}-${new Date().toISOString().split("T")[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast.success("Components report downloaded");
+  };
+
   const stats = {
     pending: procurementJobs.filter((j) => j.status === "pending").length,
     inProgress: procurementJobs.filter((j) => j.status === "in_progress").length,
@@ -269,11 +424,42 @@ export default function OperationsInventoryRelations() {
             </div>
           </div>
 
+          <div className="flex gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => handleDownloadComponentsReport("all")}
+              disabled={filteredJobs.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download All Components Report
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleDownloadComponentsReport("selected")}
+              disabled={selectedJobs.size === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Selected Components Report ({selectedJobs.size})
+            </Button>
+          </div>
+
           <Card className="mt-6">
             <CardContent className="pt-6">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <Checkbox
+                        checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedJobs(new Set(filteredJobs.map((j) => j._id)));
+                          } else {
+                            setSelectedJobs(new Set());
+                          }
+                        }}
+                      />
+                    </TableHead>
                     <TableHead>Job ID</TableHead>
                     <TableHead>Created By</TableHead>
                     <TableHead>Created On</TableHead>
@@ -293,6 +479,12 @@ export default function OperationsInventoryRelations() {
                       transition={{ delay: idx * 0.02 }}
                       className="border-b"
                     >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedJobs.has(job._id)}
+                          onCheckedChange={() => toggleJobSelection(job._id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{job.jobId}</TableCell>
                       <TableCell>{job.creatorName}</TableCell>
                       <TableCell>
