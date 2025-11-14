@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Package, Download, Trash2, FileText, ChevronDown } from "lucide-react";
+import { Package, Download, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +19,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 
 export default function OperationsInventoryRelations() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -31,7 +29,6 @@ export default function OperationsInventoryRelations() {
   const kits = useQuery(api.kits.list);
   const clients = useQuery(api.clients.list);
   const b2cClients = useQuery(api.b2cClients.list);
-  const inventory = useQuery(api.inventory.list, {});
   
   const updateStatus = useMutation(api.procurementJobs.updateStatus);
   const updatePriority = useMutation(api.procurementJobs.updatePriority);
@@ -45,7 +42,6 @@ export default function OperationsInventoryRelations() {
   const [detailsDialog, setDetailsDialog] = useState(false);
   const [notesDialog, setNotesDialog] = useState(false);
   const [editingNotes, setEditingNotes] = useState("");
-  const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -81,239 +77,6 @@ export default function OperationsInventoryRelations() {
     }
     return true;
   });
-
-  const toggleJobSelection = (jobId: string) => {
-    setSelectedJobs((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(jobId)) {
-        newSet.delete(jobId);
-      } else {
-        newSet.add(jobId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleDownloadComponentsReport = (useSelected: boolean) => {
-    console.log("Download button clicked, useSelected:", useSelected);
-    console.log("Procurement jobs:", procurementJobs);
-    console.log("Inventory:", inventory);
-    
-    if (!procurementJobs) {
-      toast.error("Procurement jobs data not loaded");
-      return;
-    }
-    
-    const pendingJobs = procurementJobs.filter((j) => j.status === "pending");
-    console.log("Pending jobs:", pendingJobs);
-    
-    const jobsToProcess = useSelected 
-      ? pendingJobs.filter((j) => selectedJobs.has(j._id))
-      : pendingJobs;
-    
-    console.log("Jobs to process:", jobsToProcess);
-    console.log("Selected jobs:", Array.from(selectedJobs));
-
-    if (jobsToProcess.length === 0) {
-      toast.error(useSelected ? "No pending jobs selected" : "No pending procurement jobs");
-      return;
-    }
-
-    if (!inventory) {
-      toast.error("Inventory data not loaded");
-      return;
-    }
-
-    // Aggregate materials from all selected jobs
-    const materialMap = new Map<string, any>();
-
-    jobsToProcess.forEach((job) => {
-      job.materialShortages.forEach((material: any) => {
-        const key = material.name.toLowerCase();
-        
-        if (materialMap.has(key)) {
-          const existing = materialMap.get(key);
-          existing.required += material.required;
-          existing.shortage += material.shortage;
-          if (material.sourceKits) {
-            existing.sourceKits = [...new Set([...existing.sourceKits, ...material.sourceKits])];
-          }
-          if (material.traceability) {
-            existing.traceability = [...new Set([...existing.traceability, material.traceability])];
-          }
-        } else {
-          const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
-          materialMap.set(key, {
-            name: material.name,
-            currentStock: invItem?.quantity || material.currentStock || 0,
-            required: material.required,
-            shortage: material.shortage,
-            unit: material.unit,
-            category: material.category || "Uncategorized",
-            sourceKits: material.sourceKits || [],
-            traceability: material.traceability ? [material.traceability] : [],
-          });
-        }
-      });
-    });
-
-    const allMaterials = Array.from(materialMap.values());
-    const byCategory = allMaterials.reduce((acc, item) => {
-      if (!acc[item.category]) {
-        acc[item.category] = [];
-      }
-      acc[item.category].push(item);
-      return acc;
-    }, {} as Record<string, typeof allMaterials>);
-
-    type MaterialItem = {
-      name: string;
-      currentStock: number;
-      required: number;
-      shortage: number;
-      unit: string;
-      sourceKits: string[];
-      traceability: string[];
-    };
-    
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Procurement Components Report</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      color: #333;
-    }
-    h1 {
-      color: #2563eb;
-      border-bottom: 3px solid #2563eb;
-      padding-bottom: 10px;
-    }
-    h2 {
-      color: #1e40af;
-      margin-top: 30px;
-      border-bottom: 2px solid #93c5fd;
-      padding-bottom: 5px;
-    }
-    .meta-info {
-      background: #f3f4f6;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .meta-info p {
-      margin: 5px 0;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    th {
-      background-color: #2563eb;
-      color: white;
-      padding: 12px;
-      text-align: left;
-      font-weight: 600;
-    }
-    td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    tr:hover {
-      background-color: #f9fafb;
-    }
-    .shortage {
-      color: #dc2626;
-      font-weight: bold;
-    }
-    .sufficient {
-      color: #16a34a;
-    }
-    .category-summary {
-      background: #eff6ff;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-left: 4px solid #2563eb;
-    }
-    @media print {
-      body { margin: 0; }
-      h2 { page-break-before: always; }
-      h2:first-of-type { page-break-before: avoid; }
-    }
-  </style>
-</head>
-<body>
-  <h1>Procurement Components Report</h1>
-  
-  <div class="meta-info">
-    <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
-    <p><strong>Report Type:</strong> ${useSelected ? "Selected Pending Jobs" : "All Pending Jobs"}</p>
-    <p><strong>Total Jobs:</strong> ${jobsToProcess.length}</p>
-    <p><strong>Total Unique Materials:</strong> ${allMaterials.length}</p>
-  </div>
-
-  ${Object.entries(byCategory).map(([category, materials]) => {
-    const materialsList = materials as MaterialItem[];
-    return `
-    <h2>${category}</h2>
-    <div class="category-summary">
-      <strong>${materialsList.length}</strong> unique material(s) in this category
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Material Name</th>
-          <th>Current Stock</th>
-          <th>Required</th>
-          <th>Shortage</th>
-          <th>Unit</th>
-          <th>Source Kits</th>
-          <th>Component Location</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${materialsList.map((material) => `
-          <tr>
-            <td><strong>${material.name}</strong></td>
-            <td class="${material.shortage > 0 ? 'shortage' : 'sufficient'}">${material.currentStock}</td>
-            <td>${material.required}</td>
-            <td class="${material.shortage > 0 ? 'shortage' : ''}">${material.shortage > 0 ? material.shortage : '—'}</td>
-            <td>${material.unit}</td>
-            <td>${material.sourceKits.join(", ")}</td>
-            <td style="font-size: 0.9em;">${[...new Set(material.traceability)].join("; ")}</td>
-          </tr>
-        `).join("")}
-      </tbody>
-    </table>
-  `;
-  }).join("")}
-
-  <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #e5e7eb; color: #6b7280; font-size: 0.9em;">
-    <p>This report shows the aggregate components needed for pending procurement jobs.</p>
-    <p>Materials with shortages are highlighted in red.</p>
-  </div>
-</body>
-</html>
-    `;
-
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `procurement-components-report-${new Date().toISOString().split("T")[0]}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast.success("Procurement components report downloaded");
-  };
 
   const handleStatusChange = async (jobId: Id<"procurementJobs">, newStatus: string) => {
     try {
@@ -416,12 +179,10 @@ export default function OperationsInventoryRelations() {
   };
 
   const stats = {
-    pending: procurementJobs?.filter((j) => j.status === "pending").length || 0,
-    inProgress: procurementJobs?.filter((j) => j.status === "in_progress").length || 0,
-    completed: procurementJobs?.filter((j) => j.status === "completed").length || 0,
+    pending: procurementJobs.filter((j) => j.status === "pending").length,
+    inProgress: procurementJobs.filter((j) => j.status === "in_progress").length,
+    completed: procurementJobs.filter((j) => j.status === "completed").length,
   };
-
-  const pendingJobsCount = stats.pending;
 
   return (
     <Layout>
@@ -430,43 +191,11 @@ export default function OperationsInventoryRelations() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Operations-Inventory Relations</h1>
-              <p className="text-muted-foreground mt-2">
-                Manage procurement requests and material shortages
-              </p>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Components Shortage
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem 
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    console.log("All Pending Jobs clicked");
-                    handleDownloadComponentsReport(false);
-                  }}
-                >
-                  All Pending Jobs ({pendingJobsCount})
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    console.log("Selected Pending Jobs clicked");
-                    handleDownloadComponentsReport(true);
-                  }}
-                  disabled={selectedJobs.size === 0}
-                >
-                  Selected Pending Jobs ({selectedJobs.size})
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Operations-Inventory Relations</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage procurement requests and material shortages
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
@@ -543,18 +272,6 @@ export default function OperationsInventoryRelations() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={selectedJobs.size === filteredJobs.filter(j => j.status === "pending").length && filteredJobs.filter(j => j.status === "pending").length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedJobs(new Set(filteredJobs.filter(j => j.status === "pending").map((j) => j._id)));
-                          } else {
-                            setSelectedJobs(new Set());
-                          }
-                        }}
-                      />
-                    </TableHead>
                     <TableHead>Job ID</TableHead>
                     <TableHead>Created By</TableHead>
                     <TableHead>Created On</TableHead>
@@ -574,13 +291,6 @@ export default function OperationsInventoryRelations() {
                       transition={{ delay: idx * 0.02 }}
                       className="border-b"
                     >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedJobs.has(job._id)}
-                          onCheckedChange={() => toggleJobSelection(job._id)}
-                          disabled={job.status !== "pending"}
-                        />
-                      </TableCell>
                       <TableCell className="font-medium">{job.jobId}</TableCell>
                       <TableCell>{job.creatorName}</TableCell>
                       <TableCell>
@@ -588,7 +298,7 @@ export default function OperationsInventoryRelations() {
                       </TableCell>
                       <TableCell>{job.assignmentIds.length}</TableCell>
                       <TableCell>{job.materialShortages.length}</TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                         <Select
                           value={job.status}
                           onValueChange={(value) => handleStatusChange(job._id, value)}
@@ -603,7 +313,7 @@ export default function OperationsInventoryRelations() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
+                      <TableCell>
                         <Select
                           value={job.priority}
                           onValueChange={(value) => handlePriorityChange(job._id, value)}
