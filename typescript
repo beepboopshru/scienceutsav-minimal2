@@ -1,1 +1,1 @@
-const createInventoryItem = useMutation(api.inventory.create);
+const editingKit = useQuery(api.kits.get, editKitId ? { id: editKitId } : ("skip" as any));

@@ -33,8 +33,7 @@ export default function KitBuilder() {
   const kits = useQuery(api.kits.list);
   const inventory = useQuery(api.inventory.list);
   const categories = useQuery(api.inventoryCategories.list);
-  const editingKit = editKitId ? useQuery(api.kits.get, { id: editKitId }) : null;
-
+  const editingKit = useQuery(api.kits.get, editKitId ? { id: editKitId } : ("skip" as any));
   const createKit = useMutation(api.kits.create);
   const updateKit = useMutation(api.kits.update);
   const createInventoryItem = useMutation(api.inventory.create);

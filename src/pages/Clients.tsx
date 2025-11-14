@@ -560,7 +560,25 @@ export default function Clients() {
                     rows={2}
                   />
                 </div>
-                
+
+                <div className="space-y-2">
+                  <Label htmlFor="type">Client Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: "monthly" | "one_time") =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Select client type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="one_time">One Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Points of Contact</Label>
