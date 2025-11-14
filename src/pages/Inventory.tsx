@@ -17,7 +17,9 @@ import {
   Package,
   ListTree,
   Edit,
-  Eye
+  Eye,
+  Check,
+  ChevronsUpDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export default function Inventory() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -604,21 +609,50 @@ export default function Inventory() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Vendor</Label>
-                      <Select
-                        value={billForm.vendorId}
-                        onValueChange={(value: any) => setBillForm({ ...billForm, vendorId: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select vendor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {vendors?.map((vendor) => (
-                            <SelectItem key={vendor._id} value={vendor._id}>
-                              {vendor.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className={cn(
+                              "w-full justify-between",
+                              !billForm.vendorId && "text-muted-foreground"
+                            )}
+                          >
+                            {billForm.vendorId
+                              ? vendors?.find((vendor) => vendor._id === billForm.vendorId)?.name
+                              : "Select vendor"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search vendor..." />
+                            <CommandList>
+                              <CommandEmpty>No vendor found.</CommandEmpty>
+                              <CommandGroup>
+                                {vendors?.map((vendor) => (
+                                  <CommandItem
+                                    key={vendor._id}
+                                    value={vendor.name}
+                                    onSelect={() => {
+                                      setBillForm({ ...billForm, vendorId: vendor._id });
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        billForm.vendorId === vendor._id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {vendor.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label>Bill Number</Label>
@@ -663,25 +697,52 @@ export default function Inventory() {
                   {billForm.items.map((item, index) => (
                     <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-4 items-start">
                       <div className="space-y-2">
-                        <Select
-                          value={item.inventoryId}
-                          onValueChange={(value: any) => {
-                            const newItems = [...billForm.items];
-                            newItems[index].inventoryId = value;
-                            setBillForm({ ...billForm, items: newItems });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select item" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {inventory?.map((invItem) => (
-                              <SelectItem key={invItem._id} value={invItem._id}>
-                                {invItem.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className={cn(
+                                "w-full justify-between",
+                                !item.inventoryId && "text-muted-foreground"
+                              )}
+                            >
+                              {item.inventoryId
+                                ? inventory?.find((invItem) => invItem._id === item.inventoryId)?.name
+                                : "Select item"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search item..." />
+                              <CommandList>
+                                <CommandEmpty>No item found.</CommandEmpty>
+                                <CommandGroup>
+                                  {inventory?.map((invItem) => (
+                                    <CommandItem
+                                      key={invItem._id}
+                                      value={invItem.name}
+                                      onSelect={() => {
+                                        const newItems = [...billForm.items];
+                                        newItems[index].inventoryId = invItem._id;
+                                        setBillForm({ ...billForm, items: newItems });
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          item.inventoryId === invItem._id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {invItem.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div className="space-y-2">
                         <Input
