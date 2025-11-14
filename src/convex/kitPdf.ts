@@ -52,6 +52,14 @@ export const generateKitSheet = action({
       return invItem?.notes || "-";
     };
 
+    // Helper function to get material description
+    const getMaterialDescription = (materialName: string): string => {
+      const invItem = inventory.find(
+        (i: any) => i.name.toLowerCase() === materialName.toLowerCase()
+      );
+      return invItem?.description || "-";
+    };
+
     // Generate HTML
     const html: string = `
 <!DOCTYPE html>
@@ -210,6 +218,7 @@ export const generateKitSheet = action({
             <tr>
               <th>Subcategory</th>
               <th>Material</th>
+              <th>Description</th>
               <th>Quantity</th>
               <th>Unit</th>
               <th>Notes</th>
@@ -220,6 +229,7 @@ export const generateKitSheet = action({
               <tr>
                 <td>${material.subcategory || "-"}</td>
                 <td>${material.name}</td>
+                <td>${getMaterialDescription(material.name)}</td>
                 <td>${material.quantity}</td>
                 <td>${material.unit}</td>
                 <td>${material.notes || getMaterialNotes(material.name)}</td>
@@ -243,6 +253,7 @@ export const generateKitSheet = action({
             <tr>
               <th>Subcategory</th>
               <th>Material</th>
+              <th>Description</th>
               <th>Quantity</th>
               <th>Unit</th>
               <th>Notes</th>
@@ -253,6 +264,7 @@ export const generateKitSheet = action({
               <tr>
                 <td>${material.subcategory || "-"}</td>
                 <td>${material.name}</td>
+                <td>${getMaterialDescription(material.name)}</td>
                 <td>${material.quantity}</td>
                 <td>${material.unit}</td>
                 <td>${material.notes || getMaterialNotes(material.name)}</td>
@@ -273,6 +285,7 @@ export const generateKitSheet = action({
         <tr>
           <th>Subcategory</th>
           <th>Item</th>
+          <th>Description</th>
           <th>Quantity</th>
           <th>Unit</th>
           <th>Notes</th>
@@ -283,6 +296,7 @@ export const generateKitSheet = action({
           <tr>
             <td>${spare.subcategory || "-"}</td>
             <td>${spare.name}</td>
+            <td>${getMaterialDescription(spare.name)}</td>
             <td>${spare.quantity}</td>
             <td>${spare.unit}</td>
             <td>${spare.notes || getMaterialNotes(spare.name)}</td>
@@ -301,6 +315,7 @@ export const generateKitSheet = action({
         <tr>
           <th>Subcategory</th>
           <th>Item</th>
+          <th>Description</th>
           <th>Quantity</th>
           <th>Unit</th>
           <th>Notes</th>
@@ -311,6 +326,7 @@ export const generateKitSheet = action({
           <tr>
             <td>${bulk.subcategory || "-"}</td>
             <td>${bulk.name}</td>
+            <td>${getMaterialDescription(bulk.name)}</td>
             <td>${bulk.quantity}</td>
             <td>${bulk.unit}</td>
             <td>${bulk.notes || getMaterialNotes(bulk.name)}</td>
