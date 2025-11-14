@@ -99,6 +99,11 @@ export default function OperationsInventoryRelations() {
     console.log("Procurement jobs:", procurementJobs);
     console.log("Inventory:", inventory);
     
+    if (!procurementJobs) {
+      toast.error("Procurement jobs data not loaded");
+      return;
+    }
+    
     const pendingJobs = procurementJobs.filter((j) => j.status === "pending");
     console.log("Pending jobs:", pendingJobs);
     
