@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect } from "react";
@@ -16,6 +17,10 @@ import { toast } from "sonner";
 export default function BillRecords() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  
+  const canView = hasPermission("billTracking", "view");
+  const canEdit = hasPermission("billTracking", "edit");
   
   const vendorImports = useQuery(api.vendorImports.list);
   const vendors = useQuery(api.vendors.list);
@@ -29,6 +34,16 @@ export default function BillRecords() {
       navigate("/pending-approval");
     }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading || !user || !vendorImports || !vendors || !inventory) {
     return (
@@ -188,26 +203,28 @@ export default function BillRecords() {
                           {getVendorName(billImport.vendorId)} • {billImport.billDate}
                         </CardDescription>
                       </div>
-                      <div className="flex gap-2">
-                        {billImport.billImageId && (
+                      {canEdit && (
+                        <div className="flex gap-2">
+                          {billImport.billImageId && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => downloadBillImage(billImport)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Image
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => downloadBillImage(billImport)}
+                            onClick={() => downloadBillAsHTML(billImport)}
                           >
                             <Download className="mr-2 h-4 w-4" />
-                            Image
+                            HTML
                           </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => downloadBillAsHTML(billImport)}
-                        >
-                          <Download className="mr-2 h-4 w-4" />
-                          HTML
-                        </Button>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">

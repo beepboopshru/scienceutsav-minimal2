@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
 import { useEffect, useState } from "react";
@@ -21,7 +22,11 @@ import autoTable from "jspdf-autotable";
 export default function Procurement() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  const canView = hasPermission("procurementJobs", "view");
+  const canEdit = hasPermission("procurementJobs", "edit");
   
   const programs = useQuery(api.programs.list);
   const assignments = useQuery(api.assignments.list, {});
@@ -45,11 +50,17 @@ export default function Procurement() {
     if (!isLoading && isAuthenticated && user && !user.isApproved) {
       navigate("/pending-approval");
     }
-    if (!isLoading && isAuthenticated && user && user.role && !["admin", "manager", "operations", "inventory"].includes(user.role)) {
-      toast.error("Access denied: Procurement access requires admin, manager, operations, or inventory role");
-      navigate("/dashboard");
-    }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   // Update URL params when selections change
   useEffect(() => {
@@ -611,10 +622,12 @@ export default function Procurement() {
                   Select a program to view material procurement requirements
                 </p>
               </div>
-              <Button onClick={() => setShowCompleteList(true)} variant="default">
-                <Package className="mr-2 h-4 w-4" />
-                Complete Procurement List
-              </Button>
+              {canEdit && (
+                <Button onClick={() => setShowCompleteList(true)} variant="default">
+                  <Package className="mr-2 h-4 w-4" />
+                  Complete Procurement List
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -672,10 +685,12 @@ export default function Procurement() {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <Button onClick={exportCompleteProcurementToPDF}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export PDF
-                </Button>
+                {canEdit && (
+                  <Button onClick={exportCompleteProcurementToPDF}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export PDF
+                  </Button>
+                )}
                 <Button variant="outline" onClick={() => setShowCompleteList(false)}>
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back to Programs
@@ -767,10 +782,12 @@ export default function Procurement() {
               <Button variant="outline" onClick={() => setSelectedProgramId(null)}>
                 Change Program
               </Button>
-              <Button onClick={exportToPDF}>
-                <Download className="mr-2 h-4 w-4" />
-                Export PDF
-              </Button>
+              {canEdit && (
+                <Button onClick={exportToPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export PDF
+                </Button>
+              )}
             </div>
           </div>
 
