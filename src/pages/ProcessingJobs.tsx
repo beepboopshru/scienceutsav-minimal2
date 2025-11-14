@@ -1,5 +1,6 @@
 import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
@@ -25,7 +26,11 @@ import { cn } from "@/lib/utils";
 
 export default function ProcessingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  
+  const canView = hasPermission("processingJobs", "view");
+  const canEdit = hasPermission("processingJobs", "edit");
   
   const jobs = useQuery(api.processingJobs.list);
   const inventory = useQuery(api.inventory.list);
@@ -112,6 +117,16 @@ export default function ProcessingJobs() {
       navigate("/pending-approval");
     }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   if (isLoading || !user || !jobs || !inventory) {
     return (
@@ -439,13 +454,14 @@ export default function ProcessingJobs() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Dialog open={preProcessingOpen} onOpenChange={setPreProcessingOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Scissors className="mr-2 h-4 w-4" />
-                    Start Pre-Processing
-                  </Button>
-                </DialogTrigger>
+              {canEdit && (
+                <Dialog open={preProcessingOpen} onOpenChange={setPreProcessingOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Scissors className="mr-2 h-4 w-4" />
+                      Start Pre-Processing
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create Processing Job</DialogTitle>
@@ -698,15 +714,17 @@ export default function ProcessingJobs() {
                     <Button onClick={handleCreateProcessingJob}>Create Job</Button>
                   </DialogFooter>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              )}
 
-              <Dialog open={sealingPacketOpen} onOpenChange={setSealingPacketOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="secondary">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Start Sealing Packet Job
-                  </Button>
-                </DialogTrigger>
+              {canEdit && (
+                <Dialog open={sealingPacketOpen} onOpenChange={setSealingPacketOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Start Sealing Packet Job
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Create Sealing Packet Job</DialogTitle>
@@ -881,7 +899,8 @@ export default function ProcessingJobs() {
                     <Button onClick={handleCreateSealingJob}>Create Job</Button>
                   </DialogFooter>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              )}
 
               <Button onClick={() => navigate("/inventory")} variant="outline">
                 Back to Inventory
@@ -957,7 +976,7 @@ export default function ProcessingJobs() {
                               : new Date(job._creationTime).toLocaleDateString()}
                           </TableCell>
                           <TableCell>
-                            {activeTab === "assigned" && (
+                            {canEdit && activeTab === "assigned" && (
                               <div className="flex gap-2">
                                 <Button size="sm" onClick={() => handleStartJob(job._id)}>
                                   <Play className="mr-2 h-4 w-4" />
@@ -969,7 +988,7 @@ export default function ProcessingJobs() {
                                 </Button>
                               </div>
                             )}
-                            {activeTab === "in_progress" && (
+                            {canEdit && activeTab === "in_progress" && (
                               <div className="flex gap-2">
                                 <Button size="sm" onClick={() => handleComplete(job._id)}>
                                   <CheckCircle className="mr-2 h-4 w-4" />
@@ -981,7 +1000,7 @@ export default function ProcessingJobs() {
                                 </Button>
                               </div>
                             )}
-                            {activeTab === "completed" && (
+                            {canEdit && activeTab === "completed" && (
                               <Button size="sm" variant="destructive" onClick={() => handleDelete(job._id)}>
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Delete
@@ -1090,16 +1109,18 @@ export default function ProcessingJobs() {
                                 {new Date(job._creationTime).toLocaleDateString()}
                               </TableCell>
                               <TableCell>
-                                <div className="flex gap-2">
-                                  <Button size="sm" onClick={() => handleComplete(job._id)}>
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Complete
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    Cancel
-                                  </Button>
-                                </div>
+                                {canEdit && (
+                                  <div className="flex gap-2">
+                                    <Button size="sm" onClick={() => handleComplete(job._id)}>
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Complete
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
+                                      <XCircle className="mr-2 h-4 w-4" />
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                )}
                               </TableCell>
                             </TableRow>
                             {expandedRows[job._id] && (
@@ -1205,10 +1226,12 @@ export default function ProcessingJobs() {
                                   : new Date(job._creationTime).toLocaleDateString()}
                               </TableCell>
                               <TableCell>
-                                <Button size="sm" variant="destructive" onClick={() => handleDelete(job._id)}>
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </Button>
+                                {canEdit && (
+                                  <Button size="sm" variant="destructive" onClick={() => handleDelete(job._id)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </Button>
+                                )}
                               </TableCell>
                             </TableRow>
                             {expandedRows[job._id] && (
