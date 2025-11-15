@@ -4,6 +4,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, Check } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -83,6 +84,10 @@ export default function Themes() {
   const [selectedTheme, setSelectedTheme] = useState<string>(() => {
     return localStorage.getItem("app-theme") || "none";
   });
+  const [themeOpacity, setThemeOpacity] = useState<number>(() => {
+    const saved = localStorage.getItem("app-theme-opacity");
+    return saved ? parseFloat(saved) : 0.3;
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -113,19 +118,20 @@ export default function Themes() {
       if (!overlay) {
         overlay = document.createElement("div");
         overlay.id = "theme-blur-overlay";
-        overlay.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          backdrop-filter: blur(80px);
-          -webkit-backdrop-filter: blur(80px);
-          pointer-events: none;
-          z-index: -1;
-        `;
         body.appendChild(overlay);
       }
+      overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        backdrop-filter: blur(80px);
+        -webkit-backdrop-filter: blur(80px);
+        background-color: rgba(255, 255, 255, ${themeOpacity});
+        pointer-events: none;
+        z-index: -1;
+      `;
     } else {
       if (overlay) {
         overlay.remove();
@@ -138,7 +144,7 @@ export default function Themes() {
         overlay.remove();
       }
     };
-  }, [selectedTheme]);
+  }, [selectedTheme, themeOpacity]);
 
   if (isLoading || !user) {
     return (
@@ -152,6 +158,12 @@ export default function Themes() {
     setSelectedTheme(themeId);
     localStorage.setItem("app-theme", themeId);
     toast.success(themeId === "none" ? "Theme removed" : "Theme applied successfully");
+  };
+
+  const handleOpacityChange = (value: number[]) => {
+    const newOpacity = value[0];
+    setThemeOpacity(newOpacity);
+    localStorage.setItem("app-theme-opacity", newOpacity.toString());
   };
 
   return (
@@ -214,12 +226,41 @@ export default function Themes() {
           ))}
         </div>
 
-        <div className="mt-8 p-4 border rounded-lg bg-card">
-          <h3 className="font-semibold mb-2">Preview</h3>
-          <p className="text-sm text-muted-foreground">
-            The selected theme will be applied as a blurred background across the entire application.
-            Your selection is saved automatically.
-          </p>
+        <div className="mt-8 space-y-6">
+          {selectedTheme !== "none" && (
+            <Card className="p-6">
+              <h3 className="font-semibold mb-4">Theme Opacity</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Adjust the overlay opacity
+                  </span>
+                  <span className="text-sm font-medium">
+                    {Math.round(themeOpacity * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  value={[themeOpacity]}
+                  onValueChange={handleOpacityChange}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Higher values create a lighter, more subtle background effect
+                </p>
+              </div>
+            </Card>
+          )}
+
+          <Card className="p-6">
+            <h3 className="font-semibold mb-2">Preview</h3>
+            <p className="text-sm text-muted-foreground">
+              The selected theme will be applied as a blurred background across the entire application.
+              Your selection is saved automatically.
+            </p>
+          </Card>
         </div>
       </div>
     </Layout>
