@@ -332,14 +332,14 @@ export default function Dispatch() {
               display: flex;
               flex-direction: column;
               align-items: center;
-              justify-content: center;
+              justify-content: flex-start;
             }
             .container {
               border: 2px solid #000;
               padding: 15px;
               display: flex;
               flex-direction: column;
-              width: fit-content;
+              width: 100%;
               margin: 0 auto;
             }
             .logo {
