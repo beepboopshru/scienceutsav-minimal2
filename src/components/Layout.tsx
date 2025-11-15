@@ -91,6 +91,59 @@ export function Layout({ children }: LayoutProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const sendChat = useAction(api.ai.chat);
 
+  // Apply saved theme on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("app-theme");
+    if (savedTheme && savedTheme !== "none") {
+      const body = document.body;
+      
+      // Theme backgrounds mapping
+      const THEME_BACKGROUNDS: Record<string, string> = {
+        "red-waves": "https://harmless-tapir-303.convex.cloud/api/storage/af314735-18df-40da-8c8e-af7f4d842a60",
+        "blue-gray-waves": "https://harmless-tapir-303.convex.cloud/api/storage/55c9d3f2-daac-49d3-af51-d997afcf208e",
+        "soft-gradient": "https://harmless-tapir-303.convex.cloud/api/storage/a85d5ab9-8a94-4f64-8f3a-c2c5a666582d",
+        "teal-triangles": "https://harmless-tapir-303.convex.cloud/api/storage/acb39d1b-2144-4355-9ac0-8b2a2857e835",
+        "concentric-circles": "https://harmless-tapir-303.convex.cloud/api/storage/3f699957-39ba-4a86-892a-981722f9fa22",
+        "pastel-waves": "https://harmless-tapir-303.convex.cloud/api/storage/1bd70797-e73d-46d9-8d0f-8a2267170c37",
+        "particle-network": "https://harmless-tapir-303.convex.cloud/api/storage/66276a20-15f9-4412-8968-e465fa67f820",
+        "fractal-art": "https://harmless-tapir-303.convex.cloud/api/storage/72193311-61fe-44e8-a036-29913ee1b974",
+        "pink-waves": "https://harmless-tapir-303.convex.cloud/api/storage/7d7544db-a3e3-4bdd-93c3-e6758f729a47",
+        "tech-network": "https://harmless-tapir-303.convex.cloud/api/storage/5c15cacf-d936-4569-9187-d2cd6ee0fdbb",
+        "watercolor": "https://harmless-tapir-303.convex.cloud/api/storage/7e598922-2012-4012-bc7c-01c2250d8edd",
+        "purple-silk": "https://harmless-tapir-303.convex.cloud/api/storage/b33f2f32-0c0d-4125-8f53-7b32f239d104",
+        "dreamy-bokeh": "https://harmless-tapir-303.convex.cloud/api/storage/3cdf4fdb-6a5c-4191-bce4-5deb995719ee",
+      };
+
+      const themeUrl = THEME_BACKGROUNDS[savedTheme];
+      if (themeUrl) {
+        body.style.backgroundImage = `url(${themeUrl})`;
+        body.style.backgroundSize = "cover";
+        body.style.backgroundPosition = "center";
+        body.style.backgroundAttachment = "fixed";
+        body.style.backgroundRepeat = "no-repeat";
+
+        // Add blur overlay
+        let overlay = document.getElementById("theme-blur-overlay");
+        if (!overlay) {
+          overlay = document.createElement("div");
+          overlay.id = "theme-blur-overlay";
+          overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backdrop-filter: blur(80px);
+            -webkit-backdrop-filter: blur(80px);
+            pointer-events: none;
+            z-index: -1;
+          `;
+          body.appendChild(overlay);
+        }
+      }
+    }
+  }, []);
+
   // Load chat history from localStorage on mount
   useEffect(() => {
     try {
