@@ -351,15 +351,15 @@ export default function Dispatch() {
               margin-bottom: 15px;
             }
             .logo img {
-              max-width: 200px;
+              max-width: 250px;
               height: auto;
             }
             .customer-id {
               text-align: center;
-              font-size: 14px;
+              font-size: 18px;
               font-weight: bold;
               margin-bottom: 15px;
-              padding: 8px;
+              padding: 10px;
               background-color: #f5f5f5;
               border: 1px solid #ddd;
             }
@@ -376,20 +376,20 @@ export default function Dispatch() {
             }
             .address-label {
               font-weight: bold;
-              font-size: 16px;
-              margin-bottom: 8px;
+              font-size: 20px;
+              margin-bottom: 10px;
               text-decoration: underline;
             }
             .address-content {
-              font-size: 13px;
-              line-height: 1.6;
+              font-size: 16px;
+              line-height: 1.7;
             }
             .address-content div {
-              margin-bottom: 4px;
+              margin-bottom: 5px;
             }
             .contact-info {
-              margin-top: 8px;
-              font-size: 12px;
+              margin-top: 10px;
+              font-size: 15px;
             }
             @media print {
               body {
