@@ -333,6 +333,11 @@ export function Layout({ children }: LayoutProps) {
       path: "/user-management",
       roles: [hasPermission("userManagement", "view") ? "allowed" : ""],
     },
+    {
+      title: "Themes",
+      icon: Settings,
+      path: "/themes",
+    },
   ];
 
   // Filter items based on permissions
