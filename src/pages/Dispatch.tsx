@@ -27,14 +27,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -60,6 +74,7 @@ export default function Dispatch() {
   const [selectedClientForLabel, setSelectedClientForLabel] = useState<string>("");
   const [selectedPOC, setSelectedPOC] = useState<string>("");
   const [customerId, setCustomerId] = useState<string>("");
+  const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
 
   // Checklist dialog state
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
@@ -976,50 +991,62 @@ export default function Dispatch() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="client-select">Select Client</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="client-select"
-                    placeholder="Search for a client..."
-                    value={(() => {
-                      if (!selectedClientForLabel) return "";
-                      const allClients = [...(clients || []), ...(b2cClients || [])];
-                      const client = allClients.find((c) => c._id === selectedClientForLabel);
-                      if (!client) return "";
-                      return (client as any).organization || (client as any).buyerName || (client as any).name || "";
-                    })()}
-                    onChange={(e) => {
-                      const searchValue = e.target.value.toLowerCase();
-                      if (!searchValue) {
-                        setSelectedClientForLabel("");
-                        setSelectedPOC("");
-                        return;
-                      }
-                      
-                      const allClients = [...(clients || []), ...(b2cClients || [])];
-                      const matchedClient = allClients.find((c) => {
-                        const clientName = ((c as any).organization || (c as any).buyerName || (c as any).name || "").toLowerCase();
-                        return clientName.includes(searchValue);
-                      });
-                      
-                      if (matchedClient) {
-                        setSelectedClientForLabel(matchedClient._id);
-                        setSelectedPOC("");
-                      }
-                    }}
-                    className="pl-9"
-                  />
-                </div>
-                {selectedClientForLabel && (() => {
-                  const allClients = [...(clients || []), ...(b2cClients || [])];
-                  const client = allClients.find((c) => c._id === selectedClientForLabel);
-                  const clientType = clients?.some((c) => c._id === selectedClientForLabel) ? "B2B" : "B2C";
-                  return client ? (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Selected: {(client as any).organization || (client as any).buyerName || (client as any).name} ({clientType})
-                    </div>
-                  ) : null;
-                })()}
+                <Popover open={clientComboboxOpen} onOpenChange={setClientComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientComboboxOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedClientForLabel ? (() => {
+                        const allClients = [...(clients || []), ...(b2cClients || [])];
+                        const client = allClients.find((c) => c._id === selectedClientForLabel);
+                        if (!client) return "Select client...";
+                        const clientName = (client as any).organization || (client as any).buyerName || (client as any).name || "";
+                        const clientType = clients?.some((c) => c._id === selectedClientForLabel) ? "B2B" : "B2C";
+                        return `${clientName} (${clientType})`;
+                      })() : "Select client..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandList>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          {[...(clients || []), ...(b2cClients || [])].map((client) => {
+                            const clientName = (client as any).organization || (client as any).buyerName || (client as any).name || "";
+                            const clientType = clients?.some((c) => c._id === client._id) ? "B2B" : "B2C";
+                            return (
+                              <CommandItem
+                                key={client._id}
+                                value={`${clientName} ${clientType}`}
+                                onSelect={() => {
+                                  setSelectedClientForLabel(client._id);
+                                  setSelectedPOC("");
+                                  setClientComboboxOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedClientForLabel === client._id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{clientName}</span>
+                                  <span className="text-xs text-muted-foreground">{clientType}</span>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {selectedClientForLabel && (() => {
