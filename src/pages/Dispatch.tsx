@@ -97,6 +97,9 @@ export default function Dispatch() {
   const canEdit = hasPermission("dispatch", "edit");
   const canGenerateClientDetails = hasPermission("dispatch", "generateClientDetails");
 
+  // Debug: Log permissions
+  console.log("Dispatch Permissions:", { canView, canEdit, canGenerateClientDetails });
+
   if (!canView) {
     return (
       <Layout>

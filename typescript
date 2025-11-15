@@ -1,1 +1,5 @@
-const createInventoryItem = useMutation(api.inventory.create);
+const canGenerateClientDetails = hasPermission("dispatch", "generateClientDetails");
+
+{canEdit && canGenerateClientDetails && (
+  <Button ... />
+)}
