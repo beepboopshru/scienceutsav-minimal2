@@ -52,6 +52,17 @@ export default function Procurement() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
+  // Update URL params when selections change
+  useEffect(() => {
+    if (selectedProgramId) {
+      searchParams.set("programId", selectedProgramId);
+      searchParams.set("month", selectedMonth);
+      searchParams.set("scope", procurementScope);
+      setSearchParams(searchParams);
+    }
+  }, [selectedProgramId, selectedMonth, procurementScope, searchParams, setSearchParams]);
+
+  // Early returns after all hooks
   if (!canView) {
     return (
       <Layout>
@@ -61,16 +72,6 @@ export default function Procurement() {
       </Layout>
     );
   }
-
-  // Update URL params when selections change
-  useEffect(() => {
-    if (selectedProgramId) {
-      searchParams.set("programId", selectedProgramId);
-      searchParams.set("month", selectedMonth);
-      searchParams.set("scope", procurementScope);
-      setSearchParams(searchParams);
-    }
-  }, [selectedProgramId, selectedMonth, procurementScope]);
 
   if (isLoading || !programs || !assignments || !inventory) {
     return (
