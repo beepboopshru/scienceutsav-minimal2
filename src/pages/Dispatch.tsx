@@ -330,7 +330,7 @@ export default function Dispatch() {
               height: 148mm;
               max-width: 210mm;
               max-height: 148mm;
-              padding: 10mm;
+              padding: 0;
               display: flex;
               flex-direction: column;
               align-items: center;
@@ -343,7 +343,8 @@ export default function Dispatch() {
               display: flex;
               flex-direction: column;
               width: 100%;
-              margin: 0 auto;
+              height: 100%;
+              margin: 0;
             }
             .logo {
               text-align: center;
