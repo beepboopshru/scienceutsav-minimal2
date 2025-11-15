@@ -182,6 +182,10 @@ const router = createBrowserRouter([
     element: <Themes />,
   },
   {
+    path: "/themes",
+    element: <Themes />,
+  },
+  {
     path: "*",
     element: <NotFound />,
   },
@@ -192,8 +196,8 @@ createRoot(document.getElementById("root")!).render(
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
+        <RouteSyncer />
         <Routes>
-          <RouteSyncer />
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -222,6 +226,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
           <Route path="/bill-tracking" element={<BillTracking />} />
           <Route path="/order-records" element={<OrderRecords />} />
+          <Route path="/themes" element={<Themes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />
