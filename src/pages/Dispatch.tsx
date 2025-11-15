@@ -1220,6 +1220,10 @@ export default function Dispatch() {
               <Button
                 variant="outline"
                 onClick={() => {
+                  if (boxKits.length >= 2) {
+                    toast.error("Maximum 2 kits allowed per box content generator");
+                    return;
+                  }
                   setBoxKits([...boxKits, {
                     kitId: "",
                     clientId: "",
@@ -1231,8 +1235,9 @@ export default function Dispatch() {
                   }]);
                 }}
                 className="w-full"
+                disabled={boxKits.length >= 2}
               >
-                Add Kit
+                Add Kit {boxKits.length >= 2 ? "(Maximum reached)" : ""}
               </Button>
             </div>
             <DialogFooter>
