@@ -125,6 +125,15 @@
     cursor: pointer;
   }
   
+  /* Improve header visibility on dark backgrounds */
+  h1, h2, h3, h4, h5, h6 {
+    text-shadow: 0 2px 8px rgba(255, 255, 255, 0.9), 0 0 20px rgba(255, 255, 255, 0.5);
+  }
+  
+  .dark h1, .dark h2, .dark h3, .dark h4, .dark h5, .dark h6 {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.5);
+  }
+  
   /* Force full opacity on all UI components */
   [role="dialog"],
   [role="alertdialog"],
