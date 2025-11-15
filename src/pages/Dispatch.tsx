@@ -976,26 +976,50 @@ export default function Dispatch() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="client-select">Select Client</Label>
-                <Select value={selectedClientForLabel} onValueChange={(value) => {
-                  setSelectedClientForLabel(value);
-                  setSelectedPOC("");
-                }}>
-                  <SelectTrigger id="client-select">
-                    <SelectValue placeholder="Choose a client..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients?.map((client) => (
-                      <SelectItem key={client._id} value={client._id}>
-                        {client.organization || client.name} (B2B)
-                      </SelectItem>
-                    ))}
-                    {b2cClients?.map((client) => (
-                      <SelectItem key={client._id} value={client._id}>
-                        {client.buyerName} (B2C)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="client-select"
+                    placeholder="Search for a client..."
+                    value={(() => {
+                      if (!selectedClientForLabel) return "";
+                      const allClients = [...(clients || []), ...(b2cClients || [])];
+                      const client = allClients.find((c) => c._id === selectedClientForLabel);
+                      if (!client) return "";
+                      return (client as any).organization || (client as any).buyerName || (client as any).name || "";
+                    })()}
+                    onChange={(e) => {
+                      const searchValue = e.target.value.toLowerCase();
+                      if (!searchValue) {
+                        setSelectedClientForLabel("");
+                        setSelectedPOC("");
+                        return;
+                      }
+                      
+                      const allClients = [...(clients || []), ...(b2cClients || [])];
+                      const matchedClient = allClients.find((c) => {
+                        const clientName = ((c as any).organization || (c as any).buyerName || (c as any).name || "").toLowerCase();
+                        return clientName.includes(searchValue);
+                      });
+                      
+                      if (matchedClient) {
+                        setSelectedClientForLabel(matchedClient._id);
+                        setSelectedPOC("");
+                      }
+                    }}
+                    className="pl-9"
+                  />
+                </div>
+                {selectedClientForLabel && (() => {
+                  const allClients = [...(clients || []), ...(b2cClients || [])];
+                  const client = allClients.find((c) => c._id === selectedClientForLabel);
+                  const clientType = clients?.some((c) => c._id === selectedClientForLabel) ? "B2B" : "B2C";
+                  return client ? (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Selected: {(client as any).organization || (client as any).buyerName || (client as any).name} ({clientType})
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               {selectedClientForLabel && (() => {
