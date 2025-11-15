@@ -1290,10 +1290,15 @@ export default function Dispatch() {
                           max-width: 200px;
                           height: auto;
                         }
+                        .kits-container {
+                          flex: 1;
+                          display: flex;
+                          flex-direction: column;
+                          gap: 20px;
+                        }
                         .kit-box {
                           border: 3px solid #000;
                           padding: 15px;
-                          margin-bottom: 20px;
                           flex: 1;
                           display: flex;
                           flex-direction: column;
@@ -1331,7 +1336,8 @@ export default function Dispatch() {
                         <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
                       </div>
                       
-                      ${kitsOnPage.map((kit, idx) => {
+                      <div class="kits-container">
+                        ${kitsOnPage.map((kit, idx) => {
                           const kitData = kits?.find((k) => k._id === kit.kitId);
                           const allClients = [...(clients || []), ...(b2cClients || [])];
                           const clientData = allClients.find((c) => c._id === kit.clientId);
@@ -1379,8 +1385,9 @@ export default function Dispatch() {
                             </div>
                           `;
                         }).join('')}
-                      </body>
-                    </html>
+                      </div>
+                    </body>
+                  </html>
                   `;
                   
                   pages.push(pageHtml);
