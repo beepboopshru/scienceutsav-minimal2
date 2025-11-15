@@ -95,6 +95,7 @@ export default function Dispatch() {
 
   const canView = hasPermission("dispatch", "view");
   const canEdit = hasPermission("dispatch", "edit");
+  const canGenerateClientDetails = hasPermission("dispatch", "generateClientDetails");
 
   if (!canView) {
     return (
@@ -505,14 +506,16 @@ export default function Dispatch() {
                             </Button>
                             {canEdit && (
                               <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleGenerateClientDetails(assignment)}
-                                  title="Generate Client Details"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                </Button>
+                                {canGenerateClientDetails && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleGenerateClientDetails(assignment)}
+                                    title="Generate Client Details"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                )}
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="outline" size="sm">
@@ -643,14 +646,16 @@ export default function Dispatch() {
                                 </Button>
                                 {canEdit && (
                                   <>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleGenerateClientDetails(assignment)}
-                                      title="Generate Client Details"
-                                    >
-                                      <FileText className="h-4 w-4" />
-                                    </Button>
+                                    {canGenerateClientDetails && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleGenerateClientDetails(assignment)}
+                                        title="Generate Client Details"
+                                      >
+                                        <FileText className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
                                         <Button variant="outline" size="sm">

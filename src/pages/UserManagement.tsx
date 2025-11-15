@@ -81,7 +81,7 @@ export default function UserManagement() {
           processingJobs: { view: false, create: false, edit: false, complete: false, delete: false },
           procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
           packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
-          dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
+          dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false, generateClientDetails: false },
           discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
           billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
           vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
