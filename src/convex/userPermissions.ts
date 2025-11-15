@@ -106,7 +106,6 @@ export const update = mutation({
         dispatch: v.boolean(),
         updateStatus: v.boolean(),
         edit: v.optional(v.boolean()),
-        generateClientDetails: v.optional(v.boolean()),
       })),
       discrepancyTickets: v.optional(v.object({
         view: v.boolean(),
