@@ -32,6 +32,7 @@ import Packing from "@/pages/Packing.tsx";
 import Dispatch from "@/pages/Dispatch.tsx";
 import OperationsInventoryRelations from "@/pages/OperationsInventoryRelations.tsx";
 import KitStatistics from "./pages/KitStatistics";
+import LMS from "./pages/LMS";
 import DiscrepancyTickets from "./pages/DiscrepancyTickets";
 import BillTracking from "@/pages/BillTracking.tsx";
 import OrderRecords from "./pages/OrderRecords.tsx";
@@ -94,6 +95,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/vendor-contacts" element={<VendorContacts />} />
             <Route path="/services" element={<Services />} />
             <Route path="/kit-statistics" element={<KitStatistics />} />
+            <Route path="/lms" element={<LMS />} />
             <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
             <Route path="/bill-tracking" element={<BillTracking />} />
             <Route path="/order-records" element={<OrderRecords />} />

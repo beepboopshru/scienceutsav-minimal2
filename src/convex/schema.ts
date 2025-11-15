@@ -89,6 +89,8 @@ const schema = defineSchema(
         v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
         v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
       ))),
+      lmsLink: v.optional(v.string()),
+      lmsNotes: v.optional(v.string()),
       stockCount: v.number(),
       lowStockThreshold: v.optional(v.number()),
       status: v.optional(v.union(
