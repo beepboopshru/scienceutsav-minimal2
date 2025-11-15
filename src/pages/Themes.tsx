@@ -96,7 +96,6 @@ export default function Themes() {
     if (selectedTheme === "none") {
       body.style.backgroundImage = "none";
       body.style.backgroundColor = "";
-      body.style.filter = "";
     } else {
       const theme = THEME_BACKGROUNDS.find((t) => t.id === selectedTheme);
       if (theme) {
@@ -105,9 +104,40 @@ export default function Themes() {
         body.style.backgroundPosition = "center";
         body.style.backgroundAttachment = "fixed";
         body.style.backgroundRepeat = "no-repeat";
-        body.style.filter = "blur(80px)";
       }
     }
+
+    // Add blur overlay
+    let overlay = document.getElementById("theme-blur-overlay");
+    if (selectedTheme !== "none") {
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "theme-blur-overlay";
+        overlay.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          backdrop-filter: blur(80px);
+          -webkit-backdrop-filter: blur(80px);
+          pointer-events: none;
+          z-index: -1;
+        `;
+        body.appendChild(overlay);
+      }
+    } else {
+      if (overlay) {
+        overlay.remove();
+      }
+    }
+
+    return () => {
+      // Cleanup on unmount
+      if (overlay) {
+        overlay.remove();
+      }
+    };
   }, [selectedTheme]);
 
   if (isLoading || !user) {
@@ -184,14 +214,12 @@ export default function Themes() {
           ))}
         </div>
 
-        <div className="mt-8 space-y-6">
-          <Card className="p-6">
-            <h3 className="font-semibold mb-2">Preview</h3>
-            <p className="text-sm text-muted-foreground">
-              The selected theme will be applied as a blurred background across the entire application.
-              Your selection is saved automatically.
-            </p>
-          </Card>
+        <div className="mt-8 p-4 border rounded-lg bg-card">
+          <h3 className="font-semibold mb-2">Preview</h3>
+          <p className="text-sm text-muted-foreground">
+            The selected theme will be applied as a blurred background across the entire application.
+            Your selection is saved automatically.
+          </p>
         </div>
       </div>
     </Layout>
