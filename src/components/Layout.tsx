@@ -362,7 +362,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex min-h-screen w-full relative z-10">
         <Sidebar className="bg-background/95 backdrop-blur-sm">
           <SidebarHeader className="border-b border-border">
-            <div className="flex items-center gap-2 px-4 py-3">
+            <div className="flex items-center justify-between gap-2 px-4 py-3">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold tracking-tight">
                   ScienceUtsav
@@ -371,6 +371,7 @@ export function Layout({ children }: LayoutProps) {
                   Management System
                 </span>
               </div>
+              <SidebarTrigger />
             </div>
           </SidebarHeader>
 
@@ -656,9 +657,6 @@ export function Layout({ children }: LayoutProps) {
         </Sidebar>
 
         <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6">
-            <SidebarTrigger />
-          </header>
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
         </div>
