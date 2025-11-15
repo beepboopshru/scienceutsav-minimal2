@@ -76,6 +76,20 @@ export default function Dispatch() {
   const [customerId, setCustomerId] = useState<string>("");
   const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
 
+  // Box Content Generator state
+  const [boxContentDialogOpen, setBoxContentDialogOpen] = useState(false);
+  const [boxKits, setBoxKits] = useState<Array<{
+    kitId: string;
+    clientId: string;
+    phase: string;
+    class: string;
+    section: string;
+    quantity: number;
+    remarks: string;
+  }>>([]);
+  const [kitComboboxOpen, setKitComboboxOpen] = useState<Record<number, boolean>>({});
+  const [clientComboboxOpenBox, setClientComboboxOpenBox] = useState<Record<number, boolean>>({});
+
   // Checklist dialog state
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
   const [selectedAssignmentForDispatch, setSelectedAssignmentForDispatch] = useState<Id<"assignments"> | null>(null);
@@ -560,14 +574,24 @@ export default function Dispatch() {
             Clear All Filters
           </Button>
 
-          <Button 
-            variant="default" 
-            onClick={() => setClientDetailsDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Client Details Generator
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="default" 
+              onClick={() => setClientDetailsDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Client Details Generator
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={() => setBoxContentDialogOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Box Content Generator
+            </Button>
+          </div>
         </div>
 
         {/* Assignments Table */}
@@ -980,6 +1004,401 @@ export default function Dispatch() {
               </Button>
               <Button onClick={handleConfirmDispatch}>
                 Confirm Dispatch
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Box Content Generator Dialog */}
+        <Dialog open={boxContentDialogOpen} onOpenChange={setBoxContentDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Generate Box Content Labels</DialogTitle>
+              <DialogDescription>
+                Add kit details to generate printable box content labels (max 2 kits per page)
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {boxKits.map((kit, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Kit {index + 1}</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newKits = boxKits.filter((_, i) => i !== index);
+                        setBoxKits(newKits);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Kit Name Combobox */}
+                    <div className="space-y-2">
+                      <Label>Kit Name</Label>
+                      <Popover 
+                        open={kitComboboxOpen[index]} 
+                        onOpenChange={(open) => setKitComboboxOpen({ ...kitComboboxOpen, [index]: open })}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {kit.kitId ? kits?.find((k) => k._id === kit.kitId)?.name || "Select kit..." : "Select kit..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search kits..." />
+                            <CommandList>
+                              <CommandEmpty>No kit found.</CommandEmpty>
+                              <CommandGroup>
+                                {(kits || []).map((k) => (
+                                  <CommandItem
+                                    key={k._id}
+                                    value={k.name}
+                                    onSelect={() => {
+                                      const newKits = [...boxKits];
+                                      newKits[index].kitId = k._id;
+                                      setBoxKits(newKits);
+                                      setKitComboboxOpen({ ...kitComboboxOpen, [index]: false });
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        kit.kitId === k._id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {k.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Client Name Combobox */}
+                    <div className="space-y-2">
+                      <Label>Client Name</Label>
+                      <Popover 
+                        open={clientComboboxOpenBox[index]} 
+                        onOpenChange={(open) => setClientComboboxOpenBox({ ...clientComboboxOpenBox, [index]: open })}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {kit.clientId ? (() => {
+                              const allClients = [...(clients || []), ...(b2cClients || [])];
+                              const client = allClients.find((c) => c._id === kit.clientId);
+                              return client ? ((client as any).organization || (client as any).buyerName || (client as any).name) : "Select client...";
+                            })() : "Select client..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search clients..." />
+                            <CommandList>
+                              <CommandEmpty>No client found.</CommandEmpty>
+                              <CommandGroup>
+                                {[...(clients || []), ...(b2cClients || [])].map((c) => {
+                                  const clientName = (c as any).organization || (c as any).buyerName || (c as any).name || "";
+                                  return (
+                                    <CommandItem
+                                      key={c._id}
+                                      value={clientName}
+                                      onSelect={() => {
+                                        const newKits = [...boxKits];
+                                        newKits[index].clientId = c._id;
+                                        setBoxKits(newKits);
+                                        setClientComboboxOpenBox({ ...clientComboboxOpenBox, [index]: false });
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          kit.clientId === c._id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {clientName}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Phase */}
+                    <div className="space-y-2">
+                      <Label>Phase</Label>
+                      <Input
+                        value={kit.phase}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].phase = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter phase..."
+                      />
+                    </div>
+
+                    {/* Class */}
+                    <div className="space-y-2">
+                      <Label>Class</Label>
+                      <Input
+                        value={kit.class}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].class = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter class..."
+                      />
+                    </div>
+
+                    {/* Section */}
+                    <div className="space-y-2">
+                      <Label>Section</Label>
+                      <Input
+                        value={kit.section}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].section = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter section..."
+                      />
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="space-y-2">
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        value={kit.quantity}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].quantity = parseInt(e.target.value) || 0;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter quantity..."
+                      />
+                    </div>
+
+                    {/* Remarks */}
+                    <div className="space-y-2 col-span-2">
+                      <Label>Remarks</Label>
+                      <Input
+                        value={kit.remarks}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].remarks = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter remarks..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setBoxKits([...boxKits, {
+                    kitId: "",
+                    clientId: "",
+                    phase: "",
+                    class: "",
+                    section: "",
+                    quantity: 0,
+                    remarks: ""
+                  }]);
+                }}
+                className="w-full"
+              >
+                Add Kit
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setBoxContentDialogOpen(false);
+                setBoxKits([]);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (boxKits.length === 0) {
+                  toast.error("Please add at least one kit");
+                  return;
+                }
+
+                // Generate HTML pages (2 kits per page)
+                const pages: string[] = [];
+                for (let i = 0; i < boxKits.length; i += 2) {
+                  const kitsOnPage = boxKits.slice(i, i + 2);
+                  
+                  const pageHtml = `
+                    <!DOCTYPE html>
+                    <html>
+                      <head>
+                        <meta charset="UTF-8">
+                        <title>Box Content - Page ${Math.floor(i / 2) + 1}</title>
+                        <style>
+                          @page {
+                            size: A4 portrait;
+                            margin: 0;
+                          }
+                          * {
+                            margin: 0;
+                            padding: 0;
+                            box-sizing: border-box;
+                          }
+                          body {
+                            font-family: Arial, sans-serif;
+                            width: 210mm;
+                            height: 297mm;
+                            padding: 15mm;
+                            display: flex;
+                            flex-direction: column;
+                          }
+                          .logo {
+                            text-align: center;
+                            margin-bottom: 20px;
+                          }
+                          .logo img {
+                            max-width: 200px;
+                            height: auto;
+                          }
+                          .kit-box {
+                            border: 3px solid #000;
+                            padding: 15px;
+                            margin-bottom: 20px;
+                            flex: 1;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 12px;
+                          }
+                          .field-row {
+                            display: flex;
+                            gap: 10px;
+                          }
+                          .field {
+                            border: 2px solid #333;
+                            padding: 10px;
+                            flex: 1;
+                          }
+                          .field-label {
+                            font-weight: bold;
+                            font-size: 12px;
+                            color: #666;
+                            margin-bottom: 5px;
+                          }
+                          .field-value {
+                            font-size: 14px;
+                            min-height: 20px;
+                          }
+                          @media print {
+                            body {
+                              print-color-adjust: exact;
+                              -webkit-print-color-adjust: exact;
+                            }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="logo">
+                          <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
+                        </div>
+                        
+                        ${kitsOnPage.map((kit, idx) => {
+                          const kitData = kits?.find((k) => k._id === kit.kitId);
+                          const allClients = [...(clients || []), ...(b2cClients || [])];
+                          const clientData = allClients.find((c) => c._id === kit.clientId);
+                          const clientName = clientData ? ((clientData as any).organization || (clientData as any).buyerName || (clientData as any).name) : "";
+                          
+                          return `
+                            <div class="kit-box">
+                              <div class="field-row">
+                                <div class="field">
+                                  <div class="field-label">Kit Name</div>
+                                  <div class="field-value">${kitData?.name || ""}</div>
+                                </div>
+                                <div class="field">
+                                  <div class="field-label">Client Name</div>
+                                  <div class="field-value">${clientName}</div>
+                                </div>
+                              </div>
+                              
+                              <div class="field-row">
+                                <div class="field">
+                                  <div class="field-label">Phase</div>
+                                  <div class="field-value">${kit.phase}</div>
+                                </div>
+                                <div class="field">
+                                  <div class="field-label">Class</div>
+                                  <div class="field-value">${kit.class}</div>
+                                </div>
+                                <div class="field">
+                                  <div class="field-label">Section</div>
+                                  <div class="field-value">${kit.section}</div>
+                                </div>
+                              </div>
+                              
+                              <div class="field-row">
+                                <div class="field">
+                                  <div class="field-label">Quantity</div>
+                                  <div class="field-value">${kit.quantity}</div>
+                                </div>
+                              </div>
+                              
+                              <div class="field">
+                                <div class="field-label">Remarks</div>
+                                <div class="field-value">${kit.remarks}</div>
+                              </div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </body>
+                    </html>
+                  `;
+                  
+                  pages.push(pageHtml);
+                }
+
+                // Open all pages in new windows
+                pages.forEach((pageHtml, index) => {
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(pageHtml);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(() => {
+                      printWindow.print();
+                    }, 250 * (index + 1));
+                  }
+                });
+
+                toast.success(`Generated ${pages.length} page(s) for ${boxKits.length} kit(s)`);
+                setBoxContentDialogOpen(false);
+                setBoxKits([]);
+              }}>
+                Generate & Print
               </Button>
             </DialogFooter>
           </DialogContent>
