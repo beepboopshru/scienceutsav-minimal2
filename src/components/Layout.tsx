@@ -42,6 +42,8 @@ import {
   Package,
   FileText,
   AlertTriangle,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode, useState, useEffect, useRef } from "react";
@@ -90,6 +92,25 @@ export function Layout({ children }: LayoutProps) {
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const sendChat = useAction(api.ai.chat);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem("dark-mode");
+    return saved === "true" || document.documentElement.classList.contains("dark");
+  });
+
+  // Apply dark mode on mount and when toggled
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("dark-mode", "true");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("dark-mode", "false");
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
 
   // Apply saved theme on mount
   useEffect(() => {
@@ -707,6 +728,19 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex-1 flex flex-col">
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6">
             <SidebarTrigger />
+            <div className="flex-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleDarkMode}
+              title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {isDarkMode ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
           </header>
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
