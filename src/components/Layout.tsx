@@ -360,7 +360,7 @@ export function Layout({ children }: LayoutProps) {
         
         {/* Content Wrapper */}
         <div className="flex min-h-screen w-full relative z-10">
-        <Sidebar className="bg-background/95 backdrop-blur-sm">
+          <Sidebar className="bg-background/95 backdrop-blur-sm">
           <SidebarHeader className="border-b border-border">
             <div className="flex items-center justify-between gap-2 px-4 py-3">
               <div className="flex flex-col">
