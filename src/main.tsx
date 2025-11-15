@@ -196,38 +196,37 @@ createRoot(document.getElementById("root")!).render(
     <VlyToolbar />
     <InstrumentationProvider>
       <ConvexAuthProvider client={convex}>
-        <RouteSyncer />
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<AuthPage redirectAfterAuth="/dashboard" />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/pending-approval" element={<PendingApproval />} />
-          <Route path="/research" element={<Research />} />
-          <Route path="/kit-builder" element={<KitBuilder />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/b2c-clients" element={<B2CClients />} />
-          <Route path="/b2b-assignments" element={<B2BAssignments />} />
-          <Route path="/b2c-assignments" element={<B2CAssignments />} />
-          <Route path="/packing" element={<Packing />} />
-          <Route path="/dispatch" element={<Dispatch />} />
-          <Route path="/procurement" element={<Procurement />} />
-          <Route path="/operations-inventory-relations" element={<OperationsInventoryRelations />} />
-          <Route path="/laser-files" element={<LaserFiles />} />
-          <Route path="/view-kit-files" element={<ViewKitFiles />} />
-          <Route path="/user-management" element={<UserManagement />} />
-          <Route path="/admin-zone" element={<AdminZone />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
-          <Route path="/inventory/bill-records" element={<BillRecords />} />
-          <Route path="/vendor-contacts" element={<VendorContacts />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/kit-statistics" element={<KitStatistics />} />
-          <Route path="/lms" element={<LMS />} />
-          <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
-          <Route path="/bill-tracking" element={<BillTracking />} />
-          <Route path="/order-records" element={<OrderRecords />} />
-          <Route path="/themes" element={<Themes />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/" element={<><RouteSyncer /><Landing /></>} />
+          <Route path="/auth" element={<><RouteSyncer /><AuthPage redirectAfterAuth="/dashboard" /></>} />
+          <Route path="/dashboard" element={<><RouteSyncer /><Dashboard /></>} />
+          <Route path="/pending-approval" element={<><RouteSyncer /><PendingApproval /></>} />
+          <Route path="/research" element={<><RouteSyncer /><Research /></>} />
+          <Route path="/kit-builder" element={<><RouteSyncer /><KitBuilder /></>} />
+          <Route path="/clients" element={<><RouteSyncer /><Clients /></>} />
+          <Route path="/b2c-clients" element={<><RouteSyncer /><B2CClients /></>} />
+          <Route path="/b2b-assignments" element={<><RouteSyncer /><B2BAssignments /></>} />
+          <Route path="/b2c-assignments" element={<><RouteSyncer /><B2CAssignments /></>} />
+          <Route path="/packing" element={<><RouteSyncer /><Packing /></>} />
+          <Route path="/dispatch" element={<><RouteSyncer /><Dispatch /></>} />
+          <Route path="/procurement" element={<><RouteSyncer /><Procurement /></>} />
+          <Route path="/operations-inventory-relations" element={<><RouteSyncer /><OperationsInventoryRelations /></>} />
+          <Route path="/laser-files" element={<><RouteSyncer /><LaserFiles /></>} />
+          <Route path="/view-kit-files" element={<><RouteSyncer /><ViewKitFiles /></>} />
+          <Route path="/user-management" element={<><RouteSyncer /><UserManagement /></>} />
+          <Route path="/admin-zone" element={<><RouteSyncer /><AdminZone /></>} />
+          <Route path="/inventory" element={<><RouteSyncer /><Inventory /></>} />
+          <Route path="/inventory/processing-jobs" element={<><RouteSyncer /><ProcessingJobs /></>} />
+          <Route path="/inventory/bill-records" element={<><RouteSyncer /><BillRecords /></>} />
+          <Route path="/vendor-contacts" element={<><RouteSyncer /><VendorContacts /></>} />
+          <Route path="/services" element={<><RouteSyncer /><Services /></>} />
+          <Route path="/kit-statistics" element={<><RouteSyncer /><KitStatistics /></>} />
+          <Route path="/lms" element={<><RouteSyncer /><LMS /></>} />
+          <Route path="/discrepancy-tickets" element={<><RouteSyncer /><DiscrepancyTickets /></>} />
+          <Route path="/bill-tracking" element={<><RouteSyncer /><BillTracking /></>} />
+          <Route path="/order-records" element={<><RouteSyncer /><OrderRecords /></>} />
+          <Route path="/themes" element={<><RouteSyncer /><Themes /></>} />
+          <Route path="*" element={<><RouteSyncer /><NotFound /></>} />
         </Routes>
         <Toaster />
       </ConvexAuthProvider>
