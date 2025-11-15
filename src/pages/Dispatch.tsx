@@ -642,34 +642,44 @@ export default function Dispatch() {
                                   <Eye className="h-4 w-4" />
                                 </Button>
                                 {canEdit && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm">
-                                        Change Status
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                        disabled={assignment.status === "transferred_to_dispatch"}
-                                      >
-                                        Transferred to Dispatch
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                        disabled={assignment.status === "dispatched"}
-                                      >
-                                        Dispatched
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                        disabled={assignment.status === "delivered"}
-                                      >
-                                        Delivered
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleGenerateClientDetails(assignment)}
+                                      title="Generate Client Details"
+                                    >
+                                      <FileText className="h-4 w-4" />
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="outline" size="sm">
+                                          Change Status
+                                          <ChevronDown className="ml-2 h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                          disabled={assignment.status === "transferred_to_dispatch"}
+                                        >
+                                          Transferred to Dispatch
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                          disabled={assignment.status === "dispatched"}
+                                        >
+                                          Dispatched
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                          disabled={assignment.status === "delivered"}
+                                        >
+                                          Delivered
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </>
                                 )}
                               </div>
                             </td>
