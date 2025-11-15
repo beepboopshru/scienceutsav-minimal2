@@ -1253,80 +1253,80 @@ export default function Dispatch() {
                 for (let i = 0; i < boxKits.length; i += 2) {
                   const kitsOnPage = boxKits.slice(i, i + 2);
                   
-                  const pageHtml = `
-                    <!DOCTYPE html>
-                    <html>
-                      <head>
-                        <meta charset="UTF-8">
-                        <title>Box Content - Page ${Math.floor(i / 2) + 1}</title>
-                        <style>
-                          @page {
-                            size: A4 portrait;
-                            margin: 0;
-                          }
-                          * {
-                            margin: 0;
-                            padding: 0;
-                            box-sizing: border-box;
-                          }
+                const pageHtml = `
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <meta charset="UTF-8">
+                      <title>Box Content - Page ${Math.floor(i / 2) + 1}</title>
+                      <style>
+                        @page {
+                          size: A4 portrait;
+                          margin: 0;
+                        }
+                        * {
+                          margin: 0;
+                          padding: 0;
+                          box-sizing: border-box;
+                        }
+                        body {
+                          font-family: Arial, sans-serif;
+                          width: 210mm;
+                          height: 297mm;
+                          padding: 15mm;
+                          display: flex;
+                          flex-direction: column;
+                        }
+                        .page-header {
+                          text-align: center;
+                          margin-bottom: 20px;
+                        }
+                        .page-header img {
+                          max-width: 200px;
+                          height: auto;
+                        }
+                        .kit-box {
+                          border: 3px solid #000;
+                          padding: 15px;
+                          margin-bottom: 20px;
+                          flex: 1;
+                          display: flex;
+                          flex-direction: column;
+                          gap: 12px;
+                        }
+                        .field-row {
+                          display: flex;
+                          gap: 10px;
+                        }
+                        .field {
+                          border: 2px solid #333;
+                          padding: 10px;
+                          flex: 1;
+                        }
+                        .field-label {
+                          font-weight: bold;
+                          font-size: 12px;
+                          color: #666;
+                          margin-bottom: 5px;
+                        }
+                        .field-value {
+                          font-size: 14px;
+                          min-height: 20px;
+                        }
+                        @media print {
                           body {
-                            font-family: Arial, sans-serif;
-                            width: 210mm;
-                            height: 297mm;
-                            padding: 15mm;
-                            display: flex;
-                            flex-direction: column;
+                            print-color-adjust: exact;
+                            -webkit-print-color-adjust: exact;
                           }
-                          .logo {
-                            text-align: center;
-                            margin-bottom: 20px;
-                          }
-                          .logo img {
-                            max-width: 200px;
-                            height: auto;
-                          }
-                          .kit-box {
-                            border: 3px solid #000;
-                            padding: 15px;
-                            margin-bottom: 20px;
-                            flex: 1;
-                            display: flex;
-                            flex-direction: column;
-                            gap: 12px;
-                          }
-                          .field-row {
-                            display: flex;
-                            gap: 10px;
-                          }
-                          .field {
-                            border: 2px solid #333;
-                            padding: 10px;
-                            flex: 1;
-                          }
-                          .field-label {
-                            font-weight: bold;
-                            font-size: 12px;
-                            color: #666;
-                            margin-bottom: 5px;
-                          }
-                          .field-value {
-                            font-size: 14px;
-                            min-height: 20px;
-                          }
-                          @media print {
-                            body {
-                              print-color-adjust: exact;
-                              -webkit-print-color-adjust: exact;
-                            }
-                          }
-                        </style>
-                      </head>
-                      <body>
-                        <div class="logo">
-                          <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
-                        </div>
-                        
-                        ${kitsOnPage.map((kit, idx) => {
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="page-header">
+                        <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
+                      </div>
+                      
+                      ${kitsOnPage.map((kit, idx) => {
                           const kitData = kits?.find((k) => k._id === kit.kitId);
                           const allClients = [...(clients || []), ...(b2cClients || [])];
                           const clientData = allClients.find((c) => c._id === kit.clientId);
