@@ -312,6 +312,12 @@ export function Layout({ children }: LayoutProps) {
       path: "/kit-statistics",
       roles: [hasPermission("programs", "view") ? "allowed" : ""],
     },
+    {
+      title: "LMS Links",
+      icon: FileText,
+      path: "/lms",
+      roles: [hasPermission("programs", "view") ? "allowed" : ""],
+    },
   ];
 
   const adminSection: NavItem[] = [

@@ -122,24 +122,21 @@ const schema = defineSchema(
         unit: v.string(),
         notes: v.optional(v.string()),
       }))),
-      components: v.optional(
-        v.array(
-          v.object({
-            inventoryItemId: v.id("inventory"),
-            quantityPerKit: v.number(),
-            unit: v.string(),
-            wastageNotes: v.optional(v.string()),
-            comments: v.optional(v.string()),
-          })
-        )
-      ),
-      createdBy: v.optional(v.id("users")),
+      components: v.optional(v.array(v.object({
+        inventoryItemId: v.id("inventory"),
+        quantityPerKit: v.number(),
+        unit: v.string(),
+        wastageNotes: v.optional(v.string()),
+        comments: v.optional(v.string()),
+      }))),
+      lmsLink: v.optional(v.string()),
+      lmsNotes: v.optional(v.string()),
+      createdBy: v.id("users"),
     })
       .index("by_program", ["programId"])
-      .index("by_created_by", ["createdBy"])
       .index("by_status", ["status"])
-      .index("by_type", ["type"])
-      .index("by_category", ["category"]),
+      .index("by_category", ["category"])
+      .index("by_created_by", ["createdBy"]),
 
     // Kit components (packets, spare materials, bulk materials, misc)
     kitComponents: defineTable({
