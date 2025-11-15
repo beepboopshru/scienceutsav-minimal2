@@ -316,7 +316,7 @@ export default function Dispatch() {
           <title>Client Address Label</title>
           <style>
             @page {
-              size: 210mm 148mm;
+              size: 297mm 210mm;
               margin: 0;
             }
             * {
@@ -326,10 +326,10 @@ export default function Dispatch() {
             }
             body {
               font-family: Arial, sans-serif;
-              width: 210mm;
-              height: 148mm;
-              max-width: 210mm;
-              max-height: 148mm;
+              width: 297mm;
+              height: 210mm;
+              max-width: 297mm;
+              max-height: 210mm;
               padding: 0;
               display: flex;
               flex-direction: column;
