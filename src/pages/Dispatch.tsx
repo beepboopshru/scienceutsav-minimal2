@@ -889,7 +889,13 @@ export default function Dispatch() {
                   <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                   <div>
                     <span className="font-medium">Address:</span>
-                    <p className="text-sm mt-1">{selectedClientForView.address}</p>
+                    <div className="text-sm mt-1">
+                      <div>{selectedClientForView.address.line1}</div>
+                      {selectedClientForView.address.line2 && <div>{selectedClientForView.address.line2}</div>}
+                      {selectedClientForView.address.line3 && <div>{selectedClientForView.address.line3}</div>}
+                      <div>{selectedClientForView.address.state} - {selectedClientForView.address.pincode}</div>
+                      <div>{selectedClientForView.address.country}</div>
+                    </div>
                   </div>
                 </div>
               )}
