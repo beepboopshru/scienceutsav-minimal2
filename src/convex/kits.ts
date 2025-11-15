@@ -249,20 +249,3 @@ export const remove = mutation({
     await ctx.db.delete(args.id);
   },
 });
-
-export const updateLmsLink = mutation({
-  args: {
-    kitId: v.id("kits"),
-    lmsLink: v.optional(v.string()),
-    lmsNotes: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
-    await ctx.db.patch(args.kitId, {
-      lmsLink: args.lmsLink,
-      lmsNotes: args.lmsNotes,
-    });
-  },
-});
