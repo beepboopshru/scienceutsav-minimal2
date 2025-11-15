@@ -124,4 +124,50 @@
   [role="button"]:not([disabled]) {
     cursor: pointer;
   }
+  
+  /* Force full opacity on all UI components */
+  [role="dialog"],
+  [role="alertdialog"],
+  .card,
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td,
+  input,
+  textarea,
+  select,
+  [role="combobox"],
+  [role="listbox"],
+  [role="menu"],
+  [role="menubar"],
+  [data-radix-popper-content-wrapper],
+  [data-radix-dialog-content],
+  [data-radix-alert-dialog-content] {
+    opacity: 1 !important;
+    background-color: white !important;
+  }
+  
+  .dark [role="dialog"],
+  .dark [role="alertdialog"],
+  .dark .card,
+  .dark table,
+  .dark thead,
+  .dark tbody,
+  .dark tr,
+  .dark th,
+  .dark td,
+  .dark input,
+  .dark textarea,
+  .dark select,
+  .dark [role="combobox"],
+  .dark [role="listbox"],
+  .dark [role="menu"],
+  .dark [role="menubar"],
+  .dark [data-radix-popper-content-wrapper],
+  .dark [data-radix-dialog-content],
+  .dark [data-radix-alert-dialog-content] {
+    background-color: oklch(0.18 0 0) !important;
+  }
 }
