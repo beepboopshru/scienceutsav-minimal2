@@ -362,7 +362,7 @@ export default function Dispatch() {
             .address-section {
               flex: 1;
               display: flex;
-              flex-direction: column;
+              flex-direction: row;
               gap: 15px;
             }
             .address-box {
