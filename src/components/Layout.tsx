@@ -353,15 +353,6 @@ export function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full relative">
-        {/* Blurred Background */}
-        <div 
-          className="fixed inset-0 z-0 bg-cover bg-center"
-          style={{
-            backgroundImage: 'url(https://harmless-tapir-303.convex.cloud/api/storage/35f27a22-fb8f-4c6b-aca0-e423b71005b3)',
-            filter: 'blur(8px)',
-            transform: 'scale(1.1)',
-          }}
-        />
         
         {/* Content Wrapper */}
         <div className="flex min-h-screen w-full relative z-10">
