@@ -857,65 +857,79 @@ export default function Dispatch() {
 
               <div 
                 ref={(el) => setGeneratedLabelRef(el)}
-                className="border rounded-lg p-8 bg-white relative overflow-hidden"
-                style={{ minHeight: "500px" }}
+                className="border border-black bg-white relative overflow-hidden"
+                style={{ 
+                  minHeight: "400px",
+                  width: "100%",
+                  aspectRatio: "16/9",
+                  fontFamily: "Arial, Helvetica, sans-serif"
+                }}
               >
-                {/* Logo Watermark */}
+                {/* Logo Watermark - centered with low opacity */}
                 <div 
-                  className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none"
-                  style={{ zIndex: 0 }}
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{ zIndex: 0, opacity: 0.15 }}
                 >
                   <img 
                     src="https://harmless-tapir-303.convex.cloud/api/storage/940d8267-95c1-4fef-ace8-815124cb5865"
                     alt="Watermark"
-                    className="max-w-md"
+                    style={{ maxWidth: "50%", maxHeight: "50%" }}
                   />
                 </div>
 
-                {/* Content */}
-                <div className="relative" style={{ zIndex: 1 }}>
-                  {/* To Address */}
-                  <div className="mb-8">
-                    <h3 className="font-bold text-base mb-3">To,</h3>
-                    <div className="space-y-0.5 text-sm leading-relaxed">
-                      {selectedClientForLabel?.organization && (
-                        <p className="font-medium">{selectedClientForLabel.organization}</p>
+                {/* Content - staggered two-column layout */}
+                <div className="relative h-full p-8" style={{ zIndex: 1 }}>
+                  <div className="grid grid-cols-2 gap-8 h-full">
+                    {/* Left Column - To Address (top) and Customer ID (bottom) */}
+                    <div className="flex flex-col justify-between">
+                      {/* To Address - Top Left */}
+                      <div>
+                        <h3 className="font-bold mb-2" style={{ fontSize: "14px", lineHeight: "1.4" }}>To,</h3>
+                        <div style={{ fontSize: "13px", lineHeight: "1.4" }}>
+                          {selectedClientForLabel?.organization && (
+                            <p>{selectedClientForLabel.organization}</p>
+                          )}
+                          {selectedClientForLabel?.buyerName && (
+                            <p>{selectedClientForLabel.buyerName}</p>
+                          )}
+                          {selectedClientForLabel?.name && (
+                            <p>{selectedClientForLabel.name}</p>
+                          )}
+                          {selectedClientForLabel?.address && (
+                            <p className="whitespace-pre-line mt-1">{selectedClientForLabel.address}</p>
+                          )}
+                          {(selectedClientForLabel?.contact || selectedClientForLabel?.phone) && (
+                            <p className="mt-1">{selectedClientForLabel.contact || selectedClientForLabel.phone}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Customer ID - Bottom Left */}
+                      {customerId && (
+                        <div>
+                          <p style={{ fontSize: "13px", lineHeight: "1.4" }}>
+                            <span className="font-bold">Customer ID:</span> {customerId}
+                          </p>
+                        </div>
                       )}
-                      {selectedClientForLabel?.buyerName && (
-                        <p className="font-medium">{selectedClientForLabel.buyerName}</p>
-                      )}
-                      {selectedClientForLabel?.name && (
-                        <p className="font-medium">{selectedClientForLabel.name}</p>
-                      )}
-                      {selectedClientForLabel?.address && (
-                        <p className="whitespace-pre-line">{selectedClientForLabel.address}</p>
-                      )}
-                      {(selectedClientForLabel?.contact || selectedClientForLabel?.phone) && (
-                        <p>{selectedClientForLabel.contact || selectedClientForLabel.phone}</p>
-                      )}
+                    </div>
+
+                    {/* Right Column - From Address (vertically centered) */}
+                    <div className="flex items-center">
+                      <div>
+                        <h3 className="font-bold mb-2" style={{ fontSize: "14px", lineHeight: "1.4" }}>From,</h3>
+                        <div style={{ fontSize: "13px", lineHeight: "1.4" }}>
+                          <p>ScienceUtsav Educational Services Pvt Ltd,</p>
+                          <p>25/1 9th Cross, 19th A Main Rd,</p>
+                          <p>2nd Phase, J. P. Nagar,</p>
+                          <p>Bengaluru- 560078</p>
+                          <p>Karnataka.</p>
+                          <p className="mt-2">Contact: 9739008220</p>
+                          <p>9029402028</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  {/* From Address */}
-                  <div className="mb-8">
-                    <h3 className="font-bold text-base mb-3">From,</h3>
-                    <div className="space-y-0.5 text-sm leading-relaxed">
-                      <p>ScienceUtsav Educational Services Pvt Ltd,</p>
-                      <p>25/1 9th Cross, 19th A Main Rd,</p>
-                      <p>2nd Phase, J. P. Nagar,</p>
-                      <p>Bengaluru- 560078</p>
-                      <p>Karnataka.</p>
-                      <p className="mt-2">Contact: 9739008220</p>
-                      <p>9029402028</p>
-                    </div>
-                  </div>
-
-                  {/* Customer ID */}
-                  {customerId && (
-                    <div className="mt-6">
-                      <p className="text-sm">Customer ID: {customerId}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
