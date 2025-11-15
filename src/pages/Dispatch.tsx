@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -54,6 +54,12 @@ export default function Dispatch() {
   const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
   const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
   const [selectedAssignments, setSelectedAssignments] = useState<Set<Id<"assignments">>>(new Set());
+
+  // Client Details Generator state
+  const [clientDetailsDialogOpen, setClientDetailsDialogOpen] = useState(false);
+  const [selectedClientForLabel, setSelectedClientForLabel] = useState<string>("");
+  const [selectedPOC, setSelectedPOC] = useState<string>("");
+  const [customerId, setCustomerId] = useState<string>("");
 
   // Checklist dialog state
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
@@ -275,6 +281,183 @@ export default function Dispatch() {
     }
   };
 
+  const handleGenerateClientLabel = () => {
+    if (!selectedClientForLabel) {
+      toast.error("Please select a client");
+      return;
+    }
+
+    // Find the selected client
+    const allClients = [...(clients || []), ...(b2cClients || [])];
+    const client = allClients.find((c) => c._id === selectedClientForLabel);
+    
+    if (!client) {
+      toast.error("Client not found");
+      return;
+    }
+
+    // Get selected POC
+    const poc = client.pointsOfContact?.find((p: any) => p.name === selectedPOC);
+    
+    if (!poc) {
+      toast.error("Please select a Point of Contact");
+      return;
+    }
+
+    // Determine client name based on type
+    const clientName = (client as any).organization || (client as any).buyerName || (client as any).name;
+
+    // Generate HTML for printing
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Client Address Label</title>
+          <style>
+            @page {
+              size: A5;
+              margin: 0;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              width: 148mm;
+              height: 210mm;
+              padding: 10mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .container {
+              width: 100%;
+              height: 100%;
+              border: 2px solid #000;
+              padding: 15px;
+              display: flex;
+              flex-direction: column;
+            }
+            .logo {
+              text-align: center;
+              margin-bottom: 15px;
+            }
+            .logo img {
+              max-width: 200px;
+              height: auto;
+            }
+            .customer-id {
+              text-align: center;
+              font-size: 14px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              padding: 8px;
+              background-color: #f5f5f5;
+              border: 1px solid #ddd;
+            }
+            .address-section {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              gap: 15px;
+            }
+            .address-box {
+              border: 2px solid #000;
+              padding: 12px;
+              flex: 1;
+            }
+            .address-label {
+              font-weight: bold;
+              font-size: 16px;
+              margin-bottom: 8px;
+              text-decoration: underline;
+            }
+            .address-content {
+              font-size: 13px;
+              line-height: 1.6;
+            }
+            .address-content div {
+              margin-bottom: 4px;
+            }
+            .contact-info {
+              margin-top: 8px;
+              font-size: 12px;
+            }
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="logo">
+              <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
+            </div>
+            
+            ${customerId ? `<div class="customer-id">Customer ID: ${customerId}</div>` : ''}
+            
+            <div class="address-section">
+              <div class="address-box">
+                <div class="address-label">FROM:</div>
+                <div class="address-content">
+                  <div><strong>ScienceUtsav Educational Services Pvt Ltd</strong></div>
+                  <div>25/1 9th Cross, 19th A Main Rd</div>
+                  <div>2nd Phase, J. P. Nagar</div>
+                  <div>Bengaluru - 560078</div>
+                  <div>Karnataka, India</div>
+                  <div class="contact-info">Contact: 9739008220, 9029402028</div>
+                </div>
+              </div>
+              
+              <div class="address-box">
+                <div class="address-label">TO:</div>
+                <div class="address-content">
+                  <div><strong>${clientName}</strong></div>
+                  <div><strong>Attn: ${poc.name}${poc.designation ? ' (' + poc.designation + ')' : ''}</strong></div>
+                  ${client.address ? `
+                    <div>${client.address.line1}</div>
+                    ${client.address.line2 ? `<div>${client.address.line2}</div>` : ''}
+                    ${client.address.line3 ? `<div>${client.address.line3}</div>` : ''}
+                    <div>${client.address.state} - ${client.address.pincode}</div>
+                    <div>${client.address.country}</div>
+                  ` : '<div>Address not available</div>'}
+                  <div class="contact-info">
+                    ${poc.phone ? `Phone: ${poc.phone}` : ''}
+                    ${poc.email ? `${poc.phone ? ' | ' : ''}Email: ${poc.email}` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Open in new window for printing
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+
+    // Reset form
+    setClientDetailsDialogOpen(false);
+    setSelectedClientForLabel("");
+    setSelectedPOC("");
+    setCustomerId("");
+    toast.success("Client label generated");
+  };
+
   const totalQuantity = filteredAssignments.reduce((sum, a) => sum + a.quantity, 0);
 
   return (
@@ -355,6 +538,15 @@ export default function Dispatch() {
 
           <Button variant="outline" onClick={handleClearAllFilters}>
             Clear All Filters
+          </Button>
+
+          <Button 
+            variant="default" 
+            onClick={() => setClientDetailsDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Client Details Generator
           </Button>
         </div>
 
@@ -762,6 +954,94 @@ export default function Dispatch() {
               </Button>
               <Button onClick={handleConfirmDispatch}>
                 Confirm Dispatch
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Client Details Generator Dialog */}
+        <Dialog open={clientDetailsDialogOpen} onOpenChange={setClientDetailsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Generate Client Address Label</DialogTitle>
+              <DialogDescription>
+                Select a client and point of contact to generate an A5 address label
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="client-select">Select Client</Label>
+                <Select value={selectedClientForLabel} onValueChange={(value) => {
+                  setSelectedClientForLabel(value);
+                  setSelectedPOC("");
+                }}>
+                  <SelectTrigger id="client-select">
+                    <SelectValue placeholder="Choose a client..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients?.map((client) => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.organization || client.name} (B2B)
+                      </SelectItem>
+                    ))}
+                    {b2cClients?.map((client) => (
+                      <SelectItem key={client._id} value={client._id}>
+                        {client.buyerName} (B2C)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedClientForLabel && (() => {
+                const allClients = [...(clients || []), ...(b2cClients || [])];
+                const client = allClients.find((c) => c._id === selectedClientForLabel);
+                const pocs = client?.pointsOfContact || [];
+                
+                return pocs.length > 0 ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="poc-select">Select Point of Contact</Label>
+                    <Select value={selectedPOC} onValueChange={setSelectedPOC}>
+                      <SelectTrigger id="poc-select">
+                        <SelectValue placeholder="Choose a POC..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pocs.map((poc: any, index: number) => (
+                          <SelectItem key={index} value={poc.name}>
+                            {poc.name}{poc.designation ? ` - ${poc.designation}` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded">
+                    This client has no points of contact configured.
+                  </div>
+                );
+              })()}
+
+              <div className="space-y-2">
+                <Label htmlFor="customer-id">Customer ID (Optional)</Label>
+                <Input
+                  id="customer-id"
+                  placeholder="Enter customer ID..."
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setClientDetailsDialogOpen(false);
+                setSelectedClientForLabel("");
+                setSelectedPOC("");
+                setCustomerId("");
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleGenerateClientLabel}>
+                Generate Label
               </Button>
             </DialogFooter>
           </DialogContent>
