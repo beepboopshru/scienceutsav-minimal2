@@ -874,48 +874,46 @@ export default function Dispatch() {
 
                 {/* Content */}
                 <div className="relative" style={{ zIndex: 1 }}>
-                  <div className="grid grid-cols-2 gap-8">
-                    {/* To Address */}
-                    <div>
-                      <h3 className="font-bold text-lg mb-4">To,</h3>
-                      <div className="space-y-1 text-sm">
-                        {selectedClientForLabel?.organization && (
-                          <p className="font-medium">{selectedClientForLabel.organization}</p>
-                        )}
-                        {selectedClientForLabel?.buyerName && (
-                          <p className="font-medium">{selectedClientForLabel.buyerName}</p>
-                        )}
-                        {selectedClientForLabel?.name && (
-                          <p className="font-medium">{selectedClientForLabel.name}</p>
-                        )}
-                        {selectedClientForLabel?.address && (
-                          <p className="whitespace-pre-line">{selectedClientForLabel.address}</p>
-                        )}
-                        {(selectedClientForLabel?.contact || selectedClientForLabel?.phone) && (
-                          <p>{selectedClientForLabel.contact || selectedClientForLabel.phone}</p>
-                        )}
-                      </div>
+                  {/* To Address */}
+                  <div className="mb-8">
+                    <h3 className="font-bold text-base mb-3">To,</h3>
+                    <div className="space-y-0.5 text-sm leading-relaxed">
+                      {selectedClientForLabel?.organization && (
+                        <p className="font-medium">{selectedClientForLabel.organization}</p>
+                      )}
+                      {selectedClientForLabel?.buyerName && (
+                        <p className="font-medium">{selectedClientForLabel.buyerName}</p>
+                      )}
+                      {selectedClientForLabel?.name && (
+                        <p className="font-medium">{selectedClientForLabel.name}</p>
+                      )}
+                      {selectedClientForLabel?.address && (
+                        <p className="whitespace-pre-line">{selectedClientForLabel.address}</p>
+                      )}
+                      {(selectedClientForLabel?.contact || selectedClientForLabel?.phone) && (
+                        <p>{selectedClientForLabel.contact || selectedClientForLabel.phone}</p>
+                      )}
                     </div>
+                  </div>
 
-                    {/* From Address */}
-                    <div className="text-right">
-                      <h3 className="font-bold text-lg mb-4">From,</h3>
-                      <div className="space-y-1 text-sm">
-                        <p className="font-medium">ScienceUtsav Educational Services Pvt Ltd,</p>
-                        <p>25/1 9th Cross, 19th A Main Rd,</p>
-                        <p>2nd Phase, J. P. Nagar,</p>
-                        <p>Bengaluru- 560078</p>
-                        <p>Karnataka.</p>
-                        <p className="mt-2">Contact: 9739008220</p>
-                        <p>9029402028</p>
-                      </div>
+                  {/* From Address */}
+                  <div className="mb-8">
+                    <h3 className="font-bold text-base mb-3">From,</h3>
+                    <div className="space-y-0.5 text-sm leading-relaxed">
+                      <p>ScienceUtsav Educational Services Pvt Ltd,</p>
+                      <p>25/1 9th Cross, 19th A Main Rd,</p>
+                      <p>2nd Phase, J. P. Nagar,</p>
+                      <p>Bengaluru- 560078</p>
+                      <p>Karnataka.</p>
+                      <p className="mt-2">Contact: 9739008220</p>
+                      <p>9029402028</p>
                     </div>
                   </div>
 
                   {/* Customer ID */}
                   {customerId && (
-                    <div className="mt-8">
-                      <p className="text-sm font-medium">Customer ID: {customerId}</p>
+                    <div className="mt-6">
+                      <p className="text-sm">Customer ID: {customerId}</p>
                     </div>
                   )}
                 </div>
