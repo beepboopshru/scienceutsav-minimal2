@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -64,6 +64,12 @@ export default function Dispatch() {
     workbookWorksheetConceptMap: false,
     spareKitsTools: false,
   });
+
+  // Client Details Generator state
+  const [clientDetailsDialog, setClientDetailsDialog] = useState(false);
+  const [selectedClientForLabel, setSelectedClientForLabel] = useState<any>(null);
+  const [customerId, setCustomerId] = useState("");
+  const [generatedLabelRef, setGeneratedLabelRef] = useState<HTMLDivElement | null>(null);
 
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -275,6 +281,39 @@ export default function Dispatch() {
     }
   };
 
+  const handleGenerateClientDetails = (assignment: any) => {
+    setSelectedClientForLabel(assignment.client);
+    setCustomerId("");
+    setClientDetailsDialog(true);
+  };
+
+  const handlePrintLabel = () => {
+    if (generatedLabelRef) {
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Client Details</title>
+              <style>
+                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+                @media print {
+                  body { margin: 0; padding: 0; }
+                }
+              </style>
+            </head>
+            <body>
+              ${generatedLabelRef.innerHTML}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+      }
+    }
+  };
+
   const totalQuantity = filteredAssignments.reduce((sum, a) => sum + a.quantity, 0);
 
   return (
@@ -455,7 +494,7 @@ export default function Dispatch() {
                             : "-"}
                         </td>
                         <td className="p-4">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex gap-2">
                             <Button
                               variant="ghost"
                               size="icon"
@@ -465,34 +504,44 @@ export default function Dispatch() {
                               <Eye className="h-4 w-4" />
                             </Button>
                             {canEdit && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    Change Status
-                                    <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                    disabled={assignment.status === "transferred_to_dispatch"}
-                                  >
-                                    Transferred to Dispatch
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                    disabled={assignment.status === "dispatched"}
-                                  >
-                                    Dispatched
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                    disabled={assignment.status === "delivered"}
-                                  >
-                                    Delivered
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleGenerateClientDetails(assignment)}
+                                  title="Generate Client Details"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      Change Status
+                                      <ChevronDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                      disabled={assignment.status === "transferred_to_dispatch"}
+                                    >
+                                      Transferred to Dispatch
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                      disabled={assignment.status === "dispatched"}
+                                    >
+                                      Dispatched
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                      disabled={assignment.status === "delivered"}
+                                    >
+                                      Delivered
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </>
                             )}
                           </div>
                         </td>
@@ -762,6 +811,104 @@ export default function Dispatch() {
               </Button>
               <Button onClick={handleConfirmDispatch}>
                 Confirm Dispatch
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Client Details Generator Dialog */}
+        <Dialog open={clientDetailsDialog} onOpenChange={setClientDetailsDialog}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Generate Client Details</DialogTitle>
+              <DialogDescription>
+                Generate a formatted address label for dispatch
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="customerId">Customer ID (Optional)</Label>
+                <Input
+                  id="customerId"
+                  placeholder="Enter customer ID"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div 
+                ref={(el) => setGeneratedLabelRef(el)}
+                className="border rounded-lg p-8 bg-white relative overflow-hidden"
+                style={{ minHeight: "500px" }}
+              >
+                {/* Logo Watermark */}
+                <div 
+                  className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none"
+                  style={{ zIndex: 0 }}
+                >
+                  <img 
+                    src="https://harmless-tapir-303.convex.cloud/api/storage/940d8267-95c1-4fef-ace8-815124cb5865"
+                    alt="Watermark"
+                    className="max-w-md"
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="relative" style={{ zIndex: 1 }}>
+                  <div className="grid grid-cols-2 gap-8">
+                    {/* To Address */}
+                    <div>
+                      <h3 className="font-bold text-lg mb-4">To,</h3>
+                      <div className="space-y-1 text-sm">
+                        {selectedClientForLabel?.organization && (
+                          <p className="font-medium">{selectedClientForLabel.organization}</p>
+                        )}
+                        {selectedClientForLabel?.buyerName && (
+                          <p className="font-medium">{selectedClientForLabel.buyerName}</p>
+                        )}
+                        {selectedClientForLabel?.name && (
+                          <p className="font-medium">{selectedClientForLabel.name}</p>
+                        )}
+                        {selectedClientForLabel?.address && (
+                          <p className="whitespace-pre-line">{selectedClientForLabel.address}</p>
+                        )}
+                        {(selectedClientForLabel?.contact || selectedClientForLabel?.phone) && (
+                          <p>{selectedClientForLabel.contact || selectedClientForLabel.phone}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* From Address */}
+                    <div className="text-right">
+                      <h3 className="font-bold text-lg mb-4">From,</h3>
+                      <div className="space-y-1 text-sm">
+                        <p className="font-medium">ScienceUtsav Educational Services Pvt Ltd,</p>
+                        <p>25/1 9th Cross, 19th A Main Rd,</p>
+                        <p>2nd Phase, J. P. Nagar,</p>
+                        <p>Bengaluru- 560078</p>
+                        <p>Karnataka.</p>
+                        <p className="mt-2">Contact: 9739008220</p>
+                        <p>9029402028</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Customer ID */}
+                  {customerId && (
+                    <div className="mt-8">
+                      <p className="text-sm font-medium">Customer ID: {customerId}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setClientDetailsDialog(false)}>
+                Close
+              </Button>
+              <Button onClick={handlePrintLabel}>
+                Print Label
               </Button>
             </DialogFooter>
           </DialogContent>
