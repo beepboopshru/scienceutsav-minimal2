@@ -57,7 +57,14 @@ export default function Clients() {
     organization: "",
     contact: "",
     email: "",
-    address: "",
+    address: {
+      line1: "",
+      line2: "",
+      line3: "",
+      state: "",
+      pincode: "",
+      country: "",
+    },
     type: "one_time" as "monthly" | "one_time",
     notes: "",
     salesPerson: "",
@@ -108,7 +115,14 @@ export default function Clients() {
           organization: client.organization || "",
           contact: client.contact || "",
           email: client.email || "",
-          address: client.address || "",
+          address: {
+            line1: client.address?.line1 || "",
+            line2: client.address?.line2 || "",
+            line3: client.address?.line3 || "",
+            state: client.address?.state || "",
+            pincode: client.address?.pincode || "",
+            country: client.address?.country || "",
+          },
           type: client.type || "one_time",
           notes: client.notes || "",
           salesPerson: client.salesPerson || "",
@@ -137,7 +151,14 @@ export default function Clients() {
         organization: "",
         contact: "",
         email: "",
-        address: "",
+        address: {
+          line1: "",
+          line2: "",
+          line3: "",
+          state: "",
+          pincode: "",
+          country: "",
+        },
         type: "one_time",
         notes: "",
         salesPerson: "",
@@ -171,7 +192,14 @@ export default function Clients() {
       organization: "",
       contact: "",
       email: "",
-      address: "",
+      address: {
+        line1: "",
+        line2: "",
+        line3: "",
+        state: "",
+        pincode: "",
+        country: "",
+      },
       type: "one_time",
       notes: "",
       salesPerson: "",
@@ -411,7 +439,19 @@ export default function Clients() {
                 {selectedClientForView?.address && (
                   <div className="flex items-start gap-2 text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <span>{selectedClientForView.address}</span>
+                    <div className="flex flex-col">
+                      <span>{selectedClientForView.address.line1}</span>
+                      {selectedClientForView.address.line2 && (
+                        <span>{selectedClientForView.address.line2}</span>
+                      )}
+                      {selectedClientForView.address.line3 && (
+                        <span>{selectedClientForView.address.line3}</span>
+                      )}
+                      <span>
+                        {selectedClientForView.address.state}, {selectedClientForView.address.pincode}
+                      </span>
+                      <span>{selectedClientForView.address.country}</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -553,14 +593,111 @@ export default function Clients() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Organization address"
-                    rows={2}
-                  />
+                  <Label>Address</Label>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="address-line1" className="text-xs text-muted-foreground">
+                        Address Line 1 *
+                      </Label>
+                      <Input
+                        id="address-line1"
+                        value={formData.address.line1}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            address: { ...formData.address, line1: e.target.value },
+                          })
+                        }
+                        placeholder="Street address, P.O. box"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="address-line2" className="text-xs text-muted-foreground">
+                        Address Line 2
+                      </Label>
+                      <Input
+                        id="address-line2"
+                        value={formData.address.line2}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            address: { ...formData.address, line2: e.target.value },
+                          })
+                        }
+                        placeholder="Apartment, suite, unit, building, floor, etc."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="address-line3" className="text-xs text-muted-foreground">
+                        Address Line 3
+                      </Label>
+                      <Input
+                        id="address-line3"
+                        value={formData.address.line3}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            address: { ...formData.address, line3: e.target.value },
+                          })
+                        }
+                        placeholder="Additional address information"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label htmlFor="state" className="text-xs text-muted-foreground">
+                          State *
+                        </Label>
+                        <Input
+                          id="state"
+                          value={formData.address.state}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              address: { ...formData.address, state: e.target.value },
+                            })
+                          }
+                          placeholder="State"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="pincode" className="text-xs text-muted-foreground">
+                          Pincode *
+                        </Label>
+                        <Input
+                          id="pincode"
+                          value={formData.address.pincode}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              address: { ...formData.address, pincode: e.target.value },
+                            })
+                          }
+                          placeholder="Pincode"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="country" className="text-xs text-muted-foreground">
+                        Country *
+                      </Label>
+                      <Input
+                        id="country"
+                        value={formData.address.country}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            address: { ...formData.address, country: e.target.value },
+                          })
+                        }
+                        placeholder="Country"
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
