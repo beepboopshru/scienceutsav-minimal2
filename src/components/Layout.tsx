@@ -44,6 +44,7 @@ import {
   AlertTriangle,
   Moon,
   Sun,
+  Truck,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode, useState, useEffect, useRef } from "react";
@@ -302,7 +303,7 @@ export function Layout({ children }: LayoutProps) {
     },
     {
       title: "Dispatch",
-      icon: Package,
+      icon: Truck,
       path: "/dispatch",
       roles: [hasPermission("dispatch", "view") ? "allowed" : ""],
     },

@@ -13,7 +13,8 @@ import {
   UserCog,
   Beaker,
   Contact,
-  Wrench
+  Wrench,
+  Truck
 } from "lucide-react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
@@ -79,7 +80,7 @@ export default function Dashboard() {
     {
       title: "Dispatch",
       description: "Track shipments and deliveries",
-      icon: Package,
+      icon: Truck,
       path: "/dispatch",
       permission: { resource: "dispatch" as const, action: "view" },
     },
