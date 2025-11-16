@@ -51,6 +51,7 @@ export default function LMS() {
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedKit, setSelectedKit] = useState<any>(null);
   const [lmsLink, setLmsLink] = useState("");
@@ -90,10 +91,14 @@ export default function LMS() {
   const filteredKits = kits?.filter((kit) => {
     const matchesProgram = selectedProgramId === "all" || kit.programId === selectedProgramId;
     const matchesCategory = categoryFilter === "all" || kit.category === categoryFilter;
+    const hasLink = kit.lmsLink && kit.lmsLink.trim().length > 0;
+    const matchesStatus = statusFilter === "all" || 
+      (statusFilter === "uploaded" && hasLink) ||
+      (statusFilter === "not_uploaded" && !hasLink);
     const matchesSearch = !searchQuery || 
       kit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       kit.serialNumber?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesProgram && matchesCategory && matchesSearch;
+    return matchesProgram && matchesCategory && matchesStatus && matchesSearch;
   }) || [];
 
   const categories = Array.from(new Set(kits?.map(k => k.category).filter(Boolean))) as string[];
@@ -150,46 +155,27 @@ export default function LMS() {
           </p>
         </motion.div>
 
-        {/* Program Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Program</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={selectedProgramId}
-              onValueChange={(value) => setSelectedProgramId(value as Id<"programs"> | "all")}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a program" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Programs</SelectItem>
-                {programs?.map((program) => (
-                  <SelectItem key={program._id} value={program._id}>
-                    {program.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Filters and Search */}
+        {/* Filters Bar */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by kit name or serial number..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
+              <Select
+                value={selectedProgramId}
+                onValueChange={(value) => setSelectedProgramId(value as Id<"programs"> | "all")}
+              >
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Select program" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Programs</SelectItem>
+                  {programs?.map((program) => (
+                    <SelectItem key={program._id} value={program._id}>
+                      {program.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full md:w-[200px]">
                   <SelectValue placeholder="Category" />
@@ -203,6 +189,29 @@ export default function LMS() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="uploaded">Uploaded</SelectItem>
+                  <SelectItem value="not_uploaded">Not Uploaded</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by kit name or serial number..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
