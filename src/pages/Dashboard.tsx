@@ -70,11 +70,32 @@ export default function Dashboard() {
       permission: { resource: "assignments" as const, action: "view" },
     },
     {
+      title: "Packing",
+      description: "Manage kit packing operations",
+      icon: Package,
+      path: "/packing",
+      permission: { resource: "packing" as const, action: "view" },
+    },
+    {
+      title: "Dispatch",
+      description: "Track shipments and deliveries",
+      icon: Package,
+      path: "/dispatch",
+      permission: { resource: "dispatch" as const, action: "view" },
+    },
+    {
       title: "Inventory",
       description: "Manage materials and stock",
       icon: Warehouse,
       path: "/inventory",
       permission: { resource: "inventory" as const, action: "view" },
+    },
+    {
+      title: "Procurement",
+      description: "Manage procurement jobs",
+      icon: ClipboardList,
+      path: "/procurement",
+      permission: { resource: "procurementJobs" as const, action: "view" },
     },
     {
       title: "Vendor Contacts",
