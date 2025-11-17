@@ -101,7 +101,8 @@ export default function KitStatistics() {
   const [fileStatusFilters, setFileStatusFilters] = useState({
     kitImages: false,
     laserFiles: false,
-    componentPicturesWorkbooks: false,
+    componentPictures: false,
+    workbooks: false,
   });
 
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
@@ -168,7 +169,8 @@ export default function KitStatistics() {
     setFileStatusFilters({
       kitImages: false,
       laserFiles: false,
-      componentPicturesWorkbooks: false,
+      componentPictures: false,
+      workbooks: false,
     });
   };
 
@@ -177,7 +179,8 @@ export default function KitStatistics() {
     selectedCategories.length > 0 || 
     fileStatusFilters.kitImages || 
     fileStatusFilters.laserFiles || 
-    fileStatusFilters.componentPicturesWorkbooks;
+    fileStatusFilters.componentPictures || 
+    fileStatusFilters.workbooks;
 
   // Program Selection View
   if (!selectedProgramId) {
@@ -265,10 +268,14 @@ export default function KitStatistics() {
       }
     }
 
-    if (fileStatusFilters.componentPicturesWorkbooks) {
-      const hasComponentFiles = kit.componentFiles && kit.componentFiles.length > 0;
-      const hasWorkbookFiles = kit.workbookFiles && kit.workbookFiles.length > 0;
-      if (!hasComponentFiles && !hasWorkbookFiles) {
+    if (fileStatusFilters.componentPictures) {
+      if (!kit.componentFiles || kit.componentFiles.length === 0) {
+        return false;
+      }
+    }
+
+    if (fileStatusFilters.workbooks) {
+      if (!kit.workbookFiles || kit.workbookFiles.length === 0) {
         return false;
       }
     }
@@ -422,20 +429,38 @@ export default function KitStatistics() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <Checkbox
-                        id="filter-component-workbooks"
-                        checked={fileStatusFilters.componentPicturesWorkbooks}
+                        id="filter-component-pictures"
+                        checked={fileStatusFilters.componentPictures}
                         onCheckedChange={(checked) =>
                           setFileStatusFilters((prev) => ({
                             ...prev,
-                            componentPicturesWorkbooks: checked as boolean,
+                            componentPictures: checked as boolean,
                           }))
                         }
                       />
                       <label
-                        htmlFor="filter-component-workbooks"
+                        htmlFor="filter-component-pictures"
                         className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                       >
-                        Component Pictures/Workbooks
+                        Component Pictures
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-workbooks"
+                        checked={fileStatusFilters.workbooks}
+                        onCheckedChange={(checked) =>
+                          setFileStatusFilters((prev) => ({
+                            ...prev,
+                            workbooks: checked as boolean,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor="filter-workbooks"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Workbooks
                       </label>
                     </div>
                   </div>
