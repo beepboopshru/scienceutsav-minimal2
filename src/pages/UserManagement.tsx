@@ -82,7 +82,7 @@ export default function UserManagement() {
         billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
         vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
         orderHistory: { view: false, edit: false, export: false },
-        laserFiles: { view: false, edit: false, upload: false, delete: false },
+        laserFiles: { view: false, upload: false, delete: false },
         reports: { view: false, download: false },
         adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
         userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
