@@ -405,12 +405,12 @@ export default function Dispatch() {
             }
             .address-label {
               font-weight: bold;
-              font-size: 18px;
+              font-size: 22px;
               margin-bottom: 10px;
               text-decoration: underline;
             }
             .address-content {
-              font-size: 18px;
+              font-size: 22px;
               line-height: 1.7;
             }
             .address-content div {
@@ -418,7 +418,7 @@ export default function Dispatch() {
             }
             .contact-info {
               margin-top: 10px;
-              font-size: 18px;
+              font-size: 22px;
             }
             @media print {
               body {
