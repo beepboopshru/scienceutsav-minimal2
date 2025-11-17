@@ -81,7 +81,7 @@ export default function UserManagement() {
         discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
         billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
         vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
-        orderHistory: { view: false, edit: false, export: false },
+        orderHistory: { view: false, export: false },
         laserFiles: { view: false, upload: false, delete: false },
         reports: { view: false, download: false },
         adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
