@@ -75,8 +75,8 @@ export default function LMS() {
     );
   }
 
-  const canView = hasPermission("programs", "view");
-  const canEdit = hasPermission("kits", "edit");
+  const canView = hasPermission("lms", "view");
+  const canEdit = hasPermission("lms", "edit");
 
   if (!canView) {
     return (

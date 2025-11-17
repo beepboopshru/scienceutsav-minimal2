@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -17,6 +17,9 @@ import {
   File,
   Eye,
   Calculator,
+  X,
+  Search,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +44,21 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements } from "@/lib/kitPacking";
@@ -51,10 +69,14 @@ export default function KitStatistics() {
   const navigate = useNavigate();
 
   const canView = hasPermission("programs", "view");
+  const canViewCapacityPricing = hasPermission("kitStatistics", "viewCapacityPricing");
+  const canEditStock = hasPermission("kitStatistics", "editStock");
+  const canViewFiles = hasPermission("kitStatistics", "viewFiles");
 
   const programs = useQuery(api.programs.list);
   const allKits = useQuery(api.kits.list);
   const inventory = useQuery(api.inventory.list);
+  const updateKit = useMutation(api.kits.update);
 
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
@@ -75,6 +97,29 @@ export default function KitStatistics() {
     open: false,
     kitId: null,
     kitName: "",
+  });
+  const [editStockDialog, setEditStockDialog] = useState<{
+    open: boolean;
+    kitId: Id<"kits"> | null;
+    kitName: string;
+    currentStock: number;
+  }>({
+    open: false,
+    kitId: null,
+    kitName: "",
+    currentStock: 0,
+  });
+  const [newStockCount, setNewStockCount] = useState<number>(0);
+
+  // Filter states
+  const [kitNameFilter, setKitNameFilter] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [fileStatusFilters, setFileStatusFilters] = useState({
+    kitImages: false,
+    laserFiles: false,
+    componentPictures: false,
+    workbooks: false,
   });
 
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
@@ -135,6 +180,50 @@ export default function KitStatistics() {
     }
   };
 
+  const handleEditStock = (kit: any) => {
+    setEditStockDialog({
+      open: true,
+      kitId: kit._id,
+      kitName: kit.name,
+      currentStock: kit.stockCount || 0,
+    });
+    setNewStockCount(kit.stockCount || 0);
+  };
+
+  const handleUpdateStock = async () => {
+    if (!editStockDialog.kitId) return;
+    
+    try {
+      await updateKit({
+        id: editStockDialog.kitId,
+        stockCount: newStockCount,
+      });
+      toast.success("Stock count updated successfully");
+      setEditStockDialog({ open: false, kitId: null, kitName: "", currentStock: 0 });
+    } catch (error) {
+      toast.error("Failed to update stock count");
+    }
+  };
+
+  const clearFilters = () => {
+    setKitNameFilter("");
+    setSelectedCategories([]);
+    setFileStatusFilters({
+      kitImages: false,
+      laserFiles: false,
+      componentPictures: false,
+      workbooks: false,
+    });
+  };
+
+  const hasActiveFilters = 
+    kitNameFilter !== "" || 
+    selectedCategories.length > 0 || 
+    fileStatusFilters.kitImages || 
+    fileStatusFilters.laserFiles || 
+    fileStatusFilters.componentPictures || 
+    fileStatusFilters.workbooks;
+
   // Program Selection View
   if (!selectedProgramId) {
     return (
@@ -191,6 +280,51 @@ export default function KitStatistics() {
   const selectedProgram = programs?.find((p) => p._id === selectedProgramId);
   const programKits = allKits?.filter((k) => k.programId === selectedProgramId) || [];
 
+  // Get unique categories for the filter
+  const uniqueCategories = Array.from(
+    new Set(programKits.map((k) => k.category).filter(Boolean))
+  ) as string[];
+
+  // Apply filters
+  const filteredKits = programKits.filter((kit) => {
+    // Kit name filter
+    if (kitNameFilter && !kit.name.toLowerCase().includes(kitNameFilter.toLowerCase())) {
+      return false;
+    }
+
+    // Category filter
+    if (selectedCategories.length > 0 && !selectedCategories.includes(kit.category || "")) {
+      return false;
+    }
+
+    // File status filters (AND logic)
+    if (fileStatusFilters.kitImages) {
+      if (!kit.kitImageFiles || kit.kitImageFiles.length === 0) {
+        return false;
+      }
+    }
+
+    if (fileStatusFilters.laserFiles) {
+      if (!kit.laserFiles || kit.laserFiles.length === 0) {
+        return false;
+      }
+    }
+
+    if (fileStatusFilters.componentPictures) {
+      if (!kit.componentFiles || kit.componentFiles.length === 0) {
+        return false;
+      }
+    }
+
+    if (fileStatusFilters.workbooks) {
+      if (!kit.workbookFiles || kit.workbookFiles.length === 0) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
   // Kit Statistics View
   return (
     <Layout>
@@ -214,10 +348,168 @@ export default function KitStatistics() {
                 {selectedProgram?.name} - Kit Statistics
               </h1>
               <p className="text-muted-foreground mt-2">
-                {programKits.length} kits in this program
+                {filteredKits.length} of {programKits.length} kits
               </p>
             </div>
           </div>
+
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Filters</CardTitle>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    <X className="h-4 w-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Kit Name Filter */}
+                <div className="space-y-2">
+                  <Label htmlFor="kit-name-filter">Kit Name</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="kit-name-filter"
+                      placeholder="Search kit name..."
+                      value={kitNameFilter}
+                      onChange={(e) => setKitNameFilter(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+
+                {/* Category Filter */}
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={categoryPopoverOpen}
+                        className="w-full justify-between"
+                      >
+                        {selectedCategories.length > 0
+                          ? `${selectedCategories.length} selected`
+                          : "Select categories..."}
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search category..." />
+                        <CommandEmpty>No category found.</CommandEmpty>
+                        <CommandGroup>
+                          {uniqueCategories.map((category) => (
+                            <CommandItem
+                              key={category}
+                              onSelect={() => {
+                                setSelectedCategories((prev) =>
+                                  prev.includes(category)
+                                    ? prev.filter((c) => c !== category)
+                                    : [...prev, category]
+                                );
+                              }}
+                            >
+                              <Checkbox
+                                checked={selectedCategories.includes(category)}
+                                className="mr-2"
+                              />
+                              {category}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* File Status Filters */}
+                <div className="space-y-2 lg:col-span-2">
+                  <Label>File Status (Show kits with)</Label>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-kit-images"
+                        checked={fileStatusFilters.kitImages}
+                        onCheckedChange={(checked) =>
+                          setFileStatusFilters((prev) => ({
+                            ...prev,
+                            kitImages: checked as boolean,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor="filter-kit-images"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Kit Images
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-laser-files"
+                        checked={fileStatusFilters.laserFiles}
+                        onCheckedChange={(checked) =>
+                          setFileStatusFilters((prev) => ({
+                            ...prev,
+                            laserFiles: checked as boolean,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor="filter-laser-files"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Laser Files
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-component-pictures"
+                        checked={fileStatusFilters.componentPictures}
+                        onCheckedChange={(checked) =>
+                          setFileStatusFilters((prev) => ({
+                            ...prev,
+                            componentPictures: checked as boolean,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor="filter-component-pictures"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Component Pictures
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-workbooks"
+                        checked={fileStatusFilters.workbooks}
+                        onCheckedChange={(checked) =>
+                          setFileStatusFilters((prev) => ({
+                            ...prev,
+                            workbooks: checked as boolean,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor="filter-workbooks"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Workbooks
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Kits Table */}
           <Card>
@@ -236,13 +528,13 @@ export default function KitStatistics() {
                     <TableHead>Kit Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Program</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead>File Status</TableHead>
-                            <TableHead>Actions</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead>File Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {programKits.map((kit, index) => {
+                  {filteredKits.map((kit, index) => {
                     const isExpanded = expandedKits.has(kit._id);
                     const structure = kit.isStructured && kit.packingRequirements
                       ? parsePackingRequirements(kit.packingRequirements)
@@ -324,42 +616,57 @@ export default function KitStatistics() {
                                   <FileText className="h-4 w-4 mr-1" />
                                   Sheet
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setFileViewerDialog({
-                                      open: true,
-                                      kitId: kit._id,
-                                      kitName: kit.name,
-                                    });
-                                  }}
-                                  title="View Kit Files"
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  Files
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setCapacityDialog({
-                                      open: true,
-                                      kitId: kit._id,
-                                      kitName: kit.name,
-                                    });
-                                  }}
-                                  title="Capacity & Pricing"
-                                >
-                                  <Calculator className="h-4 w-4 mr-1" />
-                                  Capacity
-                                </Button>
+                                {canViewFiles && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setFileViewerDialog({
+                                        open: true,
+                                        kitId: kit._id,
+                                        kitName: kit.name,
+                                      });
+                                    }}
+                                    title="View Kit Files"
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    Files
+                                  </Button>
+                                )}
+                                {canViewCapacityPricing && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setCapacityDialog({
+                                        open: true,
+                                        kitId: kit._id,
+                                        kitName: kit.name,
+                                      });
+                                    }}
+                                    title="Capacity & Pricing"
+                                  >
+                                    <Calculator className="h-4 w-4 mr-1" />
+                                    Capacity
+                                  </Button>
+                                )}
+                                {canEditStock && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditStock(kit)}
+                                    title="Edit Stock Count"
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Stock
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
                           <CollapsibleContent asChild>
                             <TableRow>
-                              <TableCell colSpan={7} className="bg-muted/50">
+                              <TableCell colSpan={8} className="bg-muted/50">
                                 <div className="p-4 space-y-4">
                                   <h4 className="font-semibold text-sm">Bill of Materials (BOM)</h4>
                                   
@@ -500,6 +807,46 @@ export default function KitStatistics() {
               inventory={inventory || []}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Stock Dialog */}
+      <Dialog
+        open={editStockDialog.open}
+        onOpenChange={(open) =>
+          !open && setEditStockDialog({ open: false, kitId: null, kitName: "", currentStock: 0 })
+        }
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Stock Count: {editStockDialog.kitName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="stock-count">Stock Count</Label>
+              <Input
+                id="stock-count"
+                type="number"
+                value={newStockCount}
+                onChange={(e) => setNewStockCount(parseInt(e.target.value) || 0)}
+                placeholder="Enter stock count"
+              />
+              <p className="text-sm text-muted-foreground">
+                Current stock: {editStockDialog.currentStock}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setEditStockDialog({ open: false, kitId: null, kitName: "", currentStock: 0 })
+                }
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateStock}>Update Stock</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>

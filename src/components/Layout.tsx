@@ -385,13 +385,13 @@ export function Layout({ children }: LayoutProps) {
       title: "Kit Statistics",
       icon: FileText,
       path: "/kit-statistics",
-      roles: [hasPermission("programs", "view") ? "allowed" : ""],
+      roles: [hasPermission("kitStatistics", "view") ? "allowed" : ""],
     },
     {
       title: "LMS",
       icon: FileText,
       path: "/lms",
-      roles: [hasPermission("programs", "view") ? "allowed" : ""],
+      roles: [hasPermission("lms", "view") ? "allowed" : ""],
     },
   ];
 

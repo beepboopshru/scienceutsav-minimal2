@@ -1,1 +1,14 @@
-const createInventoryItem = useMutation(api.inventory.create);
+const kitInfoSection: NavItem[] = [
+  {
+    title: "Kit Statistics",
+    icon: FileText,
+    path: "/kit-statistics",
+    roles: [hasPermission("programs", "view") ? "allowed" : ""],  // ❌ Wrong permission
+  },
+  {
+    title: "LMS",
+    icon: FileText,
+    path: "/lms",
+    roles: [hasPermission("programs", "view") ? "allowed" : ""],  // ❌ Wrong permission
+  },
+];

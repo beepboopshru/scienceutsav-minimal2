@@ -62,35 +62,50 @@ export default function UserManagement() {
   // Load existing permissions when dialog opens
   useEffect(() => {
     if (permissionsDialog.open && permissionsDialog.userId) {
+      // Default structure with all permissions
+      const defaultPermissions = {
+        dashboard: { view: true },
+        programs: { view: false, create: false, edit: false, delete: false, archive: false },
+        kits: { view: false, create: false, edit: false, delete: false, editStock: false, uploadImages: false, clone: false },
+        clients: { view: false, create: false, edit: false, delete: false },
+        b2cClients: { view: false, create: false, edit: false, delete: false },
+        batches: { view: false, create: false, edit: false, delete: false },
+        assignments: { view: false, create: false, edit: false, delete: false, updateStatus: false },
+        inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false },
+        vendors: { view: false, create: false, edit: false, delete: false },
+        services: { view: false, create: false, edit: false, delete: false },
+        processingJobs: { view: false, create: false, edit: false, complete: false, delete: false },
+        procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
+        packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
+        dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
+        discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
+        billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+        vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
+        orderHistory: { view: false, export: false },
+        laserFiles: { view: false, upload: false, delete: false },
+        reports: { view: false, download: false },
+        adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
+        userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+        kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+        lms: { view: false, edit: false },
+      };
+
       if (existingPermissions?.permissions) {
-        // Load existing custom permissions
-        setPermissions(existingPermissions.permissions);
-      } else {
-        // Initialize with default structure (all false except dashboard view)
-        setPermissions({
-          dashboard: { view: true },
-          programs: { view: false, create: false, edit: false, delete: false, archive: false },
-          kits: { view: false, create: false, edit: false, delete: false, editStock: false, uploadImages: false, clone: false },
-          clients: { view: false, create: false, edit: false, delete: false },
-          b2cClients: { view: false, create: false, edit: false, delete: false },
-          batches: { view: false, create: false, edit: false, delete: false },
-          assignments: { view: false, create: false, edit: false, delete: false, updateStatus: false },
-          inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false },
-          vendors: { view: false, create: false, edit: false, delete: false },
-          services: { view: false, create: false, edit: false, delete: false },
-          processingJobs: { view: false, create: false, edit: false, complete: false, delete: false },
-          procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
-          packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
-          dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
-          discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
-          billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
-          vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
-          orderHistory: { view: false, edit: false, export: false },
-          laserFiles: { view: false, edit: false, upload: false, delete: false },
-          reports: { view: false, download: false },
-          adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
-          userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+        // Merge existing permissions with defaults to ensure new fields are present
+        const merged: any = { ...defaultPermissions };
+        const existing = existingPermissions.permissions as any;
+        
+        // Merge each resource, preserving existing values and adding missing ones
+        Object.keys(merged).forEach((resource) => {
+          if (existing[resource]) {
+            merged[resource] = { ...merged[resource], ...existing[resource] };
+          }
         });
+        
+        setPermissions(merged);
+      } else {
+        // No existing permissions, use defaults
+        setPermissions(defaultPermissions);
       }
     }
   }, [permissionsDialog.open, permissionsDialog.userId, existingPermissions]);
@@ -432,30 +447,59 @@ export default function UserManagement() {
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            {Object.entries(permissions).map(([section, perms]: [string, any]) => (
-              <div key={section} className="space-y-3">
-                <h4 className="font-semibold capitalize">{section.replace(/([A-Z])/g, ' $1').trim()}</h4>
-                <div className="grid grid-cols-2 gap-3 pl-4">
-                  {Object.entries(perms).map(([perm, value]: [string, any]) => (
-                    <div key={perm} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`${section}-${perm}`}
-                        checked={value}
-                        onCheckedChange={(checked) => {
-                          setPermissions({
-                            ...permissions,
-                            [section]: { ...permissions[section], [perm]: checked },
-                          });
-                        }}
-                      />
-                      <Label htmlFor={`${section}-${perm}`} className="text-sm capitalize cursor-pointer">
-                        {perm.replace(/([A-Z])/g, ' $1').trim()}
-                      </Label>
-                    </div>
-                  ))}
+            {Object.entries(permissions).sort(([a], [b]) => a.localeCompare(b)).map(([section, perms]: [string, any]) => {
+              const allChecked = Object.values(perms).every((v) => v === true);
+              const someChecked = Object.values(perms).some((v) => v === true);
+              
+              return (
+                <div key={section} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold capitalize text-base">
+                      {section === 'kitStatistics' ? 'Kit Statistics' : 
+                       section === 'lms' ? 'LMS' :
+                       section.replace(/([A-Z])/g, ' $1').trim()}
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newValue = !allChecked;
+                        const updatedSection: any = {};
+                        Object.keys(perms).forEach((perm) => {
+                          updatedSection[perm] = newValue;
+                        });
+                        setPermissions({
+                          ...permissions,
+                          [section]: updatedSection,
+                        });
+                      }}
+                    >
+                      {allChecked ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pl-4">
+                    {Object.entries(perms).map(([perm, value]: [string, any]) => (
+                      <div key={perm} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${section}-${perm}`}
+                          checked={value}
+                          onCheckedChange={(checked) => {
+                            setPermissions({
+                              ...permissions,
+                              [section]: { ...permissions[section], [perm]: checked },
+                            });
+                          }}
+                        />
+                        <Label htmlFor={`${section}-${perm}`} className="text-sm capitalize cursor-pointer">
+                          {perm.replace(/([A-Z])/g, ' $1').trim()}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           <DialogFooter>

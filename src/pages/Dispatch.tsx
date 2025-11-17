@@ -385,7 +385,7 @@ export default function Dispatch() {
             }
             .customer-id {
               text-align: center;
-              font-size: 18px;
+              font-size: 20px;
               font-weight: bold;
               margin-bottom: 15px;
               padding: 10px;
@@ -405,12 +405,12 @@ export default function Dispatch() {
             }
             .address-label {
               font-weight: bold;
-              font-size: 20px;
+              font-size: 22px;
               margin-bottom: 10px;
               text-decoration: underline;
             }
             .address-content {
-              font-size: 16px;
+              font-size: 24px;
               line-height: 1.7;
             }
             .address-content div {
@@ -418,7 +418,7 @@ export default function Dispatch() {
             }
             .contact-info {
               margin-top: 10px;
-              font-size: 15px;
+              font-size: 22px;
             }
             @media print {
               body {
@@ -1315,12 +1315,12 @@ export default function Dispatch() {
                         }
                         .field-label {
                           font-weight: bold;
-                          font-size: 12px;
+                          font-size: 24px;
                           color: #666;
                           margin-bottom: 5px;
                         }
                         .field-value {
-                          font-size: 14px;
+                          font-size: 28px;
                           min-height: 20px;
                         }
                         @media print {
