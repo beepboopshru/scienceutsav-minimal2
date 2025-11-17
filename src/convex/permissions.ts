@@ -6,7 +6,8 @@ type PermissionResource =
   | "assignments" | "inventory" | "vendors" | "services" 
   | "processingJobs" | "procurementJobs" | "packing" | "dispatch"
   | "discrepancyTickets" | "billTracking" | "vendorImports" 
-  | "orderHistory" | "laserFiles" | "reports" | "adminZone" | "userManagement";
+  | "orderHistory" | "laserFiles" | "reports" | "adminZone" | "userManagement"
+  | "kitStatistics" | "lms";
 
 type PermissionAction = string;
 
@@ -34,6 +35,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: true, download: true },
     adminZone: { view: true, clearAssignments: true, viewActivityLogs: true, deleteActivityLogs: true },
     userManagement: { view: true, approveUsers: true, manageRoles: true, managePermissions: true, deleteUsers: true },
+    kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
+    lms: { view: true, edit: true },
   },
   manager: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -57,6 +60,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: true, download: true },
     adminZone: { view: true, clearAssignments: true, viewActivityLogs: true, deleteActivityLogs: true },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
+    lms: { view: true, edit: true },
   },
   sales: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -80,6 +85,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: false, viewCapacityPricing: true },
+    lms: { view: false, edit: false },
   },
   finance: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -103,6 +110,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+    lms: { view: false, edit: false },
   },
   laser_operator: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -126,6 +135,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+    lms: { view: false, edit: false },
   },
   research_head: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -149,6 +160,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: true, viewCapacityPricing: false },
+    lms: { view: true, edit: true },
   },
   research_development: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -172,6 +185,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: true, viewCapacityPricing: false },
+    lms: { view: true, edit: true },
   },
   operations: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -195,6 +210,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: false, viewCapacityPricing: true },
+    lms: { view: false, edit: false },
   },
   inventory: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -218,6 +235,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+    lms: { view: false, edit: false },
   },
   content: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -241,6 +260,8 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     reports: { view: false, download: false },
     adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+    kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+    lms: { view: false, edit: false },
   },
 };
 
