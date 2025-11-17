@@ -57,6 +57,7 @@ export const create = mutation({
       v.literal("high")
     ),
     notes: v.optional(v.string()),
+    remarks: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -74,6 +75,7 @@ export const create = mutation({
       status: "pending" as const,
       priority: args.priority,
       notes: args.notes,
+      remarks: args.remarks,
     };
 
     return await ctx.db.insert("procurementJobs", jobData);

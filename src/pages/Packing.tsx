@@ -61,6 +61,21 @@ export default function Packing() {
   const [procurementDialog, setProcurementDialog] = useState(false);
   const [procurementPriority, setProcurementPriority] = useState<"low" | "medium" | "high">("medium");
   const [procurementNotes, setProcurementNotes] = useState("");
+  const [procurementRemarks, setProcurementRemarks] = useState("");
+  
+  // Kit stock warning dialog state
+  const [kitStockWarningDialog, setKitStockWarningDialog] = useState<{
+    open: boolean;
+    kitBreakdown: Array<{
+      kitName: string;
+      required: number;
+      available: number;
+      shortage: number;
+    }>;
+  }>({
+    open: false,
+    kitBreakdown: [],
+  });
 
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
@@ -290,6 +305,52 @@ export default function Packing() {
       return;
     }
 
+    // Check kit stock availability
+    const kitBreakdown: Array<{
+      kitName: string;
+      required: number;
+      available: number;
+      shortage: number;
+    }> = [];
+
+    selectedAssignments.forEach((assignmentId) => {
+      const assignment = assignments?.find((a) => a._id === assignmentId);
+      if (!assignment) return;
+
+      const kit = kits?.find((k) => k._id === assignment.kitId);
+      if (!kit) return;
+
+      const existingKit = kitBreakdown.find((k) => k.kitName === kit.name);
+      if (existingKit) {
+        existingKit.required += assignment.quantity;
+        existingKit.shortage = Math.max(0, existingKit.required - existingKit.available);
+      } else {
+        kitBreakdown.push({
+          kitName: kit.name,
+          required: assignment.quantity,
+          available: kit.stockCount,
+          shortage: Math.max(0, assignment.quantity - kit.stockCount),
+        });
+      }
+    });
+
+    // Check if any kits are available in stock
+    const hasKitsInStock = kitBreakdown.some((k) => k.available > 0);
+
+    if (hasKitsInStock) {
+      // Show warning dialog with kit breakdown
+      setKitStockWarningDialog({
+        open: true,
+        kitBreakdown,
+      });
+    } else {
+      // No kits in stock, proceed directly to procurement
+      setProcurementDialog(true);
+    }
+  };
+
+  const handleProceedWithProcurement = () => {
+    setKitStockWarningDialog({ open: false, kitBreakdown: [] });
     setProcurementDialog(true);
   };
 
@@ -307,12 +368,14 @@ export default function Packing() {
         materialShortages: shortages,
         priority: procurementPriority,
         notes: procurementNotes || undefined,
+        remarks: procurementRemarks || undefined,
       });
       
       toast.success("Procurement request created successfully");
       setSelectedAssignments(new Set());
       setProcurementDialog(false);
       setProcurementNotes("");
+      setProcurementRemarks("");
       setProcurementPriority("medium");
     } catch (error) {
       toast.error("Failed to create procurement request", {
@@ -997,6 +1060,61 @@ export default function Packing() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={kitStockWarningDialog.open} onOpenChange={(open) => !open && setKitStockWarningDialog({ open: false, kitBreakdown: [] })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Kit Stock Available</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Some kits are available in stock. Do you still want to request material procurement?
+            </p>
+            
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Kit Name</th>
+                    <th className="px-3 py-2 text-right">Required</th>
+                    <th className="px-3 py-2 text-right">Available</th>
+                    <th className="px-3 py-2 text-right">Shortage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kitStockWarningDialog.kitBreakdown.map((kit, idx) => (
+                    <tr key={idx} className="border-t">
+                      <td className="px-3 py-2">{kit.kitName}</td>
+                      <td className="px-3 py-2 text-right">{kit.required}</td>
+                      <td className="px-3 py-2 text-right">
+                        <Badge variant={kit.available >= kit.required ? "default" : kit.available > 0 ? "secondary" : "destructive"}>
+                          {kit.available}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {kit.shortage > 0 ? (
+                          <Badge variant="destructive">{kit.shortage}</Badge>
+                        ) : (
+                          <Badge variant="outline">0</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setKitStockWarningDialog({ open: false, kitBreakdown: [] })}>
+                Cancel
+              </Button>
+              <Button onClick={handleProceedWithProcurement}>
+                Yes, Request Material Procurement
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={procurementDialog} onOpenChange={setProcurementDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -1073,6 +1191,15 @@ export default function Packing() {
                 placeholder="Add any notes about this procurement request..."
                 value={procurementNotes}
                 onChange={(e) => setProcurementNotes(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label>Remarks (Required if kits are in stock)</Label>
+              <Input
+                placeholder="Reason for requesting material procurement despite kit availability..."
+                value={procurementRemarks}
+                onChange={(e) => setProcurementRemarks(e.target.value)}
               />
             </div>
 

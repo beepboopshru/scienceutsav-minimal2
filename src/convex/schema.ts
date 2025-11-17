@@ -630,6 +630,7 @@ const schema = defineSchema(
         v.literal("high")
       ),
       notes: v.optional(v.string()),
+      remarks: v.optional(v.string()),
     })
       .index("by_created_by", ["createdBy"])
       .index("by_status", ["status"])
