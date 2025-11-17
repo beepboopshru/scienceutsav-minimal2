@@ -69,6 +69,9 @@ export default function KitStatistics() {
   const navigate = useNavigate();
 
   const canView = hasPermission("programs", "view");
+  const canViewCapacityPricing = hasPermission("kitStatistics", "viewCapacityPricing");
+  const canEditStock = hasPermission("kitStatistics", "editStock");
+  const canViewFiles = hasPermission("kitStatistics", "viewFiles");
 
   const programs = useQuery(api.programs.list);
   const allKits = useQuery(api.kits.list);
@@ -613,45 +616,51 @@ export default function KitStatistics() {
                                   <FileText className="h-4 w-4 mr-1" />
                                   Sheet
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setFileViewerDialog({
-                                      open: true,
-                                      kitId: kit._id,
-                                      kitName: kit.name,
-                                    });
-                                  }}
-                                  title="View Kit Files"
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  Files
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setCapacityDialog({
-                                      open: true,
-                                      kitId: kit._id,
-                                      kitName: kit.name,
-                                    });
-                                  }}
-                                  title="Capacity & Pricing"
-                                >
-                                  <Calculator className="h-4 w-4 mr-1" />
-                                  Capacity
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleEditStock(kit)}
-                                  title="Edit Stock Count"
-                                >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  Stock
-                                </Button>
+                                {canViewFiles && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setFileViewerDialog({
+                                        open: true,
+                                        kitId: kit._id,
+                                        kitName: kit.name,
+                                      });
+                                    }}
+                                    title="View Kit Files"
+                                  >
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    Files
+                                  </Button>
+                                )}
+                                {canViewCapacityPricing && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setCapacityDialog({
+                                        open: true,
+                                        kitId: kit._id,
+                                        kitName: kit.name,
+                                      });
+                                    }}
+                                    title="Capacity & Pricing"
+                                  >
+                                    <Calculator className="h-4 w-4 mr-1" />
+                                    Capacity
+                                  </Button>
+                                )}
+                                {canEditStock && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditStock(kit)}
+                                    title="Edit Stock Count"
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Stock
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
