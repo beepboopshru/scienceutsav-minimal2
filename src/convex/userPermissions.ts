@@ -154,6 +154,17 @@ export const update = mutation({
         managePermissions: v.boolean(),
         deleteUsers: v.boolean(),
       })),
+      kitStatistics: v.optional(v.object({
+        view: v.boolean(),
+        viewStock: v.boolean(),
+        editStock: v.boolean(),
+        viewFiles: v.boolean(),
+        viewCapacityPricing: v.boolean(),
+      })),
+      lms: v.optional(v.object({
+        view: v.boolean(),
+        edit: v.boolean(),
+      })),
     }),
   },
   handler: async (ctx, args) => {
