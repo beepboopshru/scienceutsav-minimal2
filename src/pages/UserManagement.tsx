@@ -434,9 +434,13 @@ export default function UserManagement() {
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            {Object.entries(permissions).map(([section, perms]: [string, any]) => (
+            {Object.entries(permissions).sort(([a], [b]) => a.localeCompare(b)).map(([section, perms]: [string, any]) => (
               <div key={section} className="space-y-3">
-                <h4 className="font-semibold capitalize">{section.replace(/([A-Z])/g, ' $1').trim()}</h4>
+                <h4 className="font-semibold capitalize text-base">
+                  {section === 'kitStatistics' ? 'Kit Statistics' : 
+                   section === 'lms' ? 'LMS' :
+                   section.replace(/([A-Z])/g, ' $1').trim()}
+                </h4>
                 <div className="grid grid-cols-2 gap-3 pl-4">
                   {Object.entries(perms).map(([perm, value]: [string, any]) => (
                     <div key={perm} className="flex items-center space-x-2">
