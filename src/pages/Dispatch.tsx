@@ -410,7 +410,7 @@ export default function Dispatch() {
               text-decoration: underline;
             }
             .address-content {
-              font-size: 22px;
+              font-size: 24px;
               line-height: 1.7;
             }
             .address-content div {
