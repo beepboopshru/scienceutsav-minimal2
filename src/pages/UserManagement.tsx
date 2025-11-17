@@ -447,34 +447,59 @@ export default function UserManagement() {
           </DialogHeader>
           
           <div className="space-y-6 py-4">
-            {Object.entries(permissions).sort(([a], [b]) => a.localeCompare(b)).map(([section, perms]: [string, any]) => (
-              <div key={section} className="space-y-3">
-                <h4 className="font-semibold capitalize text-base">
-                  {section === 'kitStatistics' ? 'Kit Statistics' : 
-                   section === 'lms' ? 'LMS' :
-                   section.replace(/([A-Z])/g, ' $1').trim()}
-                </h4>
-                <div className="grid grid-cols-2 gap-3 pl-4">
-                  {Object.entries(perms).map(([perm, value]: [string, any]) => (
-                    <div key={perm} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`${section}-${perm}`}
-                        checked={value}
-                        onCheckedChange={(checked) => {
-                          setPermissions({
-                            ...permissions,
-                            [section]: { ...permissions[section], [perm]: checked },
-                          });
-                        }}
-                      />
-                      <Label htmlFor={`${section}-${perm}`} className="text-sm capitalize cursor-pointer">
-                        {perm.replace(/([A-Z])/g, ' $1').trim()}
-                      </Label>
-                    </div>
-                  ))}
+            {Object.entries(permissions).sort(([a], [b]) => a.localeCompare(b)).map(([section, perms]: [string, any]) => {
+              const allChecked = Object.values(perms).every((v) => v === true);
+              const someChecked = Object.values(perms).some((v) => v === true);
+              
+              return (
+                <div key={section} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold capitalize text-base">
+                      {section === 'kitStatistics' ? 'Kit Statistics' : 
+                       section === 'lms' ? 'LMS' :
+                       section.replace(/([A-Z])/g, ' $1').trim()}
+                    </h4>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newValue = !allChecked;
+                        const updatedSection: any = {};
+                        Object.keys(perms).forEach((perm) => {
+                          updatedSection[perm] = newValue;
+                        });
+                        setPermissions({
+                          ...permissions,
+                          [section]: updatedSection,
+                        });
+                      }}
+                    >
+                      {allChecked ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pl-4">
+                    {Object.entries(perms).map(([perm, value]: [string, any]) => (
+                      <div key={perm} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`${section}-${perm}`}
+                          checked={value}
+                          onCheckedChange={(checked) => {
+                            setPermissions({
+                              ...permissions,
+                              [section]: { ...permissions[section], [perm]: checked },
+                            });
+                          }}
+                        />
+                        <Label htmlFor={`${section}-${perm}`} className="text-sm capitalize cursor-pointer">
+                          {perm.replace(/([A-Z])/g, ' $1').trim()}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
           <DialogFooter>
