@@ -62,37 +62,50 @@ export default function UserManagement() {
   // Load existing permissions when dialog opens
   useEffect(() => {
     if (permissionsDialog.open && permissionsDialog.userId) {
+      // Default structure with all permissions
+      const defaultPermissions = {
+        dashboard: { view: true },
+        programs: { view: false, create: false, edit: false, delete: false, archive: false },
+        kits: { view: false, create: false, edit: false, delete: false, editStock: false, uploadImages: false, clone: false },
+        clients: { view: false, create: false, edit: false, delete: false },
+        b2cClients: { view: false, create: false, edit: false, delete: false },
+        batches: { view: false, create: false, edit: false, delete: false },
+        assignments: { view: false, create: false, edit: false, delete: false, updateStatus: false },
+        inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false },
+        vendors: { view: false, create: false, edit: false, delete: false },
+        services: { view: false, create: false, edit: false, delete: false },
+        processingJobs: { view: false, create: false, edit: false, complete: false, delete: false },
+        procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
+        packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
+        dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
+        discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
+        billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+        vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
+        orderHistory: { view: false, edit: false, export: false },
+        laserFiles: { view: false, edit: false, upload: false, delete: false },
+        reports: { view: false, download: false },
+        adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
+        userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+        kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+        lms: { view: false, edit: false },
+      };
+
       if (existingPermissions?.permissions) {
-        // Load existing custom permissions
-        setPermissions(existingPermissions.permissions);
-      } else {
-        // Initialize with default structure (all false except dashboard view)
-        setPermissions({
-          dashboard: { view: true },
-          programs: { view: false, create: false, edit: false, delete: false, archive: false },
-          kits: { view: false, create: false, edit: false, delete: false, editStock: false, uploadImages: false, clone: false },
-          clients: { view: false, create: false, edit: false, delete: false },
-          b2cClients: { view: false, create: false, edit: false, delete: false },
-          batches: { view: false, create: false, edit: false, delete: false },
-          assignments: { view: false, create: false, edit: false, delete: false, updateStatus: false },
-          inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false },
-          vendors: { view: false, create: false, edit: false, delete: false },
-          services: { view: false, create: false, edit: false, delete: false },
-          processingJobs: { view: false, create: false, edit: false, complete: false, delete: false },
-          procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
-          packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
-          dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
-          discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
-          billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
-          vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
-          orderHistory: { view: false, edit: false, export: false },
-          laserFiles: { view: false, edit: false, upload: false, delete: false },
-          reports: { view: false, download: false },
-          adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
-          userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
-          kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
-          lms: { view: false, edit: false },
+        // Merge existing permissions with defaults to ensure new fields are present
+        const merged: any = { ...defaultPermissions };
+        const existing = existingPermissions.permissions as any;
+        
+        // Merge each resource, preserving existing values and adding missing ones
+        Object.keys(merged).forEach((resource) => {
+          if (existing[resource]) {
+            merged[resource] = { ...merged[resource], ...existing[resource] };
+          }
         });
+        
+        setPermissions(merged);
+      } else {
+        // No existing permissions, use defaults
+        setPermissions(defaultPermissions);
       }
     }
   }, [permissionsDialog.open, permissionsDialog.userId, existingPermissions]);
