@@ -385,7 +385,7 @@ export default function Dispatch() {
             }
             .customer-id {
               text-align: center;
-              font-size: 36px;
+              font-size: 20px;
               font-weight: bold;
               margin-bottom: 15px;
               padding: 10px;
@@ -405,12 +405,12 @@ export default function Dispatch() {
             }
             .address-label {
               font-weight: bold;
-              font-size: 40px;
+              font-size: 18px;
               margin-bottom: 10px;
               text-decoration: underline;
             }
             .address-content {
-              font-size: 32px;
+              font-size: 18px;
               line-height: 1.7;
             }
             .address-content div {
@@ -418,7 +418,7 @@ export default function Dispatch() {
             }
             .contact-info {
               margin-top: 10px;
-              font-size: 30px;
+              font-size: 18px;
             }
             @media print {
               body {
