@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -19,6 +19,7 @@ import {
   Calculator,
   X,
   Search,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +73,7 @@ export default function KitStatistics() {
   const programs = useQuery(api.programs.list);
   const allKits = useQuery(api.kits.list);
   const inventory = useQuery(api.inventory.list);
+  const updateKit = useMutation(api.kits.update);
 
   const [selectedProgramId, setSelectedProgramId] = useState<Id<"programs"> | null>(null);
   const [expandedKits, setExpandedKits] = useState<Set<string>>(new Set());
@@ -93,6 +95,18 @@ export default function KitStatistics() {
     kitId: null,
     kitName: "",
   });
+  const [editStockDialog, setEditStockDialog] = useState<{
+    open: boolean;
+    kitId: Id<"kits"> | null;
+    kitName: string;
+    currentStock: number;
+  }>({
+    open: false,
+    kitId: null,
+    kitName: "",
+    currentStock: 0,
+  });
+  const [newStockCount, setNewStockCount] = useState<number>(0);
 
   // Filter states
   const [kitNameFilter, setKitNameFilter] = useState("");
@@ -160,6 +174,31 @@ export default function KitStatistics() {
       toast.success("Kit sheet downloaded successfully");
     } catch (error) {
       toast.error("Failed to generate kit sheet");
+    }
+  };
+
+  const handleEditStock = (kit: any) => {
+    setEditStockDialog({
+      open: true,
+      kitId: kit._id,
+      kitName: kit.name,
+      currentStock: kit.stockCount || 0,
+    });
+    setNewStockCount(kit.stockCount || 0);
+  };
+
+  const handleUpdateStock = async () => {
+    if (!editStockDialog.kitId) return;
+    
+    try {
+      await updateKit({
+        id: editStockDialog.kitId,
+        stockCount: newStockCount,
+      });
+      toast.success("Stock count updated successfully");
+      setEditStockDialog({ open: false, kitId: null, kitName: "", currentStock: 0 });
+    } catch (error) {
+      toast.error("Failed to update stock count");
     }
   };
 
@@ -604,6 +643,15 @@ export default function KitStatistics() {
                                   <Calculator className="h-4 w-4 mr-1" />
                                   Capacity
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditStock(kit)}
+                                  title="Edit Stock Count"
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Stock
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -750,6 +798,46 @@ export default function KitStatistics() {
               inventory={inventory || []}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Stock Dialog */}
+      <Dialog
+        open={editStockDialog.open}
+        onOpenChange={(open) =>
+          !open && setEditStockDialog({ open: false, kitId: null, kitName: "", currentStock: 0 })
+        }
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Stock Count: {editStockDialog.kitName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="stock-count">Stock Count</Label>
+              <Input
+                id="stock-count"
+                type="number"
+                value={newStockCount}
+                onChange={(e) => setNewStockCount(parseInt(e.target.value) || 0)}
+                placeholder="Enter stock count"
+              />
+              <p className="text-sm text-muted-foreground">
+                Current stock: {editStockDialog.currentStock}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setEditStockDialog({ open: false, kitId: null, kitName: "", currentStock: 0 })
+                }
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateStock}>Update Stock</Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>
