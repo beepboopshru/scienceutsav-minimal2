@@ -90,6 +90,8 @@ export default function UserManagement() {
           reports: { view: false, download: false },
           adminZone: { view: false, clearAssignments: false, viewActivityLogs: false, deleteActivityLogs: false },
           userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
+          kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
+          lms: { view: false, edit: false },
         });
       }
     }
