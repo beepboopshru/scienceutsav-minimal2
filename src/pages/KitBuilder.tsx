@@ -22,6 +22,7 @@ import { motion } from "framer-motion";
 import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements, stringifyPackingRequirements } from "@/lib/kitPacking";
 import { cn } from "@/lib/utils";
+import { QuickAddInventoryDialog } from "@/components/research/QuickAddInventoryDialog";
 
 export default function KitBuilder() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -56,19 +57,12 @@ export default function KitBuilder() {
   
   // Quick add inventory dialog state
   const [quickAddInventoryOpen, setQuickAddInventoryOpen] = useState(false);
-  const [quickAddForm, setQuickAddForm] = useState({
-    name: "",
-    description: "",
-    type: "raw" as "raw" | "pre_processed" | "finished" | "sealed_packet",
-    unit: "",
-    subcategory: "",
-    notes: "",
-  });
   const [quickAddContext, setQuickAddContext] = useState<{
     section: "pouch" | "packet" | "spare" | "bulk";
     pouchIdx?: number;
     packetIdx?: number;
     itemIdx?: number;
+    defaultSubcategory?: string;
   } | null>(null);
 
   useEffect(() => {
@@ -122,37 +116,8 @@ export default function KitBuilder() {
     return inventory.filter((item) => item.subcategory === subcategory);
   };
 
-  const handleQuickAddInventory = async () => {
-    if (!quickAddForm.name || !quickAddForm.unit || !quickAddForm.subcategory) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    try {
-      await createInventoryItem({
-        name: quickAddForm.name,
-        description: quickAddForm.description || undefined,
-        type: quickAddForm.type,
-        quantity: 0,
-        unit: quickAddForm.unit,
-        subcategory: quickAddForm.subcategory,
-        notes: quickAddForm.notes || undefined,
-      });
-
-      toast.success("Inventory item created successfully");
-      setQuickAddInventoryOpen(false);
-      setQuickAddForm({
-        name: "",
-        description: "",
-        type: "raw",
-        unit: "",
-        subcategory: "",
-        notes: "",
-      });
-    } catch (error) {
-      toast.error("Failed to create inventory item");
-      console.error(error);
-    }
+  const handleQuickAddSuccess = () => {
+    setQuickAddInventoryOpen(false);
   };
 
   const handleSave = async () => {
@@ -484,8 +449,12 @@ export default function KitBuilder() {
                                             <Button
                                               size="sm"
                                               onClick={() => {
-                                                setQuickAddContext({ section: "pouch", pouchIdx, itemIdx: matIdx });
-                                                setQuickAddForm({ ...quickAddForm, subcategory: material.subcategory || "" });
+                                                setQuickAddContext({ 
+                                                  section: "pouch", 
+                                                  pouchIdx, 
+                                                  itemIdx: matIdx,
+                                                  defaultSubcategory: material.subcategory || ""
+                                                });
                                                 setQuickAddInventoryOpen(true);
                                               }}
                                             >
@@ -632,8 +601,12 @@ export default function KitBuilder() {
                                             <Button
                                               size="sm"
                                               onClick={() => {
-                                                setQuickAddContext({ section: "packet", packetIdx, itemIdx: matIdx });
-                                                setQuickAddForm({ ...quickAddForm, subcategory: material.subcategory || "" });
+                                                setQuickAddContext({ 
+                                                  section: "packet", 
+                                                  packetIdx, 
+                                                  itemIdx: matIdx,
+                                                  defaultSubcategory: material.subcategory || ""
+                                                });
                                                 setQuickAddInventoryOpen(true);
                                               }}
                                             >
@@ -763,8 +736,11 @@ export default function KitBuilder() {
                                         <Button
                                           size="sm"
                                           onClick={() => {
-                                            setQuickAddContext({ section: "spare", itemIdx: idx });
-                                            setQuickAddForm({ ...quickAddForm, subcategory: spare.subcategory || "" });
+                                            setQuickAddContext({ 
+                                              section: "spare", 
+                                              itemIdx: idx,
+                                              defaultSubcategory: spare.subcategory || ""
+                                            });
                                             setQuickAddInventoryOpen(true);
                                           }}
                                         >
@@ -879,8 +855,11 @@ export default function KitBuilder() {
                                         <Button
                                           size="sm"
                                           onClick={() => {
-                                            setQuickAddContext({ section: "bulk", itemIdx: idx });
-                                            setQuickAddForm({ ...quickAddForm, subcategory: bulk.subcategory || "" });
+                                            setQuickAddContext({ 
+                                              section: "bulk", 
+                                              itemIdx: idx,
+                                              defaultSubcategory: bulk.subcategory || ""
+                                            });
                                             setQuickAddInventoryOpen(true);
                                           }}
                                         >
@@ -1108,99 +1087,12 @@ export default function KitBuilder() {
           </div>
         </motion.div>
         
-        {/* Quick Add Inventory Dialog */}
-        <Dialog open={quickAddInventoryOpen} onOpenChange={setQuickAddInventoryOpen}>
-          <DialogContent className="max-w-xl">
-            <DialogHeader>
-              <DialogTitle>Add New Inventory Item</DialogTitle>
-              <DialogDescription>
-                Create a new inventory item and use it in your kit
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input
-                  value={quickAddForm.name}
-                  onChange={(e) => setQuickAddForm({ ...quickAddForm, name: e.target.value })}
-                  placeholder="Enter item name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  value={quickAddForm.description}
-                  onChange={(e) => setQuickAddForm({ ...quickAddForm, description: e.target.value })}
-                  placeholder="Brief description"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Type *</Label>
-                  <Select
-                    value={quickAddForm.type}
-                    onValueChange={(value: any) => setQuickAddForm({ ...quickAddForm, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="raw">Raw Material</SelectItem>
-                      <SelectItem value="pre_processed">Pre-Processed</SelectItem>
-                      <SelectItem value="finished">Finished</SelectItem>
-                      <SelectItem value="sealed_packet">Sealed Packet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Unit *</Label>
-                  <Input
-                    value={quickAddForm.unit}
-                    onChange={(e) => setQuickAddForm({ ...quickAddForm, unit: e.target.value })}
-                    placeholder="e.g., kg, pcs, meters"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Subcategory *</Label>
-                <Select
-                  value={quickAddForm.subcategory}
-                  onValueChange={(value) => setQuickAddForm({ ...quickAddForm, subcategory: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                      <SelectItem key={cat._id} value={cat.value}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Notes</Label>
-                <Textarea
-                  value={quickAddForm.notes}
-                  onChange={(e) => setQuickAddForm({ ...quickAddForm, notes: e.target.value })}
-                  placeholder="Additional notes"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setQuickAddInventoryOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleQuickAddInventory}
-                disabled={!quickAddForm.name || !quickAddForm.unit || !quickAddForm.subcategory}
-              >
-                Add Item
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <QuickAddInventoryDialog 
+          open={quickAddInventoryOpen} 
+          onOpenChange={setQuickAddInventoryOpen}
+          defaultSubcategory={quickAddContext?.defaultSubcategory}
+          onSuccess={handleQuickAddSuccess}
+        />
       </div>
     </Layout>
   );
