@@ -116,7 +116,42 @@ To serve your site over HTTPS and improve performance, set up a CloudFront distr
 
 ---
 
-## Step 5: Monitor and Maintain
+## Step 6: Set Up Custom Domain (Optional)
+
+To use a custom domain (e.g., `www.yourdomain.com`) instead of the CloudFront URL:
+
+1.  **Request an SSL Certificate (ACM):**
+    *   Go to **AWS Certificate Manager (ACM)**.
+    *   **Important:** Switch region to **US East (N. Virginia) us-east-1**. CloudFront requires certificates in this region.
+    *   Click **Request a certificate**.
+    *   Enter your domain name (e.g., `example.com` and `*.example.com`).
+    *   Follow instructions to validate the certificate (usually via DNS validation).
+
+2.  **Add Domain to CloudFront:**
+    *   Go to your **CloudFront Distribution**.
+    *   Click **Edit** under the **General** tab.
+    *   **Alternate Domain Names (CNAMEs):** Add your domain (e.g., `www.yourdomain.com`).
+    *   **Custom SSL Certificate:** Select the certificate you just created in ACM.
+    *   Click **Save changes**.
+
+3.  **Update DNS Records:**
+    *   **If using AWS Route 53:**
+        *   Go to your Hosted Zone.
+        *   Create a new **A Record**.
+        *   Toggle **Alias** to Yes.
+        *   Choose **Alias to CloudFront distribution**.
+        *   Select your distribution.
+    *   **If using another DNS provider (GoDaddy, Namecheap, etc.):**
+        *   Create a **CNAME record**.
+        *   Host: `www` (or `@` if supported).
+        *   Value: Your CloudFront Domain Name (e.g., `d12345.cloudfront.net`).
+
+4.  **Update Convex Environment Variable:**
+    *   Don't forget to update `SITE_URL` in Convex to your new custom domain (e.g., `https://www.yourdomain.com`).
+
+---
+
+## Step 7: Monitor and Maintain
 
 1. **Monitor Performance:**
    - Use AWS CloudWatch to monitor application performance and logs.
