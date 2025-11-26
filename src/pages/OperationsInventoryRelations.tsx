@@ -71,7 +71,7 @@ export default function OperationsInventoryRelations() {
     );
   }
 
-  if (isLoading || !procurementJobs || !assignments || !kits) {
+  if (isLoading || !procurementJobs || !assignments || !kits || !inventory) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-full">
@@ -80,6 +80,54 @@ export default function OperationsInventoryRelations() {
       </Layout>
     );
   }
+
+  const getExplodedShortages = (job: any) => {
+    if (!inventory) return job.materialShortages;
+
+    const inventoryMap = new Map(inventory.map(item => [item._id, item]));
+    const inventoryByName = new Map(inventory.map(item => [item.name, item]));
+    const requirementsMap = new Map<string, any>();
+
+    const processShortage = (itemName: string, qtyNeeded: number) => {
+      const item = inventoryByName.get(itemName);
+      
+      if (item && item.components && item.components.length > 0) {
+        item.components.forEach(comp => {
+          const rawItem = inventoryMap.get(comp.rawMaterialId);
+          if (rawItem) {
+            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired);
+          }
+        });
+      } else {
+        const key = itemName;
+        if (!requirementsMap.has(key)) {
+          requirementsMap.set(key, {
+            name: itemName,
+            subcategory: item?.subcategory || "Uncategorized",
+            description: item?.description || "N/A",
+            inventoryType: item?.type || "N/A",
+            unit: item?.unit || "units",
+            requiredQty: 0,
+            currentStock: item?.quantity || 0,
+          });
+        }
+        const req = requirementsMap.get(key)!;
+        req.requiredQty += qtyNeeded;
+      }
+    };
+
+    job.materialShortages.forEach((mat: any) => {
+      if (mat.shortage > 0) {
+        processShortage(mat.name, mat.shortage);
+      }
+    });
+
+    return Array.from(requirementsMap.values()).map(req => ({
+      ...req,
+      shortage: Math.max(0, req.requiredQty - req.currentStock),
+      category: req.subcategory 
+    })).sort((a, b) => a.subcategory.localeCompare(b.subcategory) || a.name.localeCompare(b.name));
+  };
 
   const filteredJobs = procurementJobs.filter((job) => {
     if (statusFilter !== "all" && job.status !== statusFilter) return false;
@@ -145,6 +193,7 @@ export default function OperationsInventoryRelations() {
 
   const exportJobToPDF = (job: any) => {
     const doc = new jsPDF();
+    const explodedMaterials = getExplodedShortages(job);
     
     doc.setFontSize(18);
     doc.text("Procurement Job Details", 14, 20);
@@ -161,21 +210,23 @@ export default function OperationsInventoryRelations() {
     }
     
     doc.setFontSize(14);
-    doc.text("Material Shortages", 14, 75);
+    doc.text("Material Shortages (BOM Exploded)", 14, 75);
     
-    const materialData = job.materialShortages.map((mat: any) => [
+    const materialData = explodedMaterials.map((mat: any) => [
+      mat.subcategory,
       mat.name,
-      mat.category || "—",
+      mat.description,
+      mat.inventoryType,
       `${mat.currentStock} ${mat.unit}`,
-      `${mat.required} ${mat.unit}`,
-      `${mat.shortage} ${mat.unit}`,
+      `${mat.requiredQty.toFixed(2)} ${mat.unit}`,
+      `${mat.shortage.toFixed(2)} ${mat.unit}`,
     ]);
     
     autoTable(doc, {
-      head: [["Material", "Category", "Current Stock", "Required", "Shortage"]],
+      head: [["Subcategory", "Item Name", "Description", "Type", "Stock", "Required", "Shortage"]],
       body: materialData,
       startY: 80,
-      styles: { fontSize: 9, cellPadding: 2 },
+      styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [71, 85, 105], textColor: 255 },
     });
     
@@ -671,7 +722,7 @@ export default function OperationsInventoryRelations() {
       </div>
 
       <Dialog open={detailsDialog} onOpenChange={setDetailsDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Procurement Job Details</DialogTitle>
             <DialogDescription>
@@ -703,33 +754,39 @@ export default function OperationsInventoryRelations() {
               )}
 
               <div>
-                <Label className="text-sm font-semibold">Material Shortages</Label>
+                <Label className="text-sm font-semibold">Material Shortages (BOM Exploded)</Label>
                 <Table className="mt-2">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Material</TableHead>
-                      <TableHead>Category</TableHead>
+                      <TableHead>Subcategory</TableHead>
+                      <TableHead>Item Name</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Current Stock</TableHead>
                       <TableHead>Required</TableHead>
                       <TableHead>Shortage</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {selectedJob.materialShortages.map((mat: any, idx: number) => (
+                    {getExplodedShortages(selectedJob).map((mat: any, idx: number) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">{mat.name}</TableCell>
+                        <TableCell className="font-medium">{mat.subcategory}</TableCell>
+                        <TableCell>{mat.name}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={mat.description}>
+                          {mat.description}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{mat.category || "—"}</Badge>
+                          <Badge variant="outline">{mat.inventoryType}</Badge>
                         </TableCell>
                         <TableCell>
                           {mat.currentStock} {mat.unit}
                         </TableCell>
                         <TableCell>
-                          {mat.required} {mat.unit}
+                          {mat.requiredQty.toFixed(2)} {mat.unit}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="destructive">
-                            {mat.shortage} {mat.unit}
+                          <Badge variant={mat.shortage > 0 ? "destructive" : "secondary"}>
+                            {mat.shortage.toFixed(2)} {mat.unit}
                           </Badge>
                         </TableCell>
                       </TableRow>
