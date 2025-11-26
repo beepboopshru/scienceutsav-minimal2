@@ -1,14 +1,8 @@
-const kitInfoSection: NavItem[] = [
-  {
-    title: "Kit Statistics",
-    icon: FileText,
-    path: "/kit-statistics",
-    roles: [hasPermission("programs", "view") ? "allowed" : ""],  // ❌ Wrong permission
-  },
-  {
-    title: "LMS",
-    icon: FileText,
-    path: "/lms",
-    roles: [hasPermission("programs", "view") ? "allowed" : ""],  // ❌ Wrong permission
-  },
-];
+    if (productionMonth && dispatchDate) {
+      const prodDate = new Date(productionMonth + "-01");
+      const dispDate = new Date(dispatchDate);
+      if (prodDate > dispDate) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
+    }
