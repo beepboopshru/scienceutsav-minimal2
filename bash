@@ -1,1 +1,2 @@
-npx convex env set SITE_URL="http://my-scienceutsav-management-frontend.s3-website.ap-south-1.amazonaws.com" --prod
+pnpm build
+scp -r dist/* ubuntu@YOUR_EC2_IP:/var/www/html/
