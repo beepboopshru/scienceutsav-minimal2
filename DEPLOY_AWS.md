@@ -88,7 +88,35 @@ For a more robust setup, consider setting up an API Gateway to manage API calls 
 
 ---
 
-## Step 4: Monitor and Maintain
+## Step 4: Set Up CloudFront (Recommended for HTTPS)
+
+To serve your site over HTTPS and improve performance, set up a CloudFront distribution.
+
+1.  **Go to CloudFront Console:**
+    - Navigate to the AWS CloudFront service.
+    - Click **Create distribution**.
+
+2.  **Configure Origin:**
+    - **Origin Domain:** Paste your **S3 Website Endpoint** here (e.g., `my-bucket.s3-website.ap-south-1.amazonaws.com`).
+    - **Important:** Do NOT select the bucket from the dropdown list. Paste the website endpoint URL you got from the S3 Static Hosting settings.
+    - **Protocol:** HTTP only.
+
+3.  **Default Cache Behavior:**
+    - **Viewer protocol policy:** Select **Redirect HTTP to HTTPS**.
+    - **Allowed HTTP methods:** Select `GET, HEAD, OPTIONS`.
+
+4.  **Create Distribution:**
+    - Click **Create distribution**.
+    - Wait for the deployment to finish (it may take a few minutes).
+
+5.  **Update Convex Environment Variable:**
+    - Copy your new CloudFront Domain Name (e.g., `https://d12345.cloudfront.net`).
+    - Go to your **Convex Dashboard** -> **Settings** -> **Environment Variables**.
+    - Update `SITE_URL` (in Production) to this new CloudFront URL.
+
+---
+
+## Step 5: Monitor and Maintain
 
 1. **Monitor Performance:**
    - Use AWS CloudWatch to monitor application performance and logs.
