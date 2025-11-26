@@ -47,6 +47,8 @@ export function QuickAddInventoryDialog({
     unit: string;
   }>>([]);
 
+  const [openComboboxIdx, setOpenComboboxIdx] = useState<number | null>(null);
+
   const handleSave = async () => {
     if (!form.name || !form.unit || !form.subcategory) {
       toast.error("Please fill in all required fields");
@@ -210,7 +212,11 @@ export function QuickAddInventoryDialog({
                 {bom.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-6">
-                      <Popover>
+                      <Popover
+                        open={openComboboxIdx === idx}
+                        onOpenChange={(open) => setOpenComboboxIdx(open ? idx : null)}
+                        modal={true}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -235,6 +241,7 @@ export function QuickAddInventoryDialog({
                                       updateBomItem(idx, "rawMaterialId", invItem._id);
                                       updateBomItem(idx, "name", invItem.name);
                                       updateBomItem(idx, "unit", invItem.unit);
+                                      setOpenComboboxIdx(null);
                                     }}
                                   >
                                     <Check
