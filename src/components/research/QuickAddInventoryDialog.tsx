@@ -238,9 +238,14 @@ export function QuickAddInventoryDialog({
                                     key={invItem._id}
                                     value={invItem.name}
                                     onSelect={() => {
-                                      updateBomItem(idx, "rawMaterialId", invItem._id);
-                                      updateBomItem(idx, "name", invItem.name);
-                                      updateBomItem(idx, "unit", invItem.unit);
+                                      const newBom = [...bom];
+                                      newBom[idx] = {
+                                        ...newBom[idx],
+                                        rawMaterialId: invItem._id,
+                                        name: invItem.name,
+                                        unit: invItem.unit
+                                      };
+                                      setBom(newBom);
                                       setOpenComboboxIdx(null);
                                     }}
                                   >
