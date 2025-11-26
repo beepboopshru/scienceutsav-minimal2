@@ -1,1 +1,2 @@
-sed -n '285,305p;600,620p;650,670p' src/pages/B2CAssignments.tsx
+pnpm build
+scp -r dist/* ubuntu@YOUR_EC2_IP:/var/www/html/
