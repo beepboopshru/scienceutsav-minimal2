@@ -1,0 +1,1 @@
+grep -n "productionMonth" src/convex/assignments.ts
