@@ -9,9 +9,6 @@ export const emailOtp = Email({
     return generateRandomString(6, alphabet("0-9"));
   },
   async sendVerificationRequest({ identifier: email, provider, token }) {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not set in environment variables. Please add it to your Convex Dashboard in the Production environment.");
-    }
     const resend = new Resend(process.env.RESEND_API_KEY);
     
     try {
