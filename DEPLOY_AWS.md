@@ -112,7 +112,9 @@ To serve your site over HTTPS and improve performance, set up a CloudFront distr
 5.  **Update Convex Environment Variable:**
     - Copy your new CloudFront Domain Name (e.g., `https://d12345.cloudfront.net`).
     - Go to your **Convex Dashboard** -> **Settings** -> **Environment Variables**.
-    - Update `SITE_URL` (in Production) to this new CloudFront URL.
+    - **Switch to the "Production" tab** (if not already selected).
+    - Update `SITE_URL` to this new CloudFront URL (e.g., `https://d12345.cloudfront.net`).
+    - **IMPORTANT:** You must also copy **ALL** other environment variables from Development to Production (e.g., `RESEND_API_KEY`, `OPENROUTER_API_KEY`, etc.). The Production environment is separate and empty by default.
 
 ---
 
