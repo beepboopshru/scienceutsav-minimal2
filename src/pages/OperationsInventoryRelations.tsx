@@ -222,7 +222,63 @@ export default function OperationsInventoryRelations() {
       return;
     }
 
-    // Aggregate materials from all jobs
+    // Create inventory lookups
+    const inventoryMap = new Map(inventory.map(item => [item._id, item]));
+    const inventoryByName = new Map(inventory.map(item => [item.name, item]));
+
+    // Map to store aggregated requirements
+    const requirementsMap = new Map<string, {
+      name: string;
+      subcategory: string;
+      description: string;
+      inventoryType: string;
+      unit: string;
+      requiredQty: number;
+      sourceJobs: Set<string>;
+    }>();
+
+    // Recursive function to process shortages and explode BOMs
+    const processShortage = (itemName: string, qtyNeeded: number, jobId: string) => {
+      const item = inventoryByName.get(itemName);
+      
+      // If item has components (BOM) and is pre-processed/finished, explode it
+      if (item && item.components && item.components.length > 0) {
+        item.components.forEach(comp => {
+          const rawItem = inventoryMap.get(comp.rawMaterialId);
+          if (rawItem) {
+            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired, jobId);
+          }
+        });
+      } else {
+        // Base material or item without BOM
+        const key = itemName;
+        if (!requirementsMap.has(key)) {
+          requirementsMap.set(key, {
+            name: itemName,
+            subcategory: item?.subcategory || "Uncategorized",
+            description: item?.description || "N/A",
+            inventoryType: item?.type || "N/A",
+            unit: item?.unit || "units",
+            requiredQty: 0,
+            sourceJobs: new Set()
+          });
+        }
+        const req = requirementsMap.get(key)!;
+        req.requiredQty += qtyNeeded;
+        req.sourceJobs.add(jobId);
+      }
+    };
+
+    // Process all jobs
+    jobsToProcess.forEach((job) => {
+      job.materialShortages.forEach((mat: any) => {
+        if (mat.shortage > 0) {
+          processShortage(mat.name, mat.shortage, job.jobId);
+        }
+      });
+    });
+
+    // Build final material map with net shortages
     const materialMap = new Map<string, {
       name: string;
       subcategory: string;
@@ -236,32 +292,22 @@ export default function OperationsInventoryRelations() {
       sourceJobs: string[];
     }>();
 
-    jobsToProcess.forEach((job) => {
-      job.materialShortages.forEach((mat: any) => {
-        const key = `${mat.name}-${mat.unit}`;
-        
-        // Find the inventory item to get subcategory, description, and type
-        const inventoryItem = inventory.find((inv) => inv.name === mat.name);
-        
-        if (materialMap.has(key)) {
-          const existing = materialMap.get(key)!;
-          existing.required += mat.required;
-          existing.shortage += mat.shortage;
-          existing.sourceJobs.push(job.jobId);
-        } else {
-          materialMap.set(key, {
-            name: mat.name,
-            subcategory: inventoryItem?.subcategory || mat.subcategory || "N/A",
-            description: inventoryItem?.description || "N/A",
-            inventoryType: inventoryItem?.type || mat.inventoryType || "N/A",
-            category: mat.category || "Uncategorized",
-            unit: mat.unit,
-            required: mat.required,
-            currentStock: mat.currentStock,
-            shortage: mat.shortage,
-            sourceJobs: [job.jobId],
-          });
-        }
+    requirementsMap.forEach((req, key) => {
+      const item = inventoryByName.get(req.name);
+      const currentStock = item?.quantity || 0;
+      const netShortage = Math.max(0, req.requiredQty - currentStock);
+
+      materialMap.set(key, {
+        name: req.name,
+        subcategory: req.subcategory,
+        description: req.description,
+        inventoryType: req.inventoryType,
+        category: req.subcategory, // Using subcategory as category
+        unit: req.unit,
+        required: req.requiredQty,
+        currentStock: currentStock,
+        shortage: netShortage,
+        sourceJobs: Array.from(req.sourceJobs),
       });
     });
 
@@ -284,25 +330,30 @@ export default function OperationsInventoryRelations() {
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           h1 { color: #333; }
-          h2 { color: #555; margin-top: 30px; }
+          h2 { color: #555; margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; }
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #f2f2f2; font-weight: bold; }
           .shortage { color: #dc2626; font-weight: bold; }
-          .meta { color: #666; font-size: 0.9em; margin-bottom: 20px; }
+          .meta { color: #666; font-size: 0.9em; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 5px; }
         </style>
       </head>
       <body>
         <h1>Procurement Components Report</h1>
         <div class="meta">
-          <p>Generated: ${new Date().toLocaleString()}</p>
-          <p>Scope: ${scope === "all" ? "All Filtered Jobs" : "Selected Jobs"}</p>
-          <p>Total Jobs: ${jobsToProcess.length}</p>
-          <p>Total Materials: ${materialMap.size}</p>
+          <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+          <p><strong>Scope:</strong> ${scope === "all" ? "All Filtered Jobs" : "Selected Jobs"}</p>
+          <p><strong>Total Jobs:</strong> ${jobsToProcess.length}</p>
+          <p><strong>Total Unique Materials:</strong> ${materialMap.size}</p>
+          <p><em>Note: Pre-processed items with BOMs have been exploded into raw materials. Shortages are net values against current global stock.</em></p>
         </div>
     `;
 
-    categorizedMaterials.forEach((materials, subcategory) => {
+    // Sort subcategories alphabetically
+    const sortedSubcategories = Array.from(categorizedMaterials.keys()).sort();
+
+    sortedSubcategories.forEach((subcategory) => {
+      const materials = categorizedMaterials.get(subcategory)!;
       html += `
         <h2>${subcategory}</h2>
         <table>
@@ -322,7 +373,10 @@ export default function OperationsInventoryRelations() {
           <tbody>
       `;
 
-      materials.forEach((material) => {
+      // Sort materials by name
+      const sortedMaterials = Array.from(materials.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedMaterials.forEach((material) => {
         html += `
           <tr>
             <td>${material.subcategory}</td>
