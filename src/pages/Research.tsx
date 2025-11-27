@@ -504,50 +504,70 @@ export default function Research() {
     }
   };
 
-  const handleImportKit = (importedData: any) => {
-    // Pre-fill the simple kit form with imported data
-    setSimpleKitFormData({
-      name: importedData.name || "",
-      serialNumber: "",
-      category: importedData.category || undefined,
-      conceptName: "",
-      subject: "",
-      description: importedData.description || "",
-    });
-    
-    // If components are present, we might want to handle them.
-    // Currently the simple kit dialog doesn't support adding components directly in the create flow 
-    // (it creates the kit first, then you edit it).
-    // So we'll create the kit first, then the user can edit it to add components.
-    // OR we can pass the components to the creation mutation if we update it.
-    // For now, let's open the dialog with the basic info and let the user save, 
-    // then we can guide them to the kit builder or handle the components in a second step.
-    
-    // BETTER APPROACH: Open the Kit Builder directly with the data?
-    // The KitBuilder page takes an ID to edit. We don't have an ID yet.
-    // So we should probably create the kit immediately with the imported data.
-    
-    // Let's try to create it immediately if the user confirms in the importer?
-    // The importer returns data to this handler.
-    
-    // Let's open the "Create Simple Kit" dialog pre-filled, and store the component data 
-    // in a temporary state to be saved after the kit is created?
-    // Or just create it.
-    
-    // For simplicity in this turn, I will pre-fill the "Create Simple Kit" dialog 
-    // and show a toast that components will need to be added in the builder.
-    // Ideally, I should update the create mutation to accept components, which it does!
-    
-    // Let's update the handleCreateSimpleKit to include components if they exist in a temp state.
-    setImportedComponents(importedData.components || []);
-    
-    // Handle packing requirements which might be an object now
-    const packingReqs = importedData.packingRequirements;
-    const packingString = typeof packingReqs === 'object' ? JSON.stringify(packingReqs) : (packingReqs || "");
-    
-    setImportedPacking(packingString);
-    setIsCreateSimpleKitOpen(true);
-    toast.info("Basic info pre-filled. Save to create, then components will be added.");
+  const handleImportKit = async (importedData: any) => {
+    if (!selectedProgramId) {
+      toast.error("No program selected. Cannot create kit.");
+      return;
+    }
+
+    try {
+      toast.info("Creating kit from imported data...");
+
+      // Process components
+      const rawComponents = importedData.components || [];
+
+      const componentsPayload = rawComponents
+        .filter((c: any) => c.inventoryItemId)
+        .map((c: any) => ({
+          inventoryItemId: c.inventoryItemId,
+          quantityPerKit: c.quantity || 1,
+          unit: c.unit || "pcs",
+          comments: c.name, // Keep original name as comment
+        }));
+
+      const miscPayload = rawComponents
+        .filter((c: any) => !c.inventoryItemId)
+        .map((c: any) => ({
+          name: c.name,
+          quantity: c.quantity || 1,
+          unit: c.unit || "pcs",
+          notes: c.notes,
+        }));
+
+      // Process packing requirements
+      const packingReqs = importedData.packingRequirements;
+      const isStructured =
+        typeof packingReqs === "object" &&
+        (packingReqs.pouches?.length > 0 || packingReqs.packets?.length > 0);
+      const packingString =
+        typeof packingReqs === "object"
+          ? JSON.stringify(packingReqs)
+          : packingReqs || "";
+
+      // Create the kit
+      const newKitId = await createKit({
+        name: importedData.name || "Imported Kit",
+        programId: selectedProgramId,
+        category: importedData.category,
+        description: importedData.description,
+        stockCount: 0,
+        lowStockThreshold: 5,
+        isStructured: isStructured,
+        packingRequirements: packingString,
+        components: componentsPayload.length > 0 ? componentsPayload : undefined,
+        miscellaneous: miscPayload.length > 0 ? miscPayload : undefined,
+      });
+
+      toast.success("Kit created! Redirecting to builder...");
+
+      // Navigate to builder
+      navigate(`/kit-builder?edit=${newKitId}`);
+    } catch (error) {
+      console.error("Import failed:", error);
+      toast.error("Failed to create kit from import", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   };
 
   const [importedComponents, setImportedComponents] = useState<any[]>([]);
