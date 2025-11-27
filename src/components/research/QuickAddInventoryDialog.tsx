@@ -255,7 +255,12 @@ export function QuickAddInventoryDialog({
                                         item.rawMaterialId === invItem._id ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    {invItem.name}
+                                    <div className="flex flex-col items-start">
+                                      <span>{invItem.name}</span>
+                                      {invItem.description && (
+                                        <span className="text-xs text-muted-foreground">{invItem.description}</span>
+                                      )}
+                                    </div>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
