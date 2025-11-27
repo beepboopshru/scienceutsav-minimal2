@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { ResearchFileManager } from "@/components/research/ResearchFileManager";
 import { parsePackingRequirements } from "@/lib/kitPacking";
 import { Download, Upload, Edit, Trash2, Plus, Package, Loader2, FileText, Image as ImageIcon, Wrench, BookOpen, Copy } from "lucide-react";
+import { KitImporter } from "@/components/research/KitImporter";
 
 // Helper to render structured materials (pouches/packets)
 function StructuredMaterials({ packingRequirements }: { packingRequirements?: string }) {
@@ -348,6 +349,30 @@ export default function Research() {
         });
         toast("Kit updated successfully");
       } else {
+        // Create new kit
+        // If we have imported components, we should try to map them
+        // The create mutation accepts 'components' and 'packingRequirements'
+        
+        const componentsPayload = importedComponents.length > 0 ? importedComponents.map(c => ({
+          inventoryItemId: c.inventoryItemId || "skip", // We need to handle unmatched items. 
+          // The schema requires inventoryItemId to be a valid ID. 
+          // If it's null/skip, we can't add it as a structured component yet.
+          // We might need to add them as "miscellaneous" or filter out unmatched ones.
+          quantityPerKit: c.quantity || 1,
+          unit: c.unit || "pcs",
+          comments: c.name // Store original name in comments if needed
+        })).filter(c => c.inventoryItemId !== "skip" && c.inventoryItemId !== null) : undefined;
+
+        // For unmatched items, maybe add to miscellaneous?
+        const miscPayload = importedComponents
+          .filter(c => !c.inventoryItemId)
+          .map(c => ({
+            name: c.name,
+            quantity: c.quantity || 1,
+            unit: c.unit || "pcs",
+            notes: c.notes
+          }));
+
         await createKit({
           name: simpleKitFormData.name,
           programId: selectedProgramId,
@@ -358,9 +383,16 @@ export default function Research() {
           description: simpleKitFormData.description || undefined,
           stockCount: 0,
           lowStockThreshold: 5,
-          isStructured: false,
+          isStructured: false, // Default to simple, but with data
+          packingRequirements: importedPacking || undefined,
+          components: componentsPayload as any, // Cast to satisfy TS if needed
+          miscellaneous: miscPayload.length > 0 ? miscPayload : undefined
         });
-        toast("Kit created successfully");
+        toast("Kit created successfully with imported data");
+        
+        // Clear imported state
+        setImportedComponents([]);
+        setImportedPacking("");
       }
 
       setIsCreateSimpleKitOpen(false);
@@ -471,6 +503,50 @@ export default function Research() {
       });
     }
   };
+
+  const handleImportKit = (importedData: any) => {
+    // Pre-fill the simple kit form with imported data
+    setSimpleKitFormData({
+      name: importedData.name || "",
+      serialNumber: "",
+      category: undefined,
+      conceptName: "",
+      subject: "",
+      description: importedData.description || "",
+    });
+    
+    // If components are present, we might want to handle them.
+    // Currently the simple kit dialog doesn't support adding components directly in the create flow 
+    // (it creates the kit first, then you edit it).
+    // So we'll create the kit first, then the user can edit it to add components.
+    // OR we can pass the components to the creation mutation if we update it.
+    // For now, let's open the dialog with the basic info and let the user save, 
+    // then we can guide them to the kit builder or handle the components in a second step.
+    
+    // BETTER APPROACH: Open the Kit Builder directly with the data?
+    // The KitBuilder page takes an ID to edit. We don't have an ID yet.
+    // So we should probably create the kit immediately with the imported data.
+    
+    // Let's try to create it immediately if the user confirms in the importer?
+    // The importer returns data to this handler.
+    
+    // Let's open the "Create Simple Kit" dialog pre-filled, and store the component data 
+    // in a temporary state to be saved after the kit is created?
+    // Or just create it.
+    
+    // For simplicity in this turn, I will pre-fill the "Create Simple Kit" dialog 
+    // and show a toast that components will need to be added in the builder.
+    // Ideally, I should update the create mutation to accept components, which it does!
+    
+    // Let's update the handleCreateSimpleKit to include components if they exist in a temp state.
+    setImportedComponents(importedData.components || []);
+    setImportedPacking(importedData.packingRequirements || "");
+    setIsCreateSimpleKitOpen(true);
+    toast.info("Basic info pre-filled. Save to create, then components will be added.");
+  };
+
+  const [importedComponents, setImportedComponents] = useState<any[]>([]);
+  const [importedPacking, setImportedPacking] = useState<string>("");
 
   if (isLoading || !kits || !programs) {
     return (
@@ -765,6 +841,8 @@ export default function Research() {
           <div className="flex gap-2">
             {canCreateKits && (
               <>
+                <KitImporter onImport={handleImportKit} />
+                
                 <Button onClick={() => navigate(`/kit-builder?program=${selectedProgramId}`)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Kit Builder

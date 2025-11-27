@@ -91,3 +91,88 @@ Answer questions about kit availability, inventory levels, stock status, assignm
     }
   },
 });
+
+export const parseKitFromSheet = action({
+  args: { rawText: v.string() },
+  handler: async (ctx, args): Promise<{ success: boolean; data?: string; error?: string }> => {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: "AI configuration missing" };
+    }
+
+    const openai = new OpenAI({
+      apiKey: apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
+      defaultHeaders: {
+        "HTTP-Referer": "https://scienceutsav.app",
+        "X-Title": "ScienceUtsav Management System",
+      },
+    });
+
+    // Fetch inventory for matching (limit to name and ID to save tokens)
+    const inventory = await ctx.runQuery(api.inventory.list);
+    // Take top 500 items or simplify to avoid token limits if list is huge
+    // For now assuming it fits or we rely on fuzzy matching later. 
+    // We'll send a simplified list.
+    const inventoryContext = inventory
+      .map((i: any) => `${i.name} (ID: ${i._id})`)
+      .slice(0, 1000) // Safety limit
+      .join("\n");
+
+    const prompt = `
+    You are a data extraction assistant for a science kit manufacturing system.
+    I will provide raw text copied from a spreadsheet (Google Sheets/Excel).
+    
+    Your task is to extract structured kit data.
+    
+    The text usually contains columns like: "Sl No", "Item", "Details", "Qty", "Packing plan".
+    
+    INSTRUCTIONS:
+    1. Identify the Kit Name if it appears in the header/first lines.
+    2. Extract each component row. Combine "Item" and "Details" for the component name.
+    3. Extract Quantity. Default to 1 if missing.
+    4. Try to match the component to the provided INVENTORY LIST. If you find a high-confidence match, include the ID. Otherwise null.
+    5. Analyze the "Packing plan" column (or similar grouping indicators like "Pouch", "Packet A", "1.1", "1.2"). 
+       - Create a summary string for "packingRequirements".
+       - If possible, structure it as "Pouch: Item A, Item B; Packet 1: Item C".
+    
+    INVENTORY LIST:
+    ${inventoryContext}
+    
+    RAW SHEET DATA:
+    ${args.rawText}
+    
+    OUTPUT FORMAT (JSON ONLY):
+    {
+      "name": "Extracted Kit Name",
+      "description": "Generated description based on items",
+      "components": [
+        {
+          "name": "Item Name",
+          "quantity": number,
+          "unit": "pcs",
+          "inventoryItemId": "id_or_null",
+          "notes": "Any extra details from the row"
+        }
+      ],
+      "packingRequirements": "Summary of packing groups found"
+    }
+    `;
+
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "openai/gpt-4o-mini", // Using a capable model for extraction
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) throw new Error("No response from AI");
+
+      return { success: true, data: response };
+    } catch (error: any) {
+      console.error("AI Parse Error:", error);
+      return { success: false, error: error.message };
+    }
+  },
+});
