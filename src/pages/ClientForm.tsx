@@ -413,119 +413,138 @@ export default function ClientForm() {
               <CardDescription>Plan kits and student strength per grade for each month</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px] sticky left-0 bg-background z-10">Grade</TableHead>
-                      <TableHead className="w-[100px] sticky left-[100px] bg-background z-10">Strength</TableHead>
-                      {MONTHS.map(month => (
-                        <TableHead key={month} className="min-w-[200px] capitalize">
-                          {month}
-                        </TableHead>
+              <div className="flex border rounded-md overflow-hidden">
+                {/* Fixed Columns */}
+                <div className="flex-none w-[200px] border-r bg-background z-10 shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="h-12">
+                        <TableHead className="w-[100px]">Grade</TableHead>
+                        <TableHead className="w-[100px]">Strength</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.gradePlanning.map((plan, index) => (
+                        <TableRow key={plan.grade} className="h-16">
+                          <TableCell className="font-medium">
+                            Grade {plan.grade}
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="0"
+                              className="w-20"
+                              value={plan.studentStrength || ""}
+                              onChange={(e) => {
+                                const newPlanning = [...formData.gradePlanning];
+                                newPlanning[index] = {
+                                  ...newPlanning[index],
+                                  studentStrength: parseInt(e.target.value) || 0
+                                };
+                                setFormData({ ...formData, gradePlanning: newPlanning });
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {formData.gradePlanning.map((plan, index) => (
-                      <TableRow key={plan.grade}>
-                        <TableCell className="font-medium sticky left-0 bg-background z-10">
-                          Grade {plan.grade}
-                        </TableCell>
-                        <TableCell className="sticky left-[100px] bg-background z-10">
-                          <Input
-                            type="number"
-                            min="0"
-                            className="w-20"
-                            value={plan.studentStrength || ""}
-                            onChange={(e) => {
-                              const newPlanning = [...formData.gradePlanning];
-                              newPlanning[index] = {
-                                ...newPlanning[index],
-                                studentStrength: parseInt(e.target.value) || 0
-                              };
-                              setFormData({ ...formData, gradePlanning: newPlanning });
-                            }}
-                          />
-                        </TableCell>
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Scrollable Columns */}
+                <div className="flex-1 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="h-12">
                         {MONTHS.map(month => (
-                          <TableCell key={month}>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  className={cn(
-                                    "w-full justify-between font-normal",
-                                    !plan.schedule[month] && "text-muted-foreground"
-                                  )}
-                                >
-                                  {plan.schedule[month]
-                                    ? kits?.find((k) => k._id === plan.schedule[month])?.name
-                                    : "Select kit"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[300px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search kits..." />
-                                  <CommandList>
-                                    <CommandEmpty>No kit found.</CommandEmpty>
-                                    <CommandGroup>
-                                      <CommandItem
-                                        value="none"
-                                        onSelect={() => {
-                                          const newPlanning = [...formData.gradePlanning];
-                                          const newSchedule = { ...newPlanning[index].schedule };
-                                          delete newSchedule[month];
-                                          newPlanning[index] = { ...newPlanning[index], schedule: newSchedule };
-                                          setFormData({ ...formData, gradePlanning: newPlanning });
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            !plan.schedule[month] ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        None
-                                      </CommandItem>
-                                      {kits?.map((kit) => (
+                          <TableHead key={month} className="w-[250px] min-w-[250px] capitalize">
+                            {month}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.gradePlanning.map((plan, index) => (
+                        <TableRow key={plan.grade} className="h-16">
+                          {MONTHS.map(month => (
+                            <TableCell key={month} className="w-[250px] min-w-[250px]">
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                      "w-full justify-between font-normal",
+                                      !plan.schedule[month] && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {plan.schedule[month]
+                                      ? kits?.find((k) => k._id === plan.schedule[month])?.name
+                                      : "Select kit"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Search kits..." />
+                                    <CommandList>
+                                      <CommandEmpty>No kit found.</CommandEmpty>
+                                      <CommandGroup>
                                         <CommandItem
-                                          key={kit._id}
-                                          value={kit.name}
+                                          value="none"
                                           onSelect={() => {
                                             const newPlanning = [...formData.gradePlanning];
-                                            newPlanning[index] = {
-                                              ...newPlanning[index],
-                                              schedule: {
-                                                ...newPlanning[index].schedule,
-                                                [month]: kit._id
-                                              }
-                                            };
+                                            const newSchedule = { ...newPlanning[index].schedule };
+                                            delete newSchedule[month];
+                                            newPlanning[index] = { ...newPlanning[index], schedule: newSchedule };
                                             setFormData({ ...formData, gradePlanning: newPlanning });
                                           }}
                                         >
                                           <Check
                                             className={cn(
                                               "mr-2 h-4 w-4",
-                                              plan.schedule[month] === kit._id ? "opacity-100" : "opacity-0"
+                                              !plan.schedule[month] ? "opacity-100" : "opacity-0"
                                             )}
                                           />
-                                          {kit.name}
+                                          None
                                         </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                        {kits?.map((kit) => (
+                                          <CommandItem
+                                            key={kit._id}
+                                            value={kit.name}
+                                            onSelect={() => {
+                                              const newPlanning = [...formData.gradePlanning];
+                                              newPlanning[index] = {
+                                                ...newPlanning[index],
+                                                schedule: {
+                                                  ...newPlanning[index].schedule,
+                                                  [month]: kit._id
+                                                }
+                                              };
+                                              setFormData({ ...formData, gradePlanning: newPlanning });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                plan.schedule[month] === kit._id ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            {kit.name}
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
