@@ -26,6 +26,8 @@ interface KitBuilderFormProps {
     programId: Id<"programs">;
     serialNumber?: string;
     category?: string;
+    conceptName?: string;
+    subject?: string;
     cstemVariant?: "explorer" | "discoverer";
     description?: string;
     remarks?: string;
@@ -56,6 +58,8 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
     programId: editingKit?.programId || ("" as Id<"programs">),
     serialNumber: editingKit?.serialNumber || "",
     category: editingKit?.category || "",
+    conceptName: editingKit?.conceptName || "",
+    subject: editingKit?.subject || "",
     cstemVariant: editingKit?.cstemVariant || undefined,
     description: editingKit?.description || "",
     remarks: editingKit?.remarks || "",
@@ -203,6 +207,17 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
               />
             </div>
             <div>
+              <Label>Concept Name</Label>
+              <Input
+                value={kitForm.conceptName}
+                onChange={(e) => setKitForm({ ...kitForm, conceptName: e.target.value })}
+                placeholder="e.g., Newton's Laws"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
               <Label>Category</Label>
               {(() => {
                 const selectedProgram = programs.find(p => p._id === kitForm.programId);
@@ -235,6 +250,14 @@ export function KitBuilderForm({ programs, inventory, editingKit, onSave, onCanc
                   />
                 );
               })()}
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <Input
+                value={kitForm.subject}
+                onChange={(e) => setKitForm({ ...kitForm, subject: e.target.value })}
+                placeholder="e.g., Physics, Chemistry"
+              />
             </div>
           </div>
 

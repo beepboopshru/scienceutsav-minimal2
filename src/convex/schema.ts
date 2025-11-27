@@ -66,8 +66,12 @@ const schema = defineSchema(
       serialNumber: v.optional(v.string()),
       serialNumbers: v.optional(v.array(v.string())),
       type: v.optional(v.string()),
-      cstemVariant: v.optional(v.union(v.literal("explorer"), v.literal("discoverer"))),
+      cstemVariant: v.optional(
+        v.union(v.literal("explorer"), v.literal("discoverer"))
+      ),
       category: v.optional(v.string()),
+      conceptName: v.optional(v.string()),
+      subject: v.optional(v.string()),
       description: v.optional(v.string()),
       remarks: v.optional(v.string()),
       imageUrl: v.optional(v.string()),

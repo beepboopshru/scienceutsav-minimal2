@@ -168,8 +168,10 @@ export default function Research() {
     name: string;
     serialNumber: string;
     category?: string;
+    conceptName?: string;
+    subject?: string;
     description: string;
-  }>({ name: "", serialNumber: "", category: undefined, description: "" });
+  }>({ name: "", serialNumber: "", category: undefined, conceptName: "", subject: "", description: "" });
 
   // Clone kit dialog state
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
@@ -325,6 +327,8 @@ export default function Research() {
           name: simpleKitFormData.name,
           serialNumber: simpleKitFormData.serialNumber || undefined,
           category: simpleKitFormData.category,
+          conceptName: simpleKitFormData.conceptName || undefined,
+          subject: simpleKitFormData.subject || undefined,
           description: simpleKitFormData.description || undefined,
         });
         toast("Kit updated successfully");
@@ -334,6 +338,8 @@ export default function Research() {
           programId: selectedProgramId,
           serialNumber: simpleKitFormData.serialNumber || undefined,
           category: simpleKitFormData.category,
+          conceptName: simpleKitFormData.conceptName || undefined,
+          subject: simpleKitFormData.subject || undefined,
           description: simpleKitFormData.description || undefined,
           stockCount: 0,
           lowStockThreshold: 5,
@@ -344,7 +350,7 @@ export default function Research() {
 
       setIsCreateSimpleKitOpen(false);
       setEditingKit(null);
-      setSimpleKitFormData({ name: "", serialNumber: "", category: undefined, description: "" });
+      setSimpleKitFormData({ name: "", serialNumber: "", category: undefined, conceptName: "", subject: "", description: "" });
     } catch (error) {
       toast("Error saving kit", {
         description: error instanceof Error ? error.message : "Unknown error",
@@ -363,6 +369,8 @@ export default function Research() {
         name: kit.name || "",
         serialNumber: kit.serialNumber || "",
         category: kit.category,
+        conceptName: kit.conceptName || "",
+        subject: kit.subject || "",
         description: kit.description || "",
       });
       setIsCreateSimpleKitOpen(true);
@@ -731,7 +739,7 @@ export default function Research() {
                     setIsCreateSimpleKitOpen(open);
                     if (!open) {
                       setEditingKit(null);
-                      setSimpleKitFormData({ name: "", serialNumber: "", category: undefined, description: "" });
+                      setSimpleKitFormData({ name: "", serialNumber: "", category: undefined, conceptName: "", subject: "", description: "" });
                     }
                   }}
                 >
@@ -755,36 +763,59 @@ export default function Research() {
                           required
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="serialNumber">Kit Number (optional)</Label>
-                        <Input
-                          id="serialNumber"
-                          value={simpleKitFormData.serialNumber}
-                          onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, serialNumber: e.target.value })}
-                        />
-                      </div>
-                      {selectedProgram?.categories && selectedProgram.categories.length > 0 && (
+                      <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="category">Category</Label>
-                          <Select
-                            value={simpleKitFormData.category || ""}
-                            onValueChange={(value: string) =>
-                              setSimpleKitFormData({ ...simpleKitFormData, category: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {selectedProgram.categories.map((cat) => (
-                                <SelectItem key={cat} value={cat}>
-                                  {cat}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="serialNumber">Kit Number</Label>
+                          <Input
+                            id="serialNumber"
+                            value={simpleKitFormData.serialNumber}
+                            onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, serialNumber: e.target.value })}
+                            placeholder="Optional"
+                          />
                         </div>
-                      )}
+                        <div>
+                          <Label htmlFor="conceptName">Concept Name</Label>
+                          <Input
+                            id="conceptName"
+                            value={simpleKitFormData.conceptName}
+                            onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, conceptName: e.target.value })}
+                            placeholder="Optional"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedProgram?.categories && selectedProgram.categories.length > 0 && (
+                          <div>
+                            <Label htmlFor="category">Category</Label>
+                            <Select
+                              value={simpleKitFormData.category || ""}
+                              onValueChange={(value: string) =>
+                                setSimpleKitFormData({ ...simpleKitFormData, category: value })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {selectedProgram.categories.map((cat) => (
+                                  <SelectItem key={cat} value={cat}>
+                                    {cat}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <div>
+                          <Label htmlFor="subject">Subject</Label>
+                          <Input
+                            id="subject"
+                            value={simpleKitFormData.subject}
+                            onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, subject: e.target.value })}
+                            placeholder="Optional"
+                          />
+                        </div>
+                      </div>
                       <div>
                         <Label htmlFor="description">Description</Label>
                         <Textarea
@@ -815,8 +846,10 @@ export default function Research() {
               <thead className="border-b bg-muted/50">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-medium">Kit No.</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Concept Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Kit Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Category</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Subject</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
@@ -833,6 +866,7 @@ export default function Research() {
                         onClick={() => setExpandedKitId(isExpanded ? null : kit._id)}
                       >
                         <td className="px-4 py-3 text-sm text-muted-foreground">{kit.serialNumber || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{kit.conceptName || "-"}</td>
                         <td className="px-4 py-3 text-sm font-medium">
                           <div className="flex items-center gap-2">
                             {isExpanded ? (
@@ -851,6 +885,7 @@ export default function Research() {
                             {kit.category ? kit.category.toUpperCase() : "UNCATEGORIZED"}
                           </Badge>
                         </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{kit.subject || "-"}</td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex space-x-1">
                             {canUploadImages && (
@@ -944,7 +979,7 @@ export default function Research() {
 
                       {isExpanded && (
                         <tr className="bg-muted/20">
-                          <td colSpan={4} className="px-4 py-4">
+                          <td colSpan={6} className="px-4 py-4">
                             <div className="space-y-4">
                               {kit.description && (
                                 <div>
