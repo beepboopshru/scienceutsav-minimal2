@@ -24,7 +24,7 @@ import { Download, Upload, Edit, Trash2, Plus, Package, Loader2, FileText, Image
 import { KitImporter } from "@/components/research/KitImporter";
 
 // Helper to render structured materials (pouches/packets)
-function StructuredMaterials({ packingRequirements }: { packingRequirements?: string }) {
+function StructuredMaterials({ packingRequirements, inventory }: { packingRequirements?: string; inventory?: any[] }) {
   const structure = parsePackingRequirements(packingRequirements);
   const hasContent =
     (structure.pouches?.length ?? 0) > 0 ||
@@ -33,6 +33,32 @@ function StructuredMaterials({ packingRequirements }: { packingRequirements?: st
   if (!hasContent) {
     return <div className="text-center py-4 text-muted-foreground text-sm">No structured materials found for this kit</div>;
   }
+
+  const renderMaterial = (material: any, mIdx: number) => {
+    const inventoryItem = inventory?.find((i) => i.name === material.name);
+    return (
+      <li key={mIdx}>
+        <div className="flex justify-between gap-2">
+          <div className="flex-1">
+            <div className="break-words">• {material.name}</div>
+            {inventoryItem?.description && (
+              <div className="text-xs text-muted-foreground ml-3 mt-0.5">
+                {inventoryItem.description}
+              </div>
+            )}
+          </div>
+          <span className="flex-shrink-0 font-medium whitespace-nowrap">
+            {material.quantity} {material.unit}
+          </span>
+        </div>
+        {material.notes && (
+          <div className="text-muted-foreground ml-3 mt-0.5 italic text-xs">
+            {material.notes}
+          </div>
+        )}
+      </li>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -45,21 +71,7 @@ function StructuredMaterials({ packingRequirements }: { packingRequirements?: st
                 <div className="font-medium text-sm text-center mb-3 pb-2 border-b">{pouch.name}</div>
                 {pouch.materials && pouch.materials.length > 0 ? (
                   <ul className="space-y-2 text-sm">
-                    {pouch.materials.map((material, mIdx) => (
-                      <li key={mIdx}>
-                        <div className="flex justify-between gap-2">
-                          <span className="flex-1 break-words">• {material.name}</span>
-                          <span className="flex-shrink-0 font-medium whitespace-nowrap">
-                            {material.quantity} {material.unit}
-                          </span>
-                        </div>
-                        {material.notes && (
-                          <div className="text-muted-foreground ml-3 mt-0.5 italic text-xs">
-                            {material.notes}
-                          </div>
-                        )}
-                      </li>
-                    ))}
+                    {pouch.materials.map((material, mIdx) => renderMaterial(material, mIdx))}
                   </ul>
                 ) : (
                   <div className="text-xs text-muted-foreground text-center">
@@ -81,21 +93,7 @@ function StructuredMaterials({ packingRequirements }: { packingRequirements?: st
                 <div className="font-medium text-sm text-center mb-3 pb-2 border-b">{packet.name}</div>
                 {packet.materials && packet.materials.length > 0 ? (
                   <ul className="space-y-2 text-sm">
-                    {packet.materials.map((material, mIdx) => (
-                      <li key={mIdx}>
-                        <div className="flex justify-between gap-2">
-                          <span className="flex-1 break-words">• {material.name}</span>
-                          <span className="flex-shrink-0 font-medium whitespace-nowrap">
-                            {material.quantity} {material.unit}
-                          </span>
-                        </div>
-                        {material.notes && (
-                          <div className="text-muted-foreground ml-3 mt-0.5 italic text-xs">
-                            {material.notes}
-                          </div>
-                        )}
-                      </li>
-                    ))}
+                    {packet.materials.map((material, mIdx) => renderMaterial(material, mIdx))}
                   </ul>
                 ) : (
                   <div className="text-xs text-muted-foreground text-center">
@@ -122,6 +120,7 @@ export default function Research() {
 
   const kits = useQuery(api.kits.list);
   const programs = useQuery(api.programs.list);
+  const inventory = useQuery(api.inventory.list);
   const { hasPermission } = usePermissions();
 
   const createKit = useMutation(api.kits.create);
@@ -1133,7 +1132,7 @@ export default function Research() {
                                   {kit.isStructured ? "Pouches & Packets" : "Materials (unstructured)"}
                                 </span>
                                 {kit.isStructured ? (
-                                  <StructuredMaterials packingRequirements={kit.packingRequirements} />
+                                  <StructuredMaterials packingRequirements={kit.packingRequirements} inventory={inventory} />
                                 ) : kit.packingRequirements && kit.packingRequirements.trim().length > 0 ? (
                                   <ul className="list-disc pl-5 space-y-1 text-sm mt-2">
                                     {kit.packingRequirements
