@@ -45,6 +45,8 @@ export default function KitBuilder() {
     name: "",
     programId: "" as Id<"programs">,
     serialNumber: "",
+    conceptName: "",
+    subject: "",
     category: "",
     description: "",
     isStructured: true,
@@ -80,6 +82,8 @@ export default function KitBuilder() {
         name: editingKit.name || "",
         programId: editingKit.programId || ("" as Id<"programs">),
         serialNumber: editingKit.serialNumber || "",
+        conceptName: editingKit.conceptName || "",
+        subject: editingKit.subject || "",
         category: editingKit.category || "",
         description: editingKit.description || "",
         isStructured: editingKit.isStructured ?? true,
@@ -132,6 +136,8 @@ export default function KitBuilder() {
           id: editKitId,
           name: kitForm.name,
           serialNumber: kitForm.serialNumber || undefined,
+          conceptName: kitForm.conceptName || undefined,
+          subject: kitForm.subject || undefined,
           category: kitForm.category || undefined,
           description: kitForm.description || undefined,
           isStructured: kitForm.isStructured,
@@ -296,6 +302,16 @@ export default function KitBuilder() {
                   </div>
 
                   <div>
+                    <Label>Concept Name</Label>
+                    <Input
+                      value={kitForm.conceptName}
+                      onChange={(e) => setKitForm({ ...kitForm, conceptName: e.target.value })}
+                      placeholder="e.g., Sound"
+                      disabled={!canEdit}
+                    />
+                  </div>
+
+                  <div>
                     <Label>Kit Type</Label>
                     <Select
                       value={kitForm.programId}
@@ -343,6 +359,16 @@ export default function KitBuilder() {
                         disabled={!canEdit}
                       />
                     )}
+                  </div>
+
+                  <div>
+                    <Label>Subject</Label>
+                    <Input
+                      value={kitForm.subject}
+                      onChange={(e) => setKitForm({ ...kitForm, subject: e.target.value })}
+                      placeholder="e.g., Physics"
+                      disabled={!canEdit}
+                    />
                   </div>
 
                   <div>
