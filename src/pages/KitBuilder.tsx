@@ -23,6 +23,8 @@ import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements, stringifyPackingRequirements } from "@/lib/kitPacking";
 import { cn } from "@/lib/utils";
 import { QuickAddInventoryDialog } from "@/components/research/QuickAddInventoryDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function KitBuilder() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -66,6 +68,7 @@ export default function KitBuilder() {
     itemIdx?: number;
     defaultSubcategory?: string;
   } | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -118,6 +121,10 @@ export default function KitBuilder() {
   const getInventoryBySubcategory = (subcategory: string) => {
     if (!subcategory) return [];
     return inventory.filter((item) => item.subcategory === subcategory);
+  };
+
+  const getInventoryItem = (name: string) => {
+    return inventory.find((i) => i.name === name);
   };
 
   const handleQuickAddSuccess = () => {
@@ -272,844 +279,895 @@ export default function KitBuilder() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column - Form */}
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Basic Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Kit Name</Label>
-                    <Input
-                      value={kitForm.name}
-                      onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })}
-                      placeholder="e.g., Banjo Boy"
-                      disabled={!canEdit}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Kit Number</Label>
-                    <Input
-                      value={kitForm.serialNumber}
-                      onChange={(e) => setKitForm({ ...kitForm, serialNumber: e.target.value })}
-                      placeholder="e.g., T0"
-                      disabled={!canEdit}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Concept Name</Label>
-                    <Input
-                      value={kitForm.conceptName}
-                      onChange={(e) => setKitForm({ ...kitForm, conceptName: e.target.value })}
-                      placeholder="e.g., Sound"
-                      disabled={!canEdit}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Kit Type</Label>
-                    <Select
-                      value={kitForm.programId}
-                      onValueChange={(value) => setKitForm({ ...kitForm, programId: value as Id<"programs"> })}
-                      disabled={!canEdit}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select program" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {activePrograms.map((p) => (
-                          <SelectItem key={p._id} value={p._id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Category</Label>
-                    {selectedProgram?.categories && selectedProgram.categories.length > 0 ? (
-                      <Select
-                        value={kitForm.category || "none"}
-                        onValueChange={(value) => setKitForm({ ...kitForm, category: value === "none" ? "" : value })}
-                        disabled={!canEdit}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {selectedProgram.categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        value={kitForm.category}
-                        onChange={(e) => setKitForm({ ...kitForm, category: e.target.value })}
-                        placeholder="e.g., Explorer test"
-                        disabled={!canEdit}
-                      />
-                    )}
-                  </div>
-
-                  <div>
-                    <Label>Subject</Label>
-                    <Input
-                      value={kitForm.subject}
-                      onChange={(e) => setKitForm({ ...kitForm, subject: e.target.value })}
-                      placeholder="e.g., Physics"
-                      disabled={!canEdit}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Description</Label>
-                    <Textarea
-                      value={kitForm.description}
-                      onChange={(e) => setKitForm({ ...kitForm, description: e.target.value })}
-                      placeholder="Description about the kit"
-                      rows={3}
-                      disabled={!canEdit}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Kit Image</Label>
-                    <div className="flex items-center gap-2">
-                      <Input type="file" disabled={!canEdit} />
-                      <span className="text-sm text-muted-foreground">No file chosen</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Kit Components */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Kit Components</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="main-pouch" className="w-full">
-                    <TabsList className="grid w-full grid-cols-5">
-                      <TabsTrigger value="main-pouch">Main Pouch</TabsTrigger>
-                      <TabsTrigger value="sealed-packets">Sealed Packets</TabsTrigger>
-                      <TabsTrigger value="spare">Spare Materials</TabsTrigger>
-                      <TabsTrigger value="bulk">Bulk Materials</TabsTrigger>
-                      <TabsTrigger value="misc">Misc Materials</TabsTrigger>
-                    </TabsList>
-
-                    {/* Main Pouch Tab */}
-                    <TabsContent value="main-pouch" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addPouch} disabled={!canEdit}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Main Pouch Item
-                      </Button>
-                      {structure.pouches.map((pouch, pouchIdx) => (
-                        <div key={pouchIdx} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Input
-                              value={pouch.name}
-                              onChange={(e) => {
-                                structure.pouches[pouchIdx].name = e.target.value;
-                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                              }}
-                              placeholder="Pouch name"
-                              className="max-w-xs"
-                              disabled={!canEdit}
-                            />
-                            <Button size="sm" variant="ghost" onClick={() => removePouch(pouchIdx)} disabled={!canEdit}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          {pouch.materials.map((material, matIdx) => (
-                            <div key={matIdx} className="border-l-2 border-muted pl-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <Select
-                                  value={material.subcategory || ""}
-                                  onValueChange={(value) => {
-                                    structure.pouches[pouchIdx].materials[matIdx].subcategory = value;
-                                    setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                  }}
-                                  disabled={!canEdit}
-                                >
-                                  <SelectTrigger className="w-[25%]">
-                                    <SelectValue placeholder="Subcategory" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                                      <SelectItem key={cat._id} value={cat.value}>
-                                        {cat.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      role="combobox"
-                                      disabled={!canEdit || !material.subcategory}
-                                      className="w-[35%] justify-between"
-                                    >
-                                      {material.name || "Select item"}
-                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-[300px] p-0">
-                                    <Command>
-                                      <CommandInput placeholder="Search inventory..." />
-                                      <CommandList>
-                                        <CommandEmpty>
-                                          <div className="p-2 text-center">
-                                            <p className="text-sm text-muted-foreground mb-2">No item found.</p>
-                                            <Button
-                                              size="sm"
-                                              onClick={() => {
-                                                setQuickAddContext({ 
-                                                  section: "pouch", 
-                                                  pouchIdx, 
-                                                  itemIdx: matIdx,
-                                                  defaultSubcategory: material.subcategory || ""
-                                                });
-                                                setQuickAddInventoryOpen(true);
-                                              }}
-                                            >
-                                              <Plus className="mr-2 h-4 w-4" />
-                                              Add New Item
-                                            </Button>
-                                          </div>
-                                        </CommandEmpty>
-                                        <CommandGroup>
-                                          {getInventoryBySubcategory(material.subcategory || "").map((item) => (
-                                            <CommandItem
-                                              key={item._id}
-                                              value={item.name}
-                                              onSelect={() => {
-                                                structure.pouches[pouchIdx].materials[matIdx].name = item.name;
-                                                structure.pouches[pouchIdx].materials[matIdx].unit = item.unit;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                            >
-                                              <Check
-                                                className={cn(
-                                                  "mr-2 h-4 w-4",
-                                                  material.name === item.name ? "opacity-100" : "opacity-0"
-                                                )}
-                                              />
-                                              <div className="flex flex-col items-start">
-                                                <span>{item.name}</span>
-                                                {item.description && (
-                                                  <span className="text-xs text-muted-foreground">{item.description}</span>
-                                                )}
-                                              </div>
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                                <Input
-                                  type="number"
-                                  value={material.quantity}
-                                  onChange={(e) => {
-                                    structure.pouches[pouchIdx].materials[matIdx].quantity = parseFloat(e.target.value);
-                                    setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                  }}
-                                  className="w-[15%]"
-                                  disabled={!canEdit}
-                                />
-                                <Input
-                                  value={material.unit}
-                                  className="w-[15%]"
-                                  disabled
-                                />
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => removeMaterialFromPouch(pouchIdx, matIdx)}
-                                  disabled={!canEdit}
-                                  className="w-[10%]"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => addMaterialToPouch(pouchIdx)}
-                            disabled={!canEdit}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Material
-                          </Button>
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    {/* Sealed Packets Tab */}
-                    <TabsContent value="sealed-packets" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addPacket} disabled={!canEdit}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Sealed Packet
-                      </Button>
-                      {structure.packets.map((packet, packetIdx) => (
-                        <div key={packetIdx} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <Input
-                              value={packet.name}
-                              onChange={(e) => {
-                                structure.packets[packetIdx].name = e.target.value;
-                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                              }}
-                              placeholder="Packet name"
-                              className="max-w-xs"
-                              disabled={!canEdit}
-                            />
-                            <Button size="sm" variant="ghost" onClick={() => removePacket(packetIdx)} disabled={!canEdit}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          {packet.materials.map((material, matIdx) => (
-                            <div key={matIdx} className="border-l-2 border-muted pl-3 py-2">
-                              <div className="flex items-center gap-2">
-                                <Select
-                                  value={material.subcategory || ""}
-                                  onValueChange={(value) => {
-                                    structure.packets[packetIdx].materials[matIdx].subcategory = value;
-                                    setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                  }}
-                                  disabled={!canEdit}
-                                >
-                                  <SelectTrigger className="w-[25%]">
-                                    <SelectValue placeholder="Subcategory" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                                      <SelectItem key={cat._id} value={cat.value}>
-                                        {cat.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      role="combobox"
-                                      disabled={!canEdit || !material.subcategory}
-                                      className="w-[35%] justify-between"
-                                    >
-                                      {material.name || "Select item"}
-                                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-[300px] p-0">
-                                    <Command>
-                                      <CommandInput placeholder="Search inventory..." />
-                                      <CommandList>
-                                        <CommandEmpty>
-                                          <div className="p-2 text-center">
-                                            <p className="text-sm text-muted-foreground mb-2">No item found.</p>
-                                            <Button
-                                              size="sm"
-                                              onClick={() => {
-                                                setQuickAddContext({ 
-                                                  section: "packet", 
-                                                  packetIdx, 
-                                                  itemIdx: matIdx,
-                                                  defaultSubcategory: material.subcategory || ""
-                                                });
-                                                setQuickAddInventoryOpen(true);
-                                              }}
-                                            >
-                                              <Plus className="mr-2 h-4 w-4" />
-                                              Add New Item
-                                            </Button>
-                                          </div>
-                                        </CommandEmpty>
-                                        <CommandGroup>
-                                          {getInventoryBySubcategory(material.subcategory || "").map((item) => (
-                                            <CommandItem
-                                              key={item._id}
-                                              value={item.name}
-                                              onSelect={() => {
-                                                structure.packets[packetIdx].materials[matIdx].name = item.name;
-                                                structure.packets[packetIdx].materials[matIdx].unit = item.unit;
-                                                setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                              }}
-                                            >
-                                              <Check
-                                                className={cn(
-                                                  "mr-2 h-4 w-4",
-                                                  material.name === item.name ? "opacity-100" : "opacity-0"
-                                                )}
-                                              />
-                                              <div className="flex flex-col items-start">
-                                                <span>{item.name}</span>
-                                                {item.description && (
-                                                  <span className="text-xs text-muted-foreground">{item.description}</span>
-                                                )}
-                                              </div>
-                                            </CommandItem>
-                                          ))}
-                                        </CommandGroup>
-                                      </CommandList>
-                                    </Command>
-                                  </PopoverContent>
-                                </Popover>
-                                <Input
-                                  type="number"
-                                  value={material.quantity}
-                                  onChange={(e) => {
-                                    structure.packets[packetIdx].materials[matIdx].quantity = parseFloat(e.target.value);
-                                    setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
-                                  }}
-                                  className="w-[15%]"
-                                  disabled={!canEdit}
-                                />
-                                <Input
-                                  value={material.unit}
-                                  className="w-[15%]"
-                                  disabled
-                                />
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => removeMaterialFromPacket(packetIdx, matIdx)}
-                                  disabled={!canEdit}
-                                  className="w-[10%]"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => addMaterialToPacket(packetIdx)}
-                            disabled={!canEdit}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Material
-                          </Button>
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    {/* Spare Materials Tab */}
-                    <TabsContent value="spare" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addSpareKit} disabled={!canEdit}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Spare Material
-                      </Button>
-                      {kitForm.spareKits.map((spare, idx) => (
-                        <div key={idx} className="border rounded-lg p-3">
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={spare.subcategory || ""}
-                              onValueChange={(value) => {
-                                const updated = [...kitForm.spareKits];
-                                updated[idx].subcategory = value;
-                                setKitForm({ ...kitForm, spareKits: updated });
-                              }}
-                              disabled={!canEdit}
-                            >
-                              <SelectTrigger className="w-[25%]">
-                                <SelectValue placeholder="Subcategory" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                                  <SelectItem key={cat._id} value={cat.value}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  disabled={!canEdit || !spare.subcategory}
-                                  className="w-[35%] justify-between"
-                                >
-                                  {spare.name || "Select item"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[300px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search inventory..." />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      <div className="p-2 text-center">
-                                        <p className="text-sm text-muted-foreground mb-2">No item found.</p>
-                                        <Button
-                                          size="sm"
-                                          onClick={() => {
-                                            setQuickAddContext({ 
-                                              section: "spare", 
-                                              itemIdx: idx,
-                                              defaultSubcategory: spare.subcategory || ""
-                                            });
-                                            setQuickAddInventoryOpen(true);
-                                          }}
-                                        >
-                                          <Plus className="mr-2 h-4 w-4" />
-                                          Add New Item
-                                        </Button>
-                                      </div>
-                                    </CommandEmpty>
-                                    <CommandGroup>
-                                      {getInventoryBySubcategory(spare.subcategory || "").map((item) => (
-                                        <CommandItem
-                                          key={item._id}
-                                          value={item.name}
-                                          onSelect={() => {
-                                            const updated = [...kitForm.spareKits];
-                                            updated[idx].name = item.name;
-                                            updated[idx].unit = item.unit;
-                                            setKitForm({ ...kitForm, spareKits: updated });
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              spare.name === item.name ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <div className="flex flex-col items-start">
-                                            <span>{item.name}</span>
-                                            {item.description && (
-                                              <span className="text-xs text-muted-foreground">{item.description}</span>
-                                            )}
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                            <Input
-                              type="number"
-                              value={spare.quantity}
-                              onChange={(e) => {
-                                const updated = [...kitForm.spareKits];
-                                updated[idx].quantity = parseFloat(e.target.value);
-                                setKitForm({ ...kitForm, spareKits: updated });
-                              }}
-                              className="w-[15%]"
-                              disabled={!canEdit}
-                            />
-                            <Input
-                              value={spare.unit}
-                              className="w-[15%]"
-                              disabled
-                            />
-                            <Button size="icon" variant="ghost" onClick={() => removeSpareKit(idx)} disabled={!canEdit} className="w-[10%]">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    {/* Bulk Materials Tab */}
-                    <TabsContent value="bulk" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addBulkMaterial} disabled={!canEdit}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Bulk Material
-                      </Button>
-                      {kitForm.bulkMaterials.map((bulk, idx) => (
-                        <div key={idx} className="border rounded-lg p-3">
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={bulk.subcategory || ""}
-                              onValueChange={(value) => {
-                                const updated = [...kitForm.bulkMaterials];
-                                updated[idx].subcategory = value;
-                                setKitForm({ ...kitForm, bulkMaterials: updated });
-                              }}
-                              disabled={!canEdit}
-                            >
-                              <SelectTrigger className="w-[25%]">
-                                <SelectValue placeholder="Subcategory" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
-                                  <SelectItem key={cat._id} value={cat.value}>
-                                    {cat.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  disabled={!canEdit || !bulk.subcategory}
-                                  className="w-[35%] justify-between"
-                                >
-                                  {bulk.name || "Select item"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[300px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search inventory..." />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      <div className="p-2 text-center">
-                                        <p className="text-sm text-muted-foreground mb-2">No item found.</p>
-                                        <Button
-                                          size="sm"
-                                          onClick={() => {
-                                            setQuickAddContext({ 
-                                              section: "bulk", 
-                                              itemIdx: idx,
-                                              defaultSubcategory: bulk.subcategory || ""
-                                            });
-                                            setQuickAddInventoryOpen(true);
-                                          }}
-                                        >
-                                          <Plus className="mr-2 h-4 w-4" />
-                                          Add New Item
-                                        </Button>
-                                      </div>
-                                    </CommandEmpty>
-                                    <CommandGroup>
-                                      {getInventoryBySubcategory(bulk.subcategory || "").map((item) => (
-                                        <CommandItem
-                                          key={item._id}
-                                          value={item.name}
-                                          onSelect={() => {
-                                            const updated = [...kitForm.bulkMaterials];
-                                            updated[idx].name = item.name;
-                                            updated[idx].unit = item.unit;
-                                            setKitForm({ ...kitForm, bulkMaterials: updated });
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              bulk.name === item.name ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          <div className="flex flex-col items-start">
-                                            <span>{item.name}</span>
-                                            {item.description && (
-                                              <span className="text-xs text-muted-foreground">{item.description}</span>
-                                            )}
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                            <Input
-                              type="number"
-                              value={bulk.quantity}
-                              onChange={(e) => {
-                                const updated = [...kitForm.bulkMaterials];
-                                updated[idx].quantity = parseFloat(e.target.value);
-                                setKitForm({ ...kitForm, bulkMaterials: updated });
-                              }}
-                              className="w-[15%]"
-                              disabled={!canEdit}
-                            />
-                            <Input
-                              value={bulk.unit}
-                              className="w-[15%]"
-                              disabled
-                            />
-                            <Button size="icon" variant="ghost" onClick={() => removeBulkMaterial(idx)} disabled={!canEdit} className="w-[10%]">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </TabsContent>
-
-                    {/* Misc Materials Tab */}
-                    <TabsContent value="misc" className="space-y-4 mt-4">
-                      <Button size="sm" onClick={addMiscItem} disabled={!canEdit}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Misc Material
-                      </Button>
-                      {kitForm.miscellaneous.map((misc, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <Input
-                            value={misc.name}
-                            onChange={(e) => {
-                              const updated = [...kitForm.miscellaneous];
-                              updated[idx].name = e.target.value;
-                              setKitForm({ ...kitForm, miscellaneous: updated });
-                            }}
-                            placeholder="Material name"
-                            className="flex-1"
-                            disabled={!canEdit}
-                          />
-                          <Input
-                            type="number"
-                            value={misc.quantity}
-                            onChange={(e) => {
-                              const updated = [...kitForm.miscellaneous];
-                              updated[idx].quantity = parseFloat(e.target.value);
-                              setKitForm({ ...kitForm, miscellaneous: updated });
-                            }}
-                            className="w-20"
-                            disabled={!canEdit}
-                          />
-                          <Input
-                            value={misc.unit}
-                            onChange={(e) => {
-                              const updated = [...kitForm.miscellaneous];
-                              updated[idx].unit = e.target.value;
-                              setKitForm({ ...kitForm, miscellaneous: updated });
-                            }}
-                            className="w-20"
-                            disabled={!canEdit}
-                          />
-                          <Button size="sm" variant="ghost" onClick={() => removeMiscItem(idx)} disabled={!canEdit}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column - Kit Preview */}
-            <div className="lg:sticky lg:top-6 h-fit">
+          <div className="space-y-6">
+            {/* Kit Preview (Collapsible) */}
+            <Collapsible open={isPreviewOpen} onOpenChange={setIsPreviewOpen} className="w-full">
               <Card className="bg-white dark:bg-neutral-800">
-                <CardHeader>
-                  <CardTitle className="text-lg">Kit Preview</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-bold text-xl mb-1">{kitForm.name || "Kit Name"}</h3>
-                    <p className="text-sm text-muted-foreground">{kitForm.description || "Description about the kit"}</p>
+                <CardHeader className="py-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Kit Preview</CardTitle>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" size="sm" className="w-9 p-0">
+                        {isPreviewOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">Toggle Preview</span>
+                      </Button>
+                    </CollapsibleTrigger>
                   </div>
-
-                  <Separator />
-
-                  {/* Main Pouch Items */}
-                  {structure.pouches.length > 0 && (
+                </CardHeader>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pb-6">
                     <div>
-                      <h4 className="font-semibold text-sm mb-2">
-                        Main Pouch Items ({structure.pouches.reduce((acc, p) => acc + p.materials.length, 0)})
-                      </h4>
-                      {structure.pouches.map((pouch, idx) => (
-                        <div key={idx} className="mb-3">
-                          <p className="text-sm font-medium mb-1">{pouch.name}</p>
-                          <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                            {pouch.materials.map((mat, matIdx) => (
-                              <li key={matIdx}>
-                                • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} - {mat.quantity} {mat.unit}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                      <h3 className="font-bold text-xl mb-1">{kitForm.name || "Kit Name"}</h3>
+                      <p className="text-sm text-muted-foreground">{kitForm.description || "Description about the kit"}</p>
                     </div>
-                  )}
 
-                  {/* Sealed Packets */}
-                  {structure.packets.length > 0 && (
-                    <>
-                      <Separator />
+                    <Separator />
+
+                    {/* Main Pouch Items */}
+                    {structure.pouches.length > 0 && (
                       <div>
-                        <h4 className="font-semibold text-sm mb-2">Sealed Packets ({structure.packets.length})</h4>
-                        {structure.packets.map((packet, idx) => (
+                        <h4 className="font-semibold text-sm mb-2">
+                          Main Pouch Items ({structure.pouches.reduce((acc, p) => acc + p.materials.length, 0)})
+                        </h4>
+                        {structure.pouches.map((pouch, idx) => (
                           <div key={idx} className="mb-3">
-                            <p className="text-sm font-medium mb-1">{packet.name}</p>
+                            <p className="text-sm font-medium mb-1">{pouch.name}</p>
                             <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                              {packet.materials.map((mat, matIdx) => (
-                                <li key={matIdx}>
-                                  • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} - {mat.quantity} {mat.unit}
-                                </li>
-                              ))}
+                              {pouch.materials.map((mat, matIdx) => {
+                                const desc = getInventoryItem(mat.name)?.description;
+                                return (
+                                  <li key={matIdx}>
+                                    • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} {desc ? `(${desc})` : ""} - {mat.quantity} {mat.unit}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           </div>
                         ))}
                       </div>
-                    </>
-                  )}
+                    )}
 
-                  {/* Spare Materials */}
-                  {kitForm.spareKits.filter(s => s.name && s.name.trim()).length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold text-sm mb-2">Spare Materials ({kitForm.spareKits.filter(s => s.name && s.name.trim()).length})</h4>
-                        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {kitForm.spareKits.filter(s => s.name && s.name.trim()).map((spare, idx) => (
-                            <li key={idx}>
-                              • {spare.subcategory ? `[${spare.subcategory}] ` : ""}{spare.name} - {spare.quantity} {spare.unit}
-                            </li>
+                    {/* Sealed Packets */}
+                    {structure.packets.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Sealed Packets ({structure.packets.length})</h4>
+                          {structure.packets.map((packet, idx) => (
+                            <div key={idx} className="mb-3">
+                              <p className="text-sm font-medium mb-1">{packet.name}</p>
+                              <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                                {packet.materials.map((mat, matIdx) => {
+                                  const desc = getInventoryItem(mat.name)?.description;
+                                  return (
+                                    <li key={matIdx}>
+                                      • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} {desc ? `(${desc})` : ""} - {mat.quantity} {mat.unit}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
                           ))}
-                        </ul>
-                      </div>
-                    </>
-                  )}
+                        </div>
+                      </>
+                    )}
 
-                  {/* Bulk Materials */}
-                  {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold text-sm mb-2">Bulk Materials ({kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length})</h4>
-                        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).map((bulk, idx) => (
-                            <li key={idx}>
-                              • {bulk.subcategory ? `[${bulk.subcategory}] ` : ""}{bulk.name} - {bulk.quantity} {bulk.unit}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </>
-                  )}
+                    {/* Spare Materials */}
+                    {kitForm.spareKits.filter(s => s.name && s.name.trim()).length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Spare Materials ({kitForm.spareKits.filter(s => s.name && s.name.trim()).length})</h4>
+                          <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                            {kitForm.spareKits.filter(s => s.name && s.name.trim()).map((spare, idx) => {
+                              const desc = getInventoryItem(spare.name)?.description;
+                              return (
+                                <li key={idx}>
+                                  • {spare.subcategory ? `[${spare.subcategory}] ` : ""}{spare.name} {desc ? `(${desc})` : ""} - {spare.quantity} {spare.unit}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </>
+                    )}
 
-                  {/* Misc Materials */}
-                  {kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length > 0 && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold text-sm mb-2">Misc Materials ({kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length})</h4>
-                        <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                          {kitForm.miscellaneous.filter(m => m.name && m.name.trim()).map((misc, idx) => (
-                            <li key={idx}>
-                              • {misc.name} - {misc.quantity} {misc.unit}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </>
-                  )}
-                </CardContent>
+                    {/* Bulk Materials */}
+                    {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Bulk Materials ({kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length})</h4>
+                          <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                            {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).map((bulk, idx) => {
+                              const desc = getInventoryItem(bulk.name)?.description;
+                              return (
+                                <li key={idx}>
+                                  • {bulk.subcategory ? `[${bulk.subcategory}] ` : ""}{bulk.name} {desc ? `(${desc})` : ""} - {bulk.quantity} {bulk.unit}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Misc Materials */}
+                    {kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2">Misc Materials ({kitForm.miscellaneous.filter(m => m.name && m.name.trim()).length})</h4>
+                          <ul className="text-sm text-muted-foreground space-y-1 ml-4">
+                            {kitForm.miscellaneous.filter(m => m.name && m.name.trim()).map((misc, idx) => (
+                              <li key={idx}>
+                                • {misc.name} - {misc.quantity} {misc.unit}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </CollapsibleContent>
               </Card>
-            </div>
+            </Collapsible>
+
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Basic Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Kit Name</Label>
+                  <Input
+                    value={kitForm.name}
+                    onChange={(e) => setKitForm({ ...kitForm, name: e.target.value })}
+                    placeholder="e.g., Banjo Boy"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div>
+                  <Label>Kit Number</Label>
+                  <Input
+                    value={kitForm.serialNumber}
+                    onChange={(e) => setKitForm({ ...kitForm, serialNumber: e.target.value })}
+                    placeholder="e.g., T0"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div>
+                  <Label>Concept Name</Label>
+                  <Input
+                    value={kitForm.conceptName}
+                    onChange={(e) => setKitForm({ ...kitForm, conceptName: e.target.value })}
+                    placeholder="e.g., Sound"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div>
+                  <Label>Kit Type</Label>
+                  <Select
+                    value={kitForm.programId}
+                    onValueChange={(value) => setKitForm({ ...kitForm, programId: value as Id<"programs"> })}
+                    disabled={!canEdit}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select program" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activePrograms.map((p) => (
+                        <SelectItem key={p._id} value={p._id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Category</Label>
+                  {selectedProgram?.categories && selectedProgram.categories.length > 0 ? (
+                    <Select
+                      value={kitForm.category || "none"}
+                      onValueChange={(value) => setKitForm({ ...kitForm, category: value === "none" ? "" : value })}
+                      disabled={!canEdit}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {selectedProgram.categories.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={kitForm.category}
+                      onChange={(e) => setKitForm({ ...kitForm, category: e.target.value })}
+                      placeholder="e.g., Explorer test"
+                      disabled={!canEdit}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <Label>Subject</Label>
+                  <Input
+                    value={kitForm.subject}
+                    onChange={(e) => setKitForm({ ...kitForm, subject: e.target.value })}
+                    placeholder="e.g., Physics"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={kitForm.description}
+                    onChange={(e) => setKitForm({ ...kitForm, description: e.target.value })}
+                    placeholder="Description about the kit"
+                    rows={3}
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div>
+                  <Label>Kit Image</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" disabled={!canEdit} />
+                    <span className="text-sm text-muted-foreground">No file chosen</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Kit Components */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Kit Components</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="main-pouch" className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="main-pouch">Main Pouch</TabsTrigger>
+                    <TabsTrigger value="sealed-packets">Sealed Packets</TabsTrigger>
+                    <TabsTrigger value="spare">Spare Materials</TabsTrigger>
+                    <TabsTrigger value="bulk">Bulk Materials</TabsTrigger>
+                    <TabsTrigger value="misc">Misc Materials</TabsTrigger>
+                  </TabsList>
+
+                  {/* Main Pouch Tab */}
+                  <TabsContent value="main-pouch" className="space-y-4 mt-4">
+                    <Button size="sm" onClick={addPouch} disabled={!canEdit}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Main Pouch Item
+                    </Button>
+                    {structure.pouches.map((pouch, pouchIdx) => (
+                      <div key={pouchIdx} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Input
+                            value={pouch.name}
+                            onChange={(e) => {
+                              structure.pouches[pouchIdx].name = e.target.value;
+                              setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                            }}
+                            placeholder="Pouch name"
+                            className="max-w-xs"
+                            disabled={!canEdit}
+                          />
+                          <Button size="sm" variant="ghost" onClick={() => removePouch(pouchIdx)} disabled={!canEdit}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {pouch.materials.map((material, matIdx) => (
+                          <div key={matIdx} className="border-l-2 border-muted pl-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={material.subcategory || ""}
+                                onValueChange={(value) => {
+                                  structure.pouches[pouchIdx].materials[matIdx].subcategory = value;
+                                  setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                }}
+                                disabled={!canEdit}
+                              >
+                                <SelectTrigger className="w-[20%]">
+                                  <SelectValue placeholder="Subcategory" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                                    <SelectItem key={cat._id} value={cat.value}>
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    disabled={!canEdit || !material.subcategory}
+                                    className="w-[25%] justify-between"
+                                  >
+                                    {material.name || "Select item"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Search inventory..." />
+                                    <CommandList>
+                                      <CommandEmpty>
+                                        <div className="p-2 text-center">
+                                          <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              setQuickAddContext({ 
+                                                section: "pouch", 
+                                                pouchIdx, 
+                                                itemIdx: matIdx,
+                                                defaultSubcategory: material.subcategory || ""
+                                              });
+                                              setQuickAddInventoryOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add New Item
+                                          </Button>
+                                        </div>
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {getInventoryBySubcategory(material.subcategory || "").map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={item.name}
+                                            onSelect={() => {
+                                              structure.pouches[pouchIdx].materials[matIdx].name = item.name;
+                                              structure.pouches[pouchIdx].materials[matIdx].unit = item.unit;
+                                              setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                material.name === item.name ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col items-start">
+                                              <span>{item.name}</span>
+                                              {item.description && (
+                                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                                              )}
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                              <Input
+                                value={getInventoryItem(material.name)?.description || ""}
+                                placeholder="Description"
+                                className="w-[25%] bg-muted/50"
+                                readOnly
+                                disabled
+                              />
+                              <Input
+                                type="number"
+                                value={material.quantity}
+                                onChange={(e) => {
+                                  structure.pouches[pouchIdx].materials[matIdx].quantity = parseFloat(e.target.value);
+                                  setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                }}
+                                className="w-[10%]"
+                                disabled={!canEdit}
+                              />
+                              <Input
+                                value={material.unit}
+                                className="w-[10%]"
+                                disabled
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => removeMaterialFromPouch(pouchIdx, matIdx)}
+                                disabled={!canEdit}
+                                className="w-[10%]"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => addMaterialToPouch(pouchIdx)}
+                          disabled={!canEdit}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Material
+                        </Button>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  {/* Sealed Packets Tab */}
+                  <TabsContent value="sealed-packets" className="space-y-4 mt-4">
+                    <Button size="sm" onClick={addPacket} disabled={!canEdit}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Sealed Packet
+                    </Button>
+                    {structure.packets.map((packet, packetIdx) => (
+                      <div key={packetIdx} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Input
+                            value={packet.name}
+                            onChange={(e) => {
+                              structure.packets[packetIdx].name = e.target.value;
+                              setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                            }}
+                            placeholder="Packet name"
+                            className="max-w-xs"
+                            disabled={!canEdit}
+                          />
+                          <Button size="sm" variant="ghost" onClick={() => removePacket(packetIdx)} disabled={!canEdit}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {packet.materials.map((material, matIdx) => (
+                          <div key={matIdx} className="border-l-2 border-muted pl-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Select
+                                value={material.subcategory || ""}
+                                onValueChange={(value) => {
+                                  structure.packets[packetIdx].materials[matIdx].subcategory = value;
+                                  setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                }}
+                                disabled={!canEdit}
+                              >
+                                <SelectTrigger className="w-[20%]">
+                                  <SelectValue placeholder="Subcategory" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                                    <SelectItem key={cat._id} value={cat.value}>
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    disabled={!canEdit || !material.subcategory}
+                                    className="w-[25%] justify-between"
+                                  >
+                                    {material.name || "Select item"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                  <Command>
+                                    <CommandInput placeholder="Search inventory..." />
+                                    <CommandList>
+                                      <CommandEmpty>
+                                        <div className="p-2 text-center">
+                                          <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              setQuickAddContext({ 
+                                                section: "packet", 
+                                                packetIdx, 
+                                                itemIdx: matIdx,
+                                                defaultSubcategory: material.subcategory || ""
+                                              });
+                                              setQuickAddInventoryOpen(true);
+                                            }}
+                                          >
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add New Item
+                                          </Button>
+                                        </div>
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {getInventoryBySubcategory(material.subcategory || "").map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={item.name}
+                                            onSelect={() => {
+                                              structure.packets[packetIdx].materials[matIdx].name = item.name;
+                                              structure.packets[packetIdx].materials[matIdx].unit = item.unit;
+                                              setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                material.name === item.name ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col items-start">
+                                              <span>{item.name}</span>
+                                              {item.description && (
+                                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                                              )}
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                              <Input
+                                value={getInventoryItem(material.name)?.description || ""}
+                                placeholder="Description"
+                                className="w-[25%] bg-muted/50"
+                                readOnly
+                                disabled
+                              />
+                              <Input
+                                type="number"
+                                value={material.quantity}
+                                onChange={(e) => {
+                                  structure.packets[packetIdx].materials[matIdx].quantity = parseFloat(e.target.value);
+                                  setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
+                                }}
+                                className="w-[10%]"
+                                disabled={!canEdit}
+                              />
+                              <Input
+                                value={material.unit}
+                                className="w-[10%]"
+                                disabled
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => removeMaterialFromPacket(packetIdx, matIdx)}
+                                disabled={!canEdit}
+                                className="w-[10%]"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => addMaterialToPacket(packetIdx)}
+                          disabled={!canEdit}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Material
+                        </Button>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  {/* Spare Materials Tab */}
+                  <TabsContent value="spare" className="space-y-4 mt-4">
+                    <Button size="sm" onClick={addSpareKit} disabled={!canEdit}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Spare Material
+                    </Button>
+                    {kitForm.spareKits.map((spare, idx) => (
+                      <div key={idx} className="border rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={spare.subcategory || ""}
+                            onValueChange={(value) => {
+                              const updated = [...kitForm.spareKits];
+                              updated[idx].subcategory = value;
+                              setKitForm({ ...kitForm, spareKits: updated });
+                            }}
+                            disabled={!canEdit}
+                          >
+                            <SelectTrigger className="w-[20%]">
+                              <SelectValue placeholder="Subcategory" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                                <SelectItem key={cat._id} value={cat.value}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={!canEdit || !spare.subcategory}
+                                className="w-[25%] justify-between"
+                              >
+                                {spare.name || "Select item"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    <div className="p-2 text-center">
+                                      <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          setQuickAddContext({ 
+                                            section: "spare", 
+                                            itemIdx: idx,
+                                            defaultSubcategory: spare.subcategory || ""
+                                          });
+                                          setQuickAddInventoryOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add New Item
+                                      </Button>
+                                    </div>
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {getInventoryBySubcategory(spare.subcategory || "").map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        value={item.name}
+                                        onSelect={() => {
+                                          const updated = [...kitForm.spareKits];
+                                          updated[idx].name = item.name;
+                                          updated[idx].unit = item.unit;
+                                          setKitForm({ ...kitForm, spareKits: updated });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            spare.name === item.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col items-start">
+                                          <span>{item.name}</span>
+                                          {item.description && (
+                                            <span className="text-xs text-muted-foreground">{item.description}</span>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <Input
+                            value={getInventoryItem(spare.name)?.description || ""}
+                            placeholder="Description"
+                            className="w-[25%] bg-muted/50"
+                            readOnly
+                            disabled
+                          />
+                          <Input
+                            type="number"
+                            value={spare.quantity}
+                            onChange={(e) => {
+                              const updated = [...kitForm.spareKits];
+                              updated[idx].quantity = parseFloat(e.target.value);
+                              setKitForm({ ...kitForm, spareKits: updated });
+                            }}
+                            className="w-[10%]"
+                            disabled={!canEdit}
+                          />
+                          <Input
+                            value={spare.unit}
+                            className="w-[10%]"
+                            disabled
+                          />
+                          <Button size="icon" variant="ghost" onClick={() => removeSpareKit(idx)} disabled={!canEdit} className="w-[10%]">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  {/* Bulk Materials Tab */}
+                  <TabsContent value="bulk" className="space-y-4 mt-4">
+                    <Button size="sm" onClick={addBulkMaterial} disabled={!canEdit}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Bulk Material
+                    </Button>
+                    {kitForm.bulkMaterials.map((bulk, idx) => (
+                      <div key={idx} className="border rounded-lg p-3">
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={bulk.subcategory || ""}
+                            onValueChange={(value) => {
+                              const updated = [...kitForm.bulkMaterials];
+                              updated[idx].subcategory = value;
+                              setKitForm({ ...kitForm, bulkMaterials: updated });
+                            }}
+                            disabled={!canEdit}
+                          >
+                            <SelectTrigger className="w-[20%]">
+                              <SelectValue placeholder="Subcategory" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories?.filter(cat => cat.value && cat.value.trim() !== "").map((cat) => (
+                                <SelectItem key={cat._id} value={cat.value}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                disabled={!canEdit || !bulk.subcategory}
+                                className="w-[25%] justify-between"
+                              >
+                                {bulk.name || "Select item"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    <div className="p-2 text-center">
+                                      <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => {
+                                          setQuickAddContext({ 
+                                            section: "bulk", 
+                                            itemIdx: idx,
+                                            defaultSubcategory: bulk.subcategory || ""
+                                          });
+                                          setQuickAddInventoryOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add New Item
+                                      </Button>
+                                    </div>
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {getInventoryBySubcategory(bulk.subcategory || "").map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        value={item.name}
+                                        onSelect={() => {
+                                          const updated = [...kitForm.bulkMaterials];
+                                          updated[idx].name = item.name;
+                                          updated[idx].unit = item.unit;
+                                          setKitForm({ ...kitForm, bulkMaterials: updated });
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            bulk.name === item.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col items-start">
+                                          <span>{item.name}</span>
+                                          {item.description && (
+                                            <span className="text-xs text-muted-foreground">{item.description}</span>
+                                          )}
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <Input
+                            value={getInventoryItem(bulk.name)?.description || ""}
+                            placeholder="Description"
+                            className="w-[25%] bg-muted/50"
+                            readOnly
+                            disabled
+                          />
+                          <Input
+                            type="number"
+                            value={bulk.quantity}
+                            onChange={(e) => {
+                              const updated = [...kitForm.bulkMaterials];
+                              updated[idx].quantity = parseFloat(e.target.value);
+                              setKitForm({ ...kitForm, bulkMaterials: updated });
+                            }}
+                            className="w-[10%]"
+                            disabled={!canEdit}
+                          />
+                          <Input
+                            value={bulk.unit}
+                            className="w-[10%]"
+                            disabled
+                          />
+                          <Button size="icon" variant="ghost" onClick={() => removeBulkMaterial(idx)} disabled={!canEdit} className="w-[10%]">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </TabsContent>
+
+                  {/* Misc Materials Tab */}
+                  <TabsContent value="misc" className="space-y-4 mt-4">
+                    <Button size="sm" onClick={addMiscItem} disabled={!canEdit}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Misc Material
+                    </Button>
+                    {kitForm.miscellaneous.map((misc, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input
+                          value={misc.name}
+                          onChange={(e) => {
+                            const updated = [...kitForm.miscellaneous];
+                            updated[idx].name = e.target.value;
+                            setKitForm({ ...kitForm, miscellaneous: updated });
+                          }}
+                          placeholder="Material name"
+                          className="flex-1"
+                          disabled={!canEdit}
+                        />
+                        <Input
+                          type="number"
+                          value={misc.quantity}
+                          onChange={(e) => {
+                            const updated = [...kitForm.miscellaneous];
+                            updated[idx].quantity = parseFloat(e.target.value);
+                            setKitForm({ ...kitForm, miscellaneous: updated });
+                          }}
+                          className="w-20"
+                          disabled={!canEdit}
+                        />
+                        <Input
+                          value={misc.unit}
+                          onChange={(e) => {
+                            const updated = [...kitForm.miscellaneous];
+                            updated[idx].unit = e.target.value;
+                            setKitForm({ ...kitForm, miscellaneous: updated });
+                          }}
+                          className="w-20"
+                          disabled={!canEdit}
+                        />
+                        <Button size="sm" variant="ghost" onClick={() => removeMiscItem(idx)} disabled={!canEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
           </div>
         </motion.div>
         
