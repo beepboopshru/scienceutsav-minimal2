@@ -15,8 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -269,7 +267,11 @@ export default function Procurement() {
 
   // --- Export Functions ---
 
-  const exportProcurementListPDF = () => {
+  const exportProcurementListPDF = async () => {
+    const { jsPDF } = await import("jspdf");
+    const autoTableModule = await import("jspdf-autotable");
+    const autoTable = autoTableModule.default;
+
     const doc = new jsPDF();
     const timestamp = new Date().toLocaleDateString();
     
