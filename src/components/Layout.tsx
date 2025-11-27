@@ -328,7 +328,7 @@ export function Layout({ children }: LayoutProps) {
       ],
     },
     {
-      title: "Operations-Inventory",
+      title: "Inventory Requests",
       icon: TrendingUp,
       path: "/operations-inventory-relations",
       roles: [hasPermission("procurementJobs", "view") ? "allowed" : ""],

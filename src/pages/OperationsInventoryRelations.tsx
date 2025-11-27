@@ -482,7 +482,7 @@ export default function OperationsInventoryRelations() {
           animate={{ opacity: 1, y: 0 }}
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Operations-Inventory Relations</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Inventory Requests</h1>
             <p className="text-muted-foreground mt-2">
               Manage procurement requests and material shortages
             </p>
