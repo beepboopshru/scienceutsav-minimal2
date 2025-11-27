@@ -274,8 +274,6 @@ export default function Procurement() {
     
     let title = "";
     let dataToExport: any[] = [];
-    let columns: string[] = [];
-    let rows: any[][] = [];
 
     if (activeTab === "kit-wise") {
       title = "Kit Wise Procurement List";
@@ -300,8 +298,11 @@ export default function Procurement() {
       doc.text(`Filters: ${searchTerm ? `Search: "${searchTerm}"` : ""} ${showShortagesOnly ? "[Shortages Only]" : ""}`, 14, 34);
     }
 
+    let finalY = 40;
+
     if (activeTab === "summary") {
-      rows = filteredMaterialSummary.map((item) => [
+      const columns = ["Material", "Category", "Required", "Available", "Shortage", "Used In"];
+      const rows = filteredMaterialSummary.map((item) => [
         item.name,
         item.category,
         `${item.required} ${item.unit}`,
@@ -309,12 +310,11 @@ export default function Procurement() {
         item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
         item.kits.join(", ").substring(0, 30) + (item.kits.join(", ").length > 30 ? "..." : ""),
       ]);
-      columns = ["Material", "Category", "Required", "Available", "Shortage", "Used In"];
       
       autoTable(doc, {
         head: [columns],
         body: rows,
-        startY: 40,
+        startY: finalY,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [71, 85, 105] },
         didParseCell: (data) => {
@@ -325,44 +325,69 @@ export default function Procurement() {
         },
       });
     } else {
-      // For grouped views (Kit, Month, Client), we create a flattened table or multiple tables
-      // Flattened table with first column being the Group Name
-      
-      rows = [];
+      // Grouped Views (Kit, Month, Client)
       dataToExport.forEach((group) => {
-        const groupName = group.name || group.month || group.clientName;
-        // Add a header row for the group
-        // Or just list the group name in the first column for every row? 
-        // Let's do a section header row approach which is cleaner in PDF
+        if (finalY > 250) {
+          doc.addPage();
+          finalY = 20;
+        }
+
+        let groupName = group.name || group.month || group.clientName;
+        if (activeTab === "month-wise" && group.month) {
+             try {
+                groupName = new Date(group.month + "-01").toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+             } catch (e) {}
+        }
+
+        let subInfo = "";
+        if (activeTab === "kit-wise") subInfo = `Total Assigned: ${group.totalQuantity}`;
+        else if (activeTab === "month-wise") subInfo = `Assignments: ${group.totalAssignments}`;
+        else if (activeTab === "client-wise") subInfo = `Total Kits: ${group.totalKits}`;
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(groupName, 14, finalY);
         
-        // Actually, let's just flatten it for a simple list
-        group.materials.forEach((m: any) => {
-          rows.push([
-            groupName,
-            m.name,
-            m.category,
-            `${m.required} ${m.unit}`,
-            `${m.available} ${m.unit}`,
-            m.shortage > 0 ? `${m.shortage} ${m.unit}` : "In Stock"
-          ]);
-        });
-      });
+        if (subInfo) {
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.text(subInfo, 14, finalY + 5);
+            finalY += 10;
+        } else {
+            finalY += 6;
+        }
 
-      const firstColHeader = activeTab === "kit-wise" ? "Kit Name" : activeTab === "month-wise" ? "Month" : "Client";
-      columns = [firstColHeader, "Material", "Category", "Required", "Available", "Shortage"];
+        const columns = ["Material", "Category", "Required", "Available", "Shortage"];
+        const rows = group.materials.map((m: any) => [
+          m.name,
+          m.category,
+          `${m.required} ${m.unit}`,
+          `${m.available} ${m.unit}`,
+          m.shortage > 0 ? `${m.shortage} ${m.unit}` : "In Stock"
+        ]);
 
-      autoTable(doc, {
-        head: [columns],
-        body: rows,
-        startY: 40,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [71, 85, 105] },
-        didParseCell: (data) => {
-          if (data.column.index === 5 && data.cell.text[0] !== "In Stock") {
-            data.cell.styles.textColor = [220, 38, 38];
-            data.cell.styles.fontStyle = "bold";
-          }
-        },
+        if (rows.length > 0) {
+            autoTable(doc, {
+                startY: finalY,
+                head: [columns],
+                body: rows,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [71, 85, 105] },
+                margin: { left: 14 },
+                didParseCell: (data) => {
+                if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
+                    data.cell.styles.textColor = [220, 38, 38];
+                    data.cell.styles.fontStyle = "bold";
+                }
+                },
+            });
+            finalY = (doc as any).lastAutoTable.finalY + 10;
+        } else {
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "italic");
+            doc.text("No materials required.", 14, finalY);
+            finalY += 10;
+        }
       });
     }
 
