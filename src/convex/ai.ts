@@ -129,12 +129,14 @@ export const parseKitFromSheet = action({
     
     INSTRUCTIONS:
     1. Identify the Kit Name if it appears in the header/first lines.
-    2. Extract each component row. Combine "Item" and "Details" for the component name.
-    3. Extract Quantity. Default to 1 if missing.
-    4. Try to match the component to the provided INVENTORY LIST. If you find a high-confidence match, include the ID. Otherwise null.
-    5. Analyze the "Packing plan" column (or similar grouping indicators like "Pouch", "Packet A", "1.1", "1.2"). 
-       - Create a summary string for "packingRequirements".
-       - If possible, structure it as "Pouch: Item A, Item B; Packet 1: Item C".
+    2. Identify the Kit Category if mentioned (e.g., "Explorer", "Discoverer", "Grade 6", "Physics").
+    3. Extract each component row. Combine "Item" and "Details" for the component name.
+    4. Extract Quantity. Default to 1 if missing.
+    5. Try to match the component to the provided INVENTORY LIST. If you find a high-confidence match, include the ID. Otherwise null.
+    6. Analyze the "Packing plan" column (or similar grouping indicators like "Pouch", "Packet A", "1.1", "1.2"). 
+       - "Pouch" or "Main Pouch" usually refers to the main sealed outer packaging. Map these to "pouches".
+       - Numbered groups like "1.1", "1.2", "Packet A" refer to smaller internal packets. Map these to "packets".
+       - Create a structured JSON object for packing.
     
     INVENTORY LIST:
     ${inventoryContext}
@@ -145,6 +147,7 @@ export const parseKitFromSheet = action({
     OUTPUT FORMAT (JSON ONLY):
     {
       "name": "Extracted Kit Name",
+      "category": "Extracted Category",
       "description": "Generated description based on items",
       "components": [
         {
@@ -155,7 +158,14 @@ export const parseKitFromSheet = action({
           "notes": "Any extra details from the row"
         }
       ],
-      "packingRequirements": "Summary of packing groups found"
+      "packingRequirements": {
+        "pouches": [
+          { "name": "Main Pouch", "materials": [{ "name": "Item Name", "quantity": 1, "unit": "pcs" }] }
+        ],
+        "packets": [
+          { "name": "Packet 1.1", "materials": [{ "name": "Item Name", "quantity": 1, "unit": "pcs" }] }
+        ]
+      }
     }
     `;
 

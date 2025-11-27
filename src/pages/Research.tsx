@@ -509,7 +509,7 @@ export default function Research() {
     setSimpleKitFormData({
       name: importedData.name || "",
       serialNumber: "",
-      category: undefined,
+      category: importedData.category || undefined,
       conceptName: "",
       subject: "",
       description: importedData.description || "",
@@ -540,7 +540,12 @@ export default function Research() {
     
     // Let's update the handleCreateSimpleKit to include components if they exist in a temp state.
     setImportedComponents(importedData.components || []);
-    setImportedPacking(importedData.packingRequirements || "");
+    
+    // Handle packing requirements which might be an object now
+    const packingReqs = importedData.packingRequirements;
+    const packingString = typeof packingReqs === 'object' ? JSON.stringify(packingReqs) : (packingReqs || "");
+    
+    setImportedPacking(packingString);
     setIsCreateSimpleKitOpen(true);
     toast.info("Basic info pre-filled. Save to create, then components will be added.");
   };

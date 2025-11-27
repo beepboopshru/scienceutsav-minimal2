@@ -112,7 +112,12 @@ export function KitImporter({ onImport }: KitImporterProps) {
                 <div className="space-y-4">
                   <div className="grid gap-2">
                     <div className="text-sm font-medium text-muted-foreground">Detected Name</div>
-                    <div className="font-bold text-lg">{parsedData.name || "Untitled Kit"}</div>
+                    <div className="font-bold text-lg flex items-center gap-2">
+                      {parsedData.name || "Untitled Kit"}
+                      {parsedData.category && (
+                        <Badge variant="outline">{parsedData.category}</Badge>
+                      )}
+                    </div>
                   </div>
                   
                   {parsedData.description && (
@@ -163,7 +168,46 @@ export function KitImporter({ onImport }: KitImporterProps) {
                     <div className="grid gap-2">
                       <div className="text-sm font-medium text-muted-foreground">Packing Plan</div>
                       <Card className="p-3 text-sm bg-muted/30">
-                        {parsedData.packingRequirements}
+                        {typeof parsedData.packingRequirements === 'string' ? (
+                          parsedData.packingRequirements
+                        ) : (
+                          <div className="space-y-4">
+                            {parsedData.packingRequirements.pouches?.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-xs uppercase text-muted-foreground mb-2">Pouches (Main Sealed)</div>
+                                <div className="space-y-2">
+                                  {parsedData.packingRequirements.pouches.map((pouch: any, i: number) => (
+                                    <div key={i} className="bg-background border rounded p-2">
+                                      <div className="font-medium text-xs mb-1">{pouch.name}</div>
+                                      <ul className="list-disc list-inside text-xs text-muted-foreground">
+                                        {pouch.materials?.map((m: any, j: number) => (
+                                          <li key={j}>{m.quantity}x {m.name}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {parsedData.packingRequirements.packets?.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-xs uppercase text-muted-foreground mb-2">Packets (Internal)</div>
+                                <div className="space-y-2">
+                                  {parsedData.packingRequirements.packets.map((packet: any, i: number) => (
+                                    <div key={i} className="bg-background border rounded p-2">
+                                      <div className="font-medium text-xs mb-1">{packet.name}</div>
+                                      <ul className="list-disc list-inside text-xs text-muted-foreground">
+                                        {packet.materials?.map((m: any, j: number) => (
+                                          <li key={j}>{m.quantity}x {m.name}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </Card>
                     </div>
                   )}
