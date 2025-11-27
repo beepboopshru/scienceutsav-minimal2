@@ -189,6 +189,7 @@ export default function Research() {
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [kitSearchQuery, setKitSearchQuery] = useState<string>("");
 
   // File manager
@@ -204,6 +205,17 @@ export default function Research() {
     () => (programs ?? []).find((p) => p._id === selectedProgramId) || null,
     [programs, selectedProgramId]
   );
+
+  const uniqueSubjects = useMemo(() => {
+    if (!kits || !selectedProgramId) return [];
+    const subjects = new Set<string>();
+    kits.forEach((k) => {
+      if (k.programId === selectedProgramId && k.subject) {
+        subjects.add(k.subject);
+      }
+    });
+    return Array.from(subjects).sort();
+  }, [kits, selectedProgramId]);
 
   const programStats = useMemo(() => {
     const result: Record<string, number> = {};
@@ -223,13 +235,16 @@ export default function Research() {
       let categoryOk = true;
       if (categoryFilter !== "all") categoryOk = k.category === categoryFilter;
 
+      let subjectOk = true;
+      if (subjectFilter !== "all") subjectOk = k.subject === subjectFilter;
+
       let searchOk = true;
       if (kitSearchQuery.trim()) {
         searchOk = k.name.toLowerCase().includes(kitSearchQuery.toLowerCase());
       }
-      return categoryOk && searchOk;
+      return categoryOk && searchOk && subjectOk;
     });
-  }, [kits, selectedProgramId, categoryFilter, kitSearchQuery]);
+  }, [kits, selectedProgramId, categoryFilter, subjectFilter, kitSearchQuery]);
 
   // Program handlers
   const handleCreateProgram = async (e: React.FormEvent) => {
@@ -559,6 +574,7 @@ export default function Research() {
                     onClick={() => {
                       setSelectedProgramId(program._id as Id<"programs">);
                       setCategoryFilter("all");
+                      setSubjectFilter("all");
                       setKitSearchQuery("");
                     }}
                   >
@@ -681,6 +697,7 @@ export default function Research() {
               onClick={() => {
                 setSelectedProgramId(null);
                 setCategoryFilter("all");
+                setSubjectFilter("all");
                 setKitSearchQuery("");
               }}
             >
@@ -693,7 +710,7 @@ export default function Research() {
               </h1>
               <p className="text-muted-foreground mt-2">Manage kit blueprints and design assets</p>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {selectedProgram?.categories && selectedProgram.categories.length > 0 && (
                   <div>
                     <Label className="text-xs">Category</Label>
@@ -712,6 +729,26 @@ export default function Research() {
                     </Select>
                   </div>
                 )}
+                
+                {uniqueSubjects.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Subject</Label>
+                    <Select value={subjectFilter} onValueChange={(v: string) => setSubjectFilter(v)}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All subjects" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Subjects</SelectItem>
+                        {uniqueSubjects.map((subj) => (
+                          <SelectItem key={subj} value={subj}>
+                            {subj}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <Label className="text-xs">Search Kits</Label>
                   <Input
