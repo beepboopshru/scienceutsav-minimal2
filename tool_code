@@ -1,5 +1,0 @@
-print(json.dumps([
-    {"type": "tool_call", "tool_number": 1, "tool_name": "executeCommandTool", "input_args": {"command": "cat index.html"}},
-    {"type": "tool_call", "tool_number": 2, "tool_name": "executeCommandTool", "input_args": {"command": "cat src/main.tsx"}},
-    {"type": "tool_call", "tool_number": 3, "tool_name": "executeCommandTool", "input_args": {"command": "npm run dev"}}
-]))
