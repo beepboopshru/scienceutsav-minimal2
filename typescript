@@ -1,8 +1,11 @@
-    if (productionMonth && dispatchDate) {
-      const prodDate = new Date(productionMonth + "-01");
-      const dispDate = new Date(dispatchDate);
-      if (prodDate > dispDate) {
-        toast.error("Production month must be before or same as dispatch month");
-        return;
-      }
-    }
+// In src/convex/schema.ts inside 'clients' table
+gradePlanning: v.optional(v.array(v.object({
+  grade: v.string(), // e.g., "1", "2"... "12"
+  studentStrength: v.number(),
+  // Map of Month -> Kit
+  schedule: v.object({
+    january: v.optional(v.id("kits")),
+    february: v.optional(v.id("kits")),
+    // ... all 12 months
+  })
+})))
