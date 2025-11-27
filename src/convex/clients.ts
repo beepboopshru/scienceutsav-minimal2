@@ -54,6 +54,24 @@ export const create = mutation({
       grade11: v.optional(v.number()),
       grade12: v.optional(v.number()),
     })),
+    gradePlanning: v.optional(v.array(v.object({
+      grade: v.string(),
+      studentStrength: v.optional(v.number()),
+      schedule: v.optional(v.object({
+        january: v.optional(v.id("kits")),
+        february: v.optional(v.id("kits")),
+        march: v.optional(v.id("kits")),
+        april: v.optional(v.id("kits")),
+        may: v.optional(v.id("kits")),
+        june: v.optional(v.id("kits")),
+        july: v.optional(v.id("kits")),
+        august: v.optional(v.id("kits")),
+        september: v.optional(v.id("kits")),
+        october: v.optional(v.id("kits")),
+        november: v.optional(v.id("kits")),
+        december: v.optional(v.id("kits")),
+      }))
+    }))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -153,6 +171,24 @@ export const update = mutation({
       grade11: v.optional(v.number()),
       grade12: v.optional(v.number()),
     })),
+    gradePlanning: v.optional(v.array(v.object({
+      grade: v.string(),
+      studentStrength: v.optional(v.number()),
+      schedule: v.optional(v.object({
+        january: v.optional(v.id("kits")),
+        february: v.optional(v.id("kits")),
+        march: v.optional(v.id("kits")),
+        april: v.optional(v.id("kits")),
+        may: v.optional(v.id("kits")),
+        june: v.optional(v.id("kits")),
+        july: v.optional(v.id("kits")),
+        august: v.optional(v.id("kits")),
+        september: v.optional(v.id("kits")),
+        october: v.optional(v.id("kits")),
+        november: v.optional(v.id("kits")),
+        december: v.optional(v.id("kits")),
+      }))
+    }))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);

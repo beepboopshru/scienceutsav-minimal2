@@ -37,6 +37,7 @@ import DiscrepancyTickets from "./pages/DiscrepancyTickets";
 import BillTracking from "@/pages/BillTracking.tsx";
 import OrderRecords from "./pages/OrderRecords.tsx";
 import Themes from "./pages/Themes";
+import ClientForm from "./pages/ClientForm";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -76,6 +77,8 @@ function App() {
         <Route path="/research" element={<Research />} />
         <Route path="/kit-builder" element={<KitBuilder />} />
         <Route path="/clients" element={<Clients />} />
+        <Route path="/clients/new" element={<ClientForm />} />
+        <Route path="/clients/:id/edit" element={<ClientForm />} />
         <Route path="/b2c-clients" element={<B2CClients />} />
         <Route path="/b2b-assignments" element={<B2BAssignments />} />
         <Route path="/b2c-assignments" element={<B2CAssignments />} />

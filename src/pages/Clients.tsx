@@ -106,138 +106,19 @@ export default function Clients() {
   const canEdit = hasPermission("clients", "edit");
 
   const handleOpenDialog = (clientId?: Id<"clients">) => {
-    if (clientId && clients) {
-      const client = clients.find((c) => c._id === clientId);
-      if (client) {
-        setFormData({
-          name: client.name,
-          clientId: client.clientId || "",
-          organization: client.organization || "",
-          contact: client.contact || "",
-          email: client.email || "",
-          address: {
-            line1: client.address?.line1 || "",
-            line2: client.address?.line2 || "",
-            line3: client.address?.line3 || "",
-            state: client.address?.state || "",
-            pincode: client.address?.pincode || "",
-            country: client.address?.country || "",
-          },
-          type: client.type || "one_time",
-          notes: client.notes || "",
-          salesPerson: client.salesPerson || "",
-          pointsOfContact: client.pointsOfContact || [],
-          gradeAttendance: {
-            grade1: client.gradeAttendance?.grade1 ?? undefined,
-            grade2: client.gradeAttendance?.grade2 ?? undefined,
-            grade3: client.gradeAttendance?.grade3 ?? undefined,
-            grade4: client.gradeAttendance?.grade4 ?? undefined,
-            grade5: client.gradeAttendance?.grade5 ?? undefined,
-            grade6: client.gradeAttendance?.grade6 ?? undefined,
-            grade7: client.gradeAttendance?.grade7 ?? undefined,
-            grade8: client.gradeAttendance?.grade8 ?? undefined,
-            grade9: client.gradeAttendance?.grade9 ?? undefined,
-            grade10: client.gradeAttendance?.grade10 ?? undefined,
-            grade11: client.gradeAttendance?.grade11 ?? undefined,
-            grade12: client.gradeAttendance?.grade12 ?? undefined,
-          },
-        });
-        setEditingClient(clientId);
-      }
+    if (clientId) {
+      navigate(`/clients/${clientId}/edit`);
     } else {
-      setFormData({
-        name: "",
-        clientId: "",
-        organization: "",
-        contact: "",
-        email: "",
-        address: {
-          line1: "",
-          line2: "",
-          line3: "",
-          state: "",
-          pincode: "",
-          country: "",
-        },
-        type: "one_time",
-        notes: "",
-        salesPerson: "",
-        pointsOfContact: [],
-        gradeAttendance: {
-          grade1: undefined,
-          grade2: undefined,
-          grade3: undefined,
-          grade4: undefined,
-          grade5: undefined,
-          grade6: undefined,
-          grade7: undefined,
-          grade8: undefined,
-          grade9: undefined,
-          grade10: undefined,
-          grade11: undefined,
-          grade12: undefined,
-        },
-      });
-      setEditingClient(null);
+      navigate("/clients/new");
     }
-    setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingClient(null);
-    setFormData({
-      name: "",
-      clientId: "",
-      organization: "",
-      contact: "",
-      email: "",
-      address: {
-        line1: "",
-        line2: "",
-        line3: "",
-        state: "",
-        pincode: "",
-        country: "",
-      },
-      type: "one_time",
-      notes: "",
-      salesPerson: "",
-      pointsOfContact: [],
-      gradeAttendance: {
-        grade1: undefined,
-        grade2: undefined,
-        grade3: undefined,
-        grade4: undefined,
-        grade5: undefined,
-        grade6: undefined,
-        grade7: undefined,
-        grade8: undefined,
-        grade9: undefined,
-        grade10: undefined,
-        grade11: undefined,
-        grade12: undefined,
-      },
-    });
+    // Deprecated
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingClient) {
-        await updateClient({
-          id: editingClient,
-          ...formData,
-        });
-        toast.success("Client updated successfully");
-      } else {
-        await createClient(formData);
-        toast.success("Client created successfully");
-      }
-      handleCloseDialog();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save client");
-    }
+    // Deprecated
   };
 
   const handleDelete = async (clientId: Id<"clients">) => {
