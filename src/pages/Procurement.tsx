@@ -15,8 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { exportProcurementPDF } from "@/lib/procurementExport";
 
 export default function Procurement() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -69,11 +68,12 @@ export default function Procurement() {
     const shortages: any[] = [];
     const requiredQty = assignment.quantity;
 
-    const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
+    const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string, subcategory?: string) => {
       const required = qtyPerKit * requiredQty;
       const invItem = inventory.find((i) => i.name.toLowerCase() === name.toLowerCase());
       const available = invItem?.quantity || 0;
       const shortage = Math.max(0, required - available);
+      const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
       
       if (shortage > 0 || required > 0) {
         shortages.push({
@@ -83,6 +83,7 @@ export default function Procurement() {
           shortage,
           unit,
           category,
+          subcategory: finalSubcategory,
         });
       }
     };
@@ -93,8 +94,8 @@ export default function Procurement() {
       totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
     }
 
-    kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit"));
-    kit.bulkMaterials?.forEach((b: any) => processMaterial(b.name, b.quantity, b.unit, "Bulk Material"));
+    kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit", s.subcategory));
+    kit.bulkMaterials?.forEach((b: any) => processMaterial(b.name, b.quantity, b.unit, "Bulk Material", b.subcategory));
     kit.miscellaneous?.forEach((m: any) => processMaterial(m.name, m.quantity, m.unit, "Miscellaneous"));
 
     return { direct: shortages };
@@ -120,6 +121,7 @@ export default function Procurement() {
             shortage: 0, // Recalculated at end
             unit: item.unit,
             category: item.category,
+            subcategory: item.subcategory,
             kits: new Set([assignment.kit?.name || "Unknown"]),
             programs: new Set([assignment.program?.name || "Unknown"]),
           });
@@ -219,38 +221,16 @@ export default function Procurement() {
 
   // --- Export Functions ---
 
-  const exportMaterialSummaryPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Material Procurement Summary", 14, 20);
-    doc.setFontSize(11);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-
-    const tableData = materialSummary.map((item) => [
-      item.name,
-      item.category,
-      `${item.required} ${item.unit}`,
-      `${item.available} ${item.unit}`,
-      item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
-      item.kits.join(", ").substring(0, 30) + (item.kits.join(", ").length > 30 ? "..." : ""),
-    ]);
-
-    autoTable(doc, {
-      head: [["Material", "Category", "Required", "Available", "Shortage", "Used In"]],
-      body: tableData,
-      startY: 40,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [71, 85, 105] },
-      didParseCell: (data) => {
-        if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
-          data.cell.styles.textColor = [220, 38, 38];
-          data.cell.styles.fontStyle = "bold";
-        }
-      },
-    });
-
-    doc.save("material-procurement-summary.pdf");
-    toast.success("Exported Material Summary PDF");
+  const handleExport = () => {
+    if (activeTab === "kit-wise") {
+      exportProcurementPDF("kit", kitWiseData, "kit-wise-procurement.pdf");
+    } else if (activeTab === "month-wise") {
+      exportProcurementPDF("month", monthWiseData, "month-wise-procurement.pdf");
+    } else if (activeTab === "client-wise") {
+      exportProcurementPDF("client", clientWiseData, "client-wise-procurement.pdf");
+    } else {
+      exportProcurementPDF("summary", materialSummary, "material-procurement-summary.pdf");
+    }
   };
 
   // --- Render Components ---
@@ -296,10 +276,10 @@ export default function Procurement() {
               Manage material requirements and shortages across all assignments
             </p>
           </div>
-          {canEdit && activeTab === "summary" && (
-            <Button onClick={exportMaterialSummaryPDF}>
+          {canEdit && (
+            <Button onClick={handleExport}>
               <Download className="mr-2 h-4 w-4" />
-              Export Summary PDF
+              Export {activeTab === "summary" ? "Summary" : "List"} PDF
             </Button>
           )}
         </div>
