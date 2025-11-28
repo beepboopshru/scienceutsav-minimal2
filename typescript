@@ -1,11 +1,10 @@
-// In src/convex/schema.ts inside 'clients' table
-gradePlanning: v.optional(v.array(v.object({
-  grade: v.string(), // e.g., "1", "2"... "12"
-  studentStrength: v.number(),
-  // Map of Month -> Kit
-  schedule: v.object({
-    january: v.optional(v.id("kits")),
-    february: v.optional(v.id("kits")),
-    // ... all 12 months
-  })
-})))
+    gradePlanning: v.optional(
+      v.array(
+        v.object({
+          grade: v.string(), // "1", "2", etc.
+          month: v.string(), // "April", "May", etc.
+          kitId: v.id("kits"),
+          // ... other fields
+        })
+      )
+    ),
