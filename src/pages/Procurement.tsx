@@ -164,6 +164,8 @@ export default function Procurement() {
           if (invItem && invItem.components && invItem.components.length > 0) {
             // Mark as processed to avoid re-processing the same shortage amount
             item.processedShortage = currentShortage;
+            // Mark as exploded to exclude from procurement list (since we are making it)
+            item.isExploded = true;
 
             invItem.components.forEach((comp: any) => {
               const compInvItem = inventoryById.get(comp.rawMaterialId);
@@ -202,7 +204,9 @@ export default function Procurement() {
       }
     }
 
-    return Array.from(materialMap.values()).map((item) => ({
+    return Array.from(materialMap.values())
+      .filter((item: any) => !item.isExploded)
+      .map((item) => ({
       ...item,
       shortage: Math.max(0, item.required - item.available),
       kits: Array.from(item.kits),
