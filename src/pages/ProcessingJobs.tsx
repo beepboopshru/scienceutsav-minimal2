@@ -23,6 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
+import { ProcessingRequirements } from "@/components/processing/ProcessingRequirements";
+import { ProcessingJobsList } from "@/components/processing/ProcessingJobsList";
 
 export default function ProcessingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -37,6 +39,7 @@ export default function ProcessingJobs() {
   const vendors = useQuery(api.vendors.list);
   const services = useQuery(api.services.list);
   const kits = useQuery(api.kits.list);
+  const assignments = useQuery(api.assignments.list, {});
 
   const createProcessingJob = useMutation(api.processingJobs.create);
   const completeJob = useMutation(api.processingJobs.complete);
@@ -84,8 +87,6 @@ export default function ProcessingJobs() {
 
   const [preProcessingOpen, setPreProcessingOpen] = useState(false);
   const [sealingPacketOpen, setSealingPacketOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"assigned" | "in_progress" | "completed">("assigned");
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [sourceComboboxOpen, setSourceComboboxOpen] = useState<Record<number, boolean>>({});
   const [targetComboboxOpen, setTargetComboboxOpen] = useState<Record<number, boolean>>({});
   const [processingForm, setProcessingForm] = useState({
@@ -108,6 +109,7 @@ export default function ProcessingJobs() {
   });
 
   const [sealingPacketComboboxOpen, setSealingPacketComboboxOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -128,42 +130,13 @@ export default function ProcessingJobs() {
     );
   }
 
-  if (isLoading || !user || !jobs || !inventory) {
+  if (isLoading || !user || !jobs || !inventory || !assignments) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
       </div>
     );
   }
-
-  const filteredJobs = jobs.filter((job) => {
-    return job.status === activeTab;
-  });
-
-  const getItemName = (itemId: string) => {
-    const item = inventory.find((i) => i._id === itemId);
-    return item ? `${item.name} (${item.unit})` : "Unknown Item";
-  };
-
-  const getProcessorName = (job: any) => {
-    if (job.processedByType === "in_house") return "In-House";
-    if (job.processedByType === "vendor") {
-      const vendor = vendors?.find((v) => v._id === job.processedBy);
-      return vendor ? vendor.name : "Unknown Vendor";
-    }
-    if (job.processedByType === "service") {
-      const service = services?.find((s) => s._id === job.processedBy);
-      return service ? service.name : "Unknown Service";
-    }
-    return "Unknown";
-  };
-
-  const toggleRowExpansion = (jobId: string) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [jobId]: !prev[jobId],
-    }));
-  };
 
   const handleTargetSelection = (targetIndex: number, itemId: Id<"inventory">) => {
     const selectedItem = inventory.find((i) => i._id === itemId);
@@ -436,6 +409,31 @@ export default function ProcessingJobs() {
     } catch (error: any) {
       toast.error(error.message || "Failed to create processing job");
     }
+  };
+
+  const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number) => {
+    const item = inventory.find(i => i._id === targetItemId);
+    if (!item) return;
+
+    // Calculate sources immediately
+    let sources: any[] = [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }];
+    if (item.components && item.components.length > 0) {
+      sources = item.components.map((component) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * quantity,
+      }));
+    }
+
+    setProcessingForm({
+      name: `Process ${item.name}`,
+      sources: sources,
+      targets: [{ targetItemId, targetQuantity: quantity }],
+      processedBy: "",
+      processedByType: "in_house",
+      notes: "Auto-generated from requirements",
+    });
+    
+    setPreProcessingOpen(true);
   };
 
   return (
@@ -908,381 +906,32 @@ export default function ProcessingJobs() {
             </div>
           </div>
 
-          {/* Jobs Tabs */}
-          <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="assigned">Assigned ({jobs.filter(j => j.status === "assigned").length})</TabsTrigger>
-              <TabsTrigger value="in_progress">In Progress ({jobs.filter(j => j.status === "in_progress").length})</TabsTrigger>
-              <TabsTrigger value="completed">Completed ({jobs.filter(j => j.status === "completed").length})</TabsTrigger>
+          <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+              <TabsTrigger value="requirements">Requirements & Planning</TabsTrigger>
+              <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="assigned" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assigned Jobs ({filteredJobs.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]"></TableHead>
-                    <TableHead>Job Name</TableHead>
-                    <TableHead>Processor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredJobs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No processing jobs found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredJobs.map((job) => (
-                      <>
-                        <TableRow key={job._id}>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => toggleRowExpansion(job._id)}
-                            >
-                              {expandedRows[job._id] ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </TableCell>
-                          <TableCell className="font-medium">{job.name}</TableCell>
-                          <TableCell>{getProcessorName(job)}</TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              job.status === "completed" ? "secondary" : 
-                              job.status === "in_progress" ? "default" : 
-                              "outline"
-                            }>
-                              {job.status === "assigned" ? "Assigned" : 
-                               job.status === "in_progress" ? "In Progress" : 
-                               "Completed"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {job.status === "completed" && job.completedAt
-                              ? new Date(job.completedAt).toLocaleDateString()
-                              : new Date(job._creationTime).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            {canEdit && activeTab === "assigned" && (
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleStartJob(job._id)}>
-                                  <Play className="mr-2 h-4 w-4" />
-                                  Start Job
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel
-                                </Button>
-                              </div>
-                            )}
-                            {canEdit && activeTab === "in_progress" && (
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleComplete(job._id)}>
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Complete
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel
-                                </Button>
-                              </div>
-                            )}
-                            {canEdit && activeTab === "completed" && (
-                              <Button size="sm" variant="destructive" onClick={() => handleDelete(job._id)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                        {expandedRows[job._id] && (
-                          <TableRow>
-                            <TableCell colSpan={6} className="bg-muted/50">
-                              <div className="p-4 space-y-4">
-                                <div className="grid md:grid-cols-2 gap-4">
-                                  <div>
-                                    <p className="text-sm font-medium mb-2">Source Materials</p>
-                                    <div className="space-y-1">
-                                      {job.sources.map((source: any, index: number) => (
-                                        <div key={index} className="flex items-center gap-2 text-sm">
-                                          <span>{getItemName(source.sourceItemId)}</span>
-                                          <span className="text-muted-foreground">× {source.sourceQuantity}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-medium mb-2">Target Materials</p>
-                                    <div className="space-y-1">
-                                      {job.targets.map((target: any, index: number) => (
-                                        <div key={index} className="flex items-center gap-2 text-sm">
-                                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                          <span>{getItemName(target.targetItemId)}</span>
-                                          <span className="text-muted-foreground">× {target.targetQuantity}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                                {job.notes && (
-                                  <>
-                                    <Separator />
-                                    <div>
-                                      <p className="text-sm font-medium mb-1">Notes</p>
-                                      <p className="text-sm text-muted-foreground">{job.notes}</p>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-                </CardContent>
-              </Card>
+            <TabsContent value="requirements" className="space-y-4">
+              <ProcessingRequirements 
+                assignments={assignments} 
+                inventory={inventory} 
+                onStartJob={handleStartRequirementJob}
+              />
             </TabsContent>
 
-            <TabsContent value="in_progress" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>In Progress Jobs ({filteredJobs.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>Job Name</TableHead>
-                        <TableHead>Processor</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredJobs.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No in progress jobs found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredJobs.map((job) => (
-                          <>
-                            <TableRow key={job._id}>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => toggleRowExpansion(job._id)}
-                                >
-                                  {expandedRows[job._id] ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                              <TableCell className="font-medium">{job.name}</TableCell>
-                              <TableCell>{getProcessorName(job)}</TableCell>
-                              <TableCell>
-                                <Badge variant="default">In Progress</Badge>
-                              </TableCell>
-                              <TableCell>
-                                {new Date(job._creationTime).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                {canEdit && (
-                                  <div className="flex gap-2">
-                                    <Button size="sm" onClick={() => handleComplete(job._id)}>
-                                      <CheckCircle className="mr-2 h-4 w-4" />
-                                      Complete
-                                    </Button>
-                                    <Button size="sm" variant="outline" onClick={() => handleCancel(job._id, job.status)}>
-                                      <XCircle className="mr-2 h-4 w-4" />
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                            {expandedRows[job._id] && (
-                              <TableRow>
-                                <TableCell colSpan={6} className="bg-muted/50">
-                                  <div className="p-4 space-y-4">
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                      <div>
-                                        <p className="text-sm font-medium mb-2">Source Materials</p>
-                                        <div className="space-y-1">
-                                          {job.sources.map((source: any, index: number) => (
-                                            <div key={index} className="flex items-center gap-2 text-sm">
-                                              <span>{getItemName(source.sourceItemId)}</span>
-                                              <span className="text-muted-foreground">× {source.sourceQuantity}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium mb-2">Target Materials</p>
-                                        <div className="space-y-1">
-                                          {job.targets.map((target: any, index: number) => (
-                                            <div key={index} className="flex items-center gap-2 text-sm">
-                                              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                              <span>{getItemName(target.targetItemId)}</span>
-                                              <span className="text-muted-foreground">× {target.targetQuantity}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {job.notes && (
-                                      <>
-                                        <Separator />
-                                        <div>
-                                          <p className="text-sm font-medium mb-1">Notes</p>
-                                          <p className="text-sm text-muted-foreground">{job.notes}</p>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="completed" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Completed Jobs ({filteredJobs.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>Job Name</TableHead>
-                        <TableHead>Processor</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredJobs.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                            No completed jobs found
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredJobs.map((job) => (
-                          <>
-                            <TableRow key={job._id}>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => toggleRowExpansion(job._id)}
-                                >
-                                  {expandedRows[job._id] ? (
-                                    <ChevronDown className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                              <TableCell className="font-medium">{job.name}</TableCell>
-                              <TableCell>{getProcessorName(job)}</TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">Completed</Badge>
-                              </TableCell>
-                              <TableCell>
-                                {job.completedAt
-                                  ? new Date(job.completedAt).toLocaleDateString()
-                                  : new Date(job._creationTime).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                {canEdit && (
-                                  <Button size="sm" variant="destructive" onClick={() => handleDelete(job._id)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                            {expandedRows[job._id] && (
-                              <TableRow>
-                                <TableCell colSpan={6} className="bg-muted/50">
-                                  <div className="p-4 space-y-4">
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                      <div>
-                                        <p className="text-sm font-medium mb-2">Source Materials</p>
-                                        <div className="space-y-1">
-                                          {job.sources.map((source: any, index: number) => (
-                                            <div key={index} className="flex items-center gap-2 text-sm">
-                                              <span>{getItemName(source.sourceItemId)}</span>
-                                              <span className="text-muted-foreground">× {source.sourceQuantity}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-medium mb-2">Target Materials</p>
-                                        <div className="space-y-1">
-                                          {job.targets.map((target: any, index: number) => (
-                                            <div key={index} className="flex items-center gap-2 text-sm">
-                                              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                              <span>{getItemName(target.targetItemId)}</span>
-                                              <span className="text-muted-foreground">× {target.targetQuantity}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    {job.notes && (
-                                      <>
-                                        <Separator />
-                                        <div>
-                                          <p className="text-sm font-medium mb-1">Notes</p>
-                                          <p className="text-sm text-muted-foreground">{job.notes}</p>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+            <TabsContent value="jobs" className="space-y-4">
+              <ProcessingJobsList
+                jobs={jobs}
+                inventory={inventory}
+                vendors={vendors}
+                services={services}
+                canEdit={canEdit}
+                onStartJob={handleStartJob}
+                onCompleteJob={handleComplete}
+                onCancelJob={handleCancel}
+                onDeleteJob={handleDelete}
+              />
             </TabsContent>
           </Tabs>
         </motion.div>
