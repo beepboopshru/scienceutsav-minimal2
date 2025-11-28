@@ -19,8 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Loader2, Plus } from "lucide-react";
-import { Id } from "@/convex/_generated/dataModel";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface ImportCurriculumDialogProps {
@@ -33,8 +32,8 @@ export function ImportCurriculumDialog({ onImport }: ImportCurriculumDialogProps
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
-  const clients = useQuery(api.clients.get);
-  const kits = useQuery(api.kits.get);
+  const clients = useQuery(api.clients.list);
+  const kits = useQuery(api.kits.list);
 
   const months = [
     "january", "february", "march", "april", "may", "june",
@@ -57,7 +56,7 @@ export function ImportCurriculumDialog({ onImport }: ImportCurriculumDialogProps
 
     const newAssignments: any[] = [];
 
-    client.gradePlanning.forEach((gradePlan) => {
+    client.gradePlanning.forEach((gradePlan: any) => {
       const kitId = gradePlan.schedule?.[selectedMonth as keyof typeof gradePlan.schedule];
       
       if (kitId) {
@@ -65,10 +64,10 @@ export function ImportCurriculumDialog({ onImport }: ImportCurriculumDialogProps
         if (kit) {
           newAssignments.push({
             kitId: kit._id,
-            kitName: kit.name, // For display purposes before saving
-            quantity: gradePlan.studentStrength || 0,
+            programId: kit.programId,
+            kitName: kit.name,
+            quantity: gradePlan.studentStrength || 1, // Default to 1 if 0 or undefined, but user asked for studentStrength
             grade: gradePlan.grade,
-            status: "assigned",
             notes: `Imported from ${selectedMonth} curriculum`,
           });
         }

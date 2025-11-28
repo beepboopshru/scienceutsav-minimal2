@@ -516,6 +516,40 @@ export default function Assignments() {
     );
   };
 
+  const handleImportCurriculum = (assignments: any[], client: any, month: string, year: string) => {
+    // Create a new batch in progress
+    const batchId = `batch-${Date.now()}`;
+    const monthIndex = [
+      "january", "february", "march", "april", "may", "june",
+      "july", "august", "september", "october", "november", "december"
+    ].indexOf(month.toLowerCase());
+    
+    // Default dispatch date to 1st of the selected month/year
+    const dispatchDate = new Date(parseInt(year), monthIndex, 1);
+    
+    const newBatch: BatchInProgress = {
+      id: batchId,
+      batchId: "", // Will be generated
+      client: client._id,
+      clientName: client.organization || client.name,
+      batchName: `Batch imported from ${month} ${year}`,
+      dispatchDate: dispatchDate,
+      productionMonth: `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`, // YYYY-MM format
+      batchNotes: `Imported from ${month} ${year} curriculum`,
+      rows: assignments.map((a) => ({
+        id: `row-${Date.now()}-${Math.random()}`,
+        program: a.programId,
+        kit: a.kitId,
+        quantity: a.quantity.toString(),
+        grade: a.grade,
+        notes: a.notes,
+      })),
+    };
+
+    setBatchesInProgress((prev) => [...prev, newBatch]);
+    toast.success("Batch created from curriculum. Please review and save.");
+  };
+
   const generateBatchId = (clientId: string) => {
     const client = clients?.find((c) => c._id === clientId);
     if (!client) return "";
@@ -727,47 +761,13 @@ export default function Assignments() {
     setExpandedBatches(newExpanded);
   };
 
-  const handleImportCurriculum = (assignments: any[], client: any, month: string, year: string) => {
-    // Create a new batch in progress
-    const batchId = `batch-${Date.now()}`;
-    const monthIndex = [
-      "january", "february", "march", "april", "may", "june",
-      "july", "august", "september", "october", "november", "december"
-    ].indexOf(month.toLowerCase());
-    
-    // Default dispatch date to 1st of the selected month/year
-    const dispatchDate = new Date(parseInt(year), monthIndex, 1);
-    
-    const newBatch: BatchInProgress = {
-      id: batchId,
-      clientId: client._id,
-      clientName: client.organization || client.name,
-      rows: assignments.map((a) => ({
-        id: `temp-${Date.now()}-${Math.random()}`,
-        kitId: a.kitId,
-        quantity: a.quantity,
-        grade: a.grade,
-        status: "assigned",
-        notes: a.notes,
-        dispatchDate: dispatchDate,
-        productionMonth: `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`, // YYYY-MM format
-      })),
-      notes: `Batch imported from ${month} ${year} curriculum`,
-      dispatchDate: dispatchDate,
-      productionMonth: `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`,
-    };
-
-    setBatchesInProgress((prev) => [...prev, newBatch]);
-    toast.success("Batch created from curriculum. Please review and save.");
-  };
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">B2B Assignments</h1>
         <div className="flex gap-2">
           <ImportCurriculumDialog onImport={handleImportCurriculum} />
-          <Button onClick={startNewBatch} className="gap-2">
+          <Button onClick={handleStartBatch} className="gap-2">
             <Plus className="h-4 w-4" />
             Start Batch
           </Button>
