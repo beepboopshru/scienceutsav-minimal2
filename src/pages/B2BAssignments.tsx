@@ -759,8 +759,9 @@ export default function Assignments() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <Layout>
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">B2B Assignments</h1>
         <div className="flex gap-2">
           <ImportCurriculumDialog onImport={handleImportCurriculum} />
@@ -2147,6 +2148,7 @@ export default function Assignments() {
         kits={kits}
         onCreateBatch={handleCreateBatch}
       />
-    </div>
+      </div>
+    </Layout>
   );
 }
