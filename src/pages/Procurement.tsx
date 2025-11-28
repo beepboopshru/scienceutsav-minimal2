@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { Download, Package, Calendar, Users, Layers, AlertCircle } from "lucide-react";
@@ -29,6 +29,16 @@ export default function Procurement() {
   const inventory = useQuery(api.inventory.list);
   
   const [activeTab, setActiveTab] = useState("kit-wise");
+
+  const inventoryByName = useMemo(() => {
+    if (!inventory) return new Map();
+    return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
+  }, [inventory]);
+
+  const inventoryById = useMemo(() => {
+    if (!inventory) return new Map();
+    return new Map(inventory.map(i => [i._id, i]));
+  }, [inventory]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -70,7 +80,7 @@ export default function Procurement() {
 
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string, subcategory?: string) => {
       const required = qtyPerKit * requiredQty;
-      const invItem = inventory.find((i) => i.name.toLowerCase() === name.toLowerCase());
+      const invItem = inventoryByName.get(name.toLowerCase());
       const available = invItem?.quantity || 0;
       const shortage = Math.max(0, required - available);
       const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
@@ -104,6 +114,7 @@ export default function Procurement() {
   const aggregateMaterials = (assignmentList: any[]) => {
     const materialMap = new Map<string, any>();
 
+    // 1. Collect direct requirements
     assignmentList.forEach((assignment) => {
       const shortages = calculateShortages(assignment);
       shortages.direct.forEach((item: any) => {
@@ -118,16 +129,78 @@ export default function Procurement() {
             name: item.name,
             required: item.required,
             available: item.available,
-            shortage: 0, // Recalculated at end
+            shortage: 0, // Recalculated later
             unit: item.unit,
             category: item.category,
             subcategory: item.subcategory,
             kits: new Set([assignment.kit?.name || "Unknown"]),
             programs: new Set([assignment.program?.name || "Unknown"]),
+            processedShortage: 0, // Track processed shortage for BOM explosion
           });
         }
       });
     });
+
+    // 2. BOM Explosion for Shortages
+    const queue = Array.from(materialMap.keys());
+    
+    while (queue.length > 0) {
+      const key = queue.shift()!;
+      const item = materialMap.get(key);
+      if (!item) continue;
+
+      // Calculate current shortage
+      const currentShortage = Math.max(0, item.required - item.available);
+      item.shortage = currentShortage;
+
+      if (currentShortage > 0) {
+        const processedShortage = item.processedShortage || 0;
+        const newShortage = currentShortage - processedShortage;
+
+        if (newShortage > 0) {
+          // Find inventory item to get BOM
+          const invItem = inventoryByName.get(key);
+          
+          if (invItem && invItem.components && invItem.components.length > 0) {
+            // Mark as processed to avoid re-processing the same shortage amount
+            item.processedShortage = currentShortage;
+
+            invItem.components.forEach((comp: any) => {
+              const compInvItem = inventoryById.get(comp.rawMaterialId);
+              if (compInvItem) {
+                const compKey = compInvItem.name.toLowerCase();
+                const qtyNeeded = newShortage * comp.quantityRequired;
+
+                if (materialMap.has(compKey)) {
+                  const existing = materialMap.get(compKey);
+                  existing.required += qtyNeeded;
+                  // Inherit kits/programs from parent
+                  item.kits.forEach((k: string) => existing.kits.add(k));
+                  item.programs.forEach((p: string) => existing.programs.add(p));
+                  
+                  // Add to queue to re-evaluate this component's shortage
+                  if (!queue.includes(compKey)) queue.push(compKey);
+                } else {
+                  materialMap.set(compKey, {
+                    name: compInvItem.name,
+                    required: qtyNeeded,
+                    available: compInvItem.quantity,
+                    shortage: 0,
+                    unit: compInvItem.unit,
+                    category: "Raw Material (BOM)",
+                    subcategory: compInvItem.subcategory || "Uncategorized",
+                    kits: new Set(item.kits),
+                    programs: new Set(item.programs),
+                    processedShortage: 0
+                  });
+                  queue.push(compKey);
+                }
+              }
+            });
+          }
+        }
+      }
+    }
 
     return Array.from(materialMap.values()).map((item) => ({
       ...item,
