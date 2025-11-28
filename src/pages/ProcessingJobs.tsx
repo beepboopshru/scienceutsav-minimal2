@@ -111,6 +111,7 @@ export default function ProcessingJobs() {
 
   const [sealingPacketComboboxOpen, setSealingPacketComboboxOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
+  const [isFromRequirements, setIsFromRequirements] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -411,8 +412,6 @@ export default function ProcessingJobs() {
       toast.error(error.message || "Failed to create processing job");
     }
   };
-
-  const [isFromRequirements, setIsFromRequirements] = useState(false);
 
   const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number) => {
     const item = inventory.find(i => i._id === targetItemId);
