@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
+import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
 
 interface ImportCurriculumDialogProps {
@@ -55,6 +56,7 @@ export function ImportCurriculumDialog({ onImport }: ImportCurriculumDialogProps
     }
 
     const newAssignments: any[] = [];
+    const warnings: string[] = [];
 
     client.gradePlanning.forEach((gradePlan: any) => {
       const kitId = gradePlan.schedule?.[selectedMonth as keyof typeof gradePlan.schedule];
@@ -62,12 +64,20 @@ export function ImportCurriculumDialog({ onImport }: ImportCurriculumDialogProps
       if (kitId) {
         const kit = kits?.find((k) => k._id === kitId);
         if (kit) {
+          let quantity = gradePlan.studentStrength;
+          
+          if (quantity === undefined || quantity === null) {
+            quantity = 0;
+            warnings.push(`Grade ${gradePlan.grade}: Missing student strength`);
+          }
+
           newAssignments.push({
             kitId: kit._id,
             programId: kit.programId,
-            kitName: kit.name,
-            quantity: gradePlan.studentStrength || 1, // Default to 1 if 0 or undefined, but user asked for studentStrength
+            kitName: kit.name, // For display purposes before saving
+            quantity: quantity,
             grade: gradePlan.grade,
+            status: "assigned",
             notes: `Imported from ${selectedMonth} curriculum`,
           });
         }
@@ -77,6 +87,13 @@ export function ImportCurriculumDialog({ onImport }: ImportCurriculumDialogProps
     if (newAssignments.length === 0) {
       toast.error(`No kits found scheduled for ${selectedMonth} in the curriculum.`);
       return;
+    }
+
+    if (warnings.length > 0) {
+      toast.warning(`Missing student strength for ${warnings.length} grades. Defaulted to 0.`, {
+        description: warnings.join(", "),
+        duration: 5000,
+      });
     }
 
     onImport(newAssignments, client, selectedMonth, selectedYear);
