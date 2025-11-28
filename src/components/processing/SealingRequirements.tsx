@@ -6,17 +6,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
-import { Scissors, ChevronDown, ChevronRight } from "lucide-react";
+import { Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-interface ProcessingRequirementsProps {
+interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
   onStartJob: (targetItemId: Id<"inventory">, quantity: number) => void;
 }
 
-export function ProcessingRequirements({ assignments, inventory, onStartJob }: ProcessingRequirementsProps) {
+export function SealingRequirements({ assignments, inventory, onStartJob }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
@@ -34,8 +33,8 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
 
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
       const invItem = inventoryByName.get(name.toLowerCase());
-      // Only care about pre-processed items
-      if (!invItem || invItem.type !== "pre_processed") {
+      // Only care about sealed packets
+      if (!invItem || invItem.type !== "sealed_packet") {
         return;
       }
 
@@ -103,7 +102,6 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
     })).filter(i => i.shortage > 0);
   };
 
-  // Generate Data Views
   const summaryData = aggregateRequirements(assignments);
 
   const kitWiseData = useMemo(() => {
@@ -177,7 +175,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
       <TableHeader>
         <TableRow>
           <TableHead className="w-[50px]"></TableHead>
-          <TableHead>Item Name</TableHead>
+          <TableHead>Sealed Packet Name</TableHead>
           <TableHead>Required</TableHead>
           <TableHead>Available</TableHead>
           <TableHead>Shortage</TableHead>
@@ -215,7 +213,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
                 </TableCell>
                 <TableCell>
                   <Button size="sm" onClick={() => onStartJob(item.id, item.shortage)}>
-                    <Scissors className="mr-2 h-4 w-4" />
+                    <Package className="mr-2 h-4 w-4" />
                     Start Job
                   </Button>
                 </TableCell>
@@ -224,7 +222,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
                 <TableRow>
                   <TableCell colSpan={6} className="bg-muted/50 p-4">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Raw Materials Required (per unit):</p>
+                      <p className="text-sm font-medium">Raw Materials Required (per packet):</p>
                       <div className="grid gap-2">
                         {item.invItem.components.map((comp: any, compIdx: number) => {
                           const rawMaterial = inventory.find(inv => inv._id === comp.rawMaterialId);
@@ -257,9 +255,9 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Pre-Processed Items Requirements</h2>
+        <h2 className="text-xl font-semibold">Sealed Packet Requirements</h2>
         <p className="text-sm text-muted-foreground">
-          Pre-processed items that need to be created based on current assignments
+          Sealed packets that need to be created based on current assignments
         </p>
       </div>
 
@@ -275,12 +273,12 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
           <TabsContent value="summary">
             <Card>
               <CardHeader>
-                <CardTitle>Total Processing Requirements</CardTitle>
-                <CardDescription>Aggregated list of all pre-processed items needed</CardDescription>
+                <CardTitle>Total Sealing Requirements</CardTitle>
+                <CardDescription>Aggregated list of all sealed packets needed</CardDescription>
               </CardHeader>
               <CardContent>
                 {summaryData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
                   <RequirementsTable items={summaryData} />
                 )}
@@ -292,7 +290,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
                 {kitWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
                   kitWiseData.map((kit, idx) => (
                     <Card key={idx}>
@@ -314,7 +312,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
                 {monthWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
                   monthWiseData.map((month, idx) => (
                     <Card key={idx}>
@@ -337,7 +335,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
                 {clientWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
                   clientWiseData.map((client, idx) => (
                     <Card key={idx}>

@@ -38,6 +38,7 @@ import BillTracking from "@/pages/BillTracking.tsx";
 import OrderRecords from "./pages/OrderRecords.tsx";
 import Themes from "./pages/Themes";
 import ClientForm from "./pages/ClientForm";
+import SealingJobs from "./pages/SealingJobs";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -92,6 +93,7 @@ function App() {
         <Route path="/admin-zone" element={<AdminZone />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
+        <Route path="/inventory/sealing-jobs" element={<SealingJobs />} />
         <Route path="/inventory/bill-records" element={<BillRecords />} />
         <Route path="/vendor-contacts" element={<VendorContacts />} />
         <Route path="/services" element={<Services />} />

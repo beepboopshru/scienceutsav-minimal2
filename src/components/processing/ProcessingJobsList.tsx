@@ -196,7 +196,7 @@ export function ProcessingJobsList({
                                     <Separator />
                                     <div>
                                       <p className="text-sm font-medium mb-1">Notes</p>
-                                      <p className=\"text-sm text-muted-foreground\">{job.notes}</p>
+                                      <p className="text-sm text-muted-foreground">{job.notes}</p>
                                     </div>
                                   </>
                                 )}
