@@ -33,6 +33,7 @@ export default function ProcessingJobs() {
   
   const canView = hasPermission("processingJobs", "view");
   const canEdit = hasPermission("processingJobs", "edit");
+  const canEditBOM = hasPermission("processingJobs", "editBOM");
   
   const jobs = useQuery(api.processingJobs.list);
   const inventory = useQuery(api.inventory.list);
@@ -411,6 +412,8 @@ export default function ProcessingJobs() {
     }
   };
 
+  const [isFromRequirements, setIsFromRequirements] = useState(false);
+
   const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number) => {
     const item = inventory.find(i => i._id === targetItemId);
     if (!item) return;
@@ -433,6 +436,7 @@ export default function ProcessingJobs() {
       notes: "Auto-generated from requirements",
     });
     
+    setIsFromRequirements(true);
     setPreProcessingOpen(true);
   };
 
@@ -453,9 +457,12 @@ export default function ProcessingJobs() {
             </div>
             <div className="flex gap-2">
               {canEdit && (
-                <Dialog open={preProcessingOpen} onOpenChange={setPreProcessingOpen}>
+                <Dialog open={preProcessingOpen} onOpenChange={(open) => {
+                  setPreProcessingOpen(open);
+                  if (!open) setIsFromRequirements(false);
+                }}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button onClick={() => setIsFromRequirements(false)}>
                       <Scissors className="mr-2 h-4 w-4" />
                       Start Pre-Processing
                     </Button>
@@ -474,13 +481,18 @@ export default function ProcessingJobs() {
                         />
                       </div>
                       <Separator />
-                      <Label>Source Materials</Label>
-                      {processingForm.sources.map((source, index) => (
+                      <Label>Source Materials {isFromRequirements && !canEditBOM && <span className="text-xs text-muted-foreground">(Auto-filled from BOM - Read Only)</span>}</Label>
+                      {processingForm.sources.map((source, index) => {
+                        const targetItem = inventory.find(i => i._id === processingForm.targets[0]?.targetItemId);
+                        const hasBOM = targetItem?.components && targetItem.components.length > 0;
+                        const isLocked = isFromRequirements && hasBOM && !canEditBOM;
+                        
+                        return (
                         <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
                           <div className="space-y-2">
                             <Popover 
-                              open={sourceComboboxOpen[index]} 
-                              onOpenChange={(open) => setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: open })}
+                              open={!isLocked && sourceComboboxOpen[index]} 
+                              onOpenChange={(open) => !isLocked && setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: open })}
                             >
                               <PopoverTrigger asChild>
                                 <Button
@@ -488,6 +500,7 @@ export default function ProcessingJobs() {
                                   role="combobox"
                                   aria-expanded={sourceComboboxOpen[index]}
                                   className="w-full justify-between"
+                                  disabled={isLocked}
                                 >
                                   {source.sourceItemId
                                     ? (() => {
@@ -540,6 +553,7 @@ export default function ProcessingJobs() {
                                 newSources[index].sourceQuantity = Number(e.target.value);
                                 setProcessingForm({ ...processingForm, sources: newSources });
                               }}
+                              disabled={isLocked}
                             />
                           </div>
                           <Button
@@ -552,25 +566,27 @@ export default function ProcessingJobs() {
                                 setProcessingForm({ ...processingForm, sources: newSources });
                               }
                             }}
-                            disabled={processingForm.sources.length === 1}
+                            disabled={processingForm.sources.length === 1 || isLocked}
                           >
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setProcessingForm({
-                            ...processingForm,
-                            sources: [...processingForm.sources, { sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
-                          })
-                        }
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Source
-                      </Button>
+                      )})}
+                      {(!isFromRequirements || canEditBOM || !processingForm.targets[0]?.targetItemId || !inventory.find(i => i._id === processingForm.targets[0]?.targetItemId)?.components?.length) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setProcessingForm({
+                              ...processingForm,
+                              sources: [...processingForm.sources, { sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
+                            })
+                          }
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Source
+                        </Button>
+                      )}
                       <Separator />
                       <Label>Target Items</Label>
                       {processingForm.targets.map((target, index) => (
