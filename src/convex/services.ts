@@ -66,14 +66,13 @@ export const remove = mutation({
     const service = await ctx.db.get(args.id);
     if (!service) throw new Error("Service not found");
 
-    // Create deletion request instead of deleting immediately
-    await ctx.db.insert("deletionRequests", {
+    return await ctx.db.insert("deletionRequests", {
       entityType: "service",
       entityId: args.id,
       entityName: service.name,
-      requestedBy: userId,
       status: "pending",
-      reason: "Deletion requested by user",
+      requestedBy: userId,
+      reason: "User requested deletion",
     });
   },
 });

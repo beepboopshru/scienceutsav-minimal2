@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, MutationCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Create a deletion request
@@ -46,9 +46,10 @@ export const list = query({
     let requests;
 
     if (args.status) {
+      const status = args.status;
       requests = await ctx.db
         .query("deletionRequests")
-        .withIndex("by_status", (q) => q.eq("status", args.status))
+        .withIndex("by_status", (q) => q.eq("status", status))
         .collect();
     } else {
       requests = await ctx.db.query("deletionRequests").collect();
@@ -149,7 +150,7 @@ export const reject = mutation({
 });
 
 // Helper function to perform actual deletion
-async function performDeletion(ctx: any, entityType: string, entityId: string) {
+async function performDeletion(ctx: MutationCtx, entityType: string, entityId: string) {
   switch (entityType) {
     case "inventory":
       await ctx.db.delete(entityId as Id<"inventory">);
@@ -170,13 +171,64 @@ async function performDeletion(ctx: any, entityType: string, entityId: string) {
       await ctx.db.delete(entityId as Id<"services">);
       break;
     case "assignment":
+      const assignment = await ctx.db.get(entityId as Id<"assignments">);
+      if (assignment && assignment.status !== "dispatched") {
+        const kit = await ctx.db.get(assignment.kitId);
+        if (kit) {
+          const newStockCount = kit.stockCount + assignment.quantity;
+          let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
+          
+          if (newStockCount === 0) {
+            newStatus = "assigned";
+          } else if (newStockCount < 0) {
+            newStatus = "to_be_made";
+          }
+
+          await ctx.db.patch(assignment.kitId, {
+            stockCount: newStockCount,
+            status: newStatus,
+          });
+        }
+      }
       await ctx.db.delete(entityId as Id<"assignments">);
       break;
     case "processingJob":
+      const job = await ctx.db.get(entityId as Id<"processingJobs">);
+      if (job && job.status === "in_progress") {
+        for (const source of job.sources) {
+          const sourceItem = await ctx.db.get(source.sourceItemId);
+          if (sourceItem) {
+            await ctx.db.patch(source.sourceItemId, {
+              quantity: sourceItem.quantity + source.sourceQuantity,
+            });
+          }
+        }
+      }
       await ctx.db.delete(entityId as Id<"processingJobs">);
       break;
     case "procurementJob":
       await ctx.db.delete(entityId as Id<"procurementJobs">);
+      break;
+    case "program":
+      await ctx.db.delete(entityId as Id<"programs">);
+      break;
+    case "batch":
+      await ctx.db.delete(entityId as Id<"batches">);
+      break;
+    case "billTracking":
+      await ctx.db.delete(entityId as Id<"billTracking">);
+      break;
+    case "vendorImport":
+      await ctx.db.delete(entityId as Id<"vendorImports">);
+      break;
+    case "laserFile":
+      await ctx.db.delete(entityId as Id<"laserFiles">);
+      break;
+    case "discrepancyTicket":
+      await ctx.db.delete(entityId as Id<"discrepancyTickets">);
+      break;
+    case "inventoryCategory":
+      await ctx.db.delete(entityId as Id<"inventoryCategories">);
       break;
     default:
       throw new Error(`Unknown entity type: ${entityType}`);

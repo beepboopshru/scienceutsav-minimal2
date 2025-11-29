@@ -127,32 +127,19 @@ export const updateQuantity = mutation({
 export const remove = mutation({
   args: { id: v.id("inventory") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email))
-      .unique();
-
-    if (!user) throw new Error("User not found");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
     const item = await ctx.db.get(args.id);
     if (!item) throw new Error("Item not found");
 
-    if (user.role !== "admin") {
-      await ctx.db.insert("deletionRequests", {
-        entityType: "inventory",
-        entityId: args.id,
-        entityName: item.name,
-        status: "pending",
-        requestedBy: user._id,
-        reason: "User requested deletion",
-      });
-      return { requestCreated: true, message: "Deletion request submitted for approval" };
-    }
-
-    await ctx.db.delete(args.id);
-    return { success: true };
+    return await ctx.db.insert("deletionRequests", {
+      entityType: "inventory",
+      entityId: args.id,
+      entityName: item.name,
+      status: "pending",
+      requestedBy: userId,
+      reason: "User requested deletion",
+    });
   },
 });

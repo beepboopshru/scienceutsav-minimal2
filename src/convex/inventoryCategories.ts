@@ -54,6 +54,15 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    await ctx.db.delete(args.id);
+    const category = await ctx.db.get(args.id);
+    if (!category) throw new Error("Category not found");
+
+    await ctx.db.insert("deletionRequests", {
+      entityType: "inventoryCategory",
+      entityId: args.id,
+      entityName: category.name,
+      status: "pending",
+      requestedBy: userId,
+    });
   },
 });

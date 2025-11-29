@@ -120,6 +120,14 @@ export const updateStatus = mutation({
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
+    await ctx.db.insert("deletionRequests", {
+      entityType: "assignment",
+      entityId: args.id,
+      entityName: `Assignment ${assignment._id}`,
+      status: "pending",
+      requestedBy: user._id,
+    });
+
     const updates: any = { status: args.status };
 
     if (args.status === "dispatched" && !assignment.dispatchedAt) {
@@ -195,27 +203,17 @@ export const deleteAssignment = mutation({
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
-    // Restore stock if not dispatched
-    if (assignment.status !== "dispatched") {
-      const kit = await ctx.db.get(assignment.kitId);
-      if (kit) {
-        const newStockCount = kit.stockCount + assignment.quantity;
-        let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-        
-        if (newStockCount === 0) {
-          newStatus = "assigned";
-        } else if (newStockCount < 0) {
-          newStatus = "to_be_made";
-        }
+    const kit = await ctx.db.get(assignment.kitId);
+    const entityName = kit ? `Assignment for ${kit.name}` : `Assignment ${args.id}`;
 
-        await ctx.db.patch(assignment.kitId, {
-          stockCount: newStockCount,
-          status: newStatus,
-        });
-      }
-    }
-
-    await ctx.db.delete(args.id);
+    return await ctx.db.insert("deletionRequests", {
+      entityType: "assignment",
+      entityId: args.id,
+      entityName: entityName,
+      status: "pending",
+      requestedBy: userId,
+      reason: "User requested deletion",
+    });
   },
 });
 
@@ -241,33 +239,23 @@ export const getByClient = query({
 export const remove = mutation({
   args: { id: v.id("assignments") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("email", (q) => q.eq("email", identity.email))
-      .unique();
-
-    if (!user) throw new Error("User not found");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
-    if (user.role !== "admin") {
-      await ctx.db.insert("deletionRequests", {
-        entityType: "assignment",
-        entityId: args.id,
-        entityName: `Assignment for ${assignment.schoolName || "Unknown School"}`, // Assuming schoolName exists or similar
-        status: "pending",
-        requestedBy: user._id,
-        reason: "User requested deletion",
-      });
-      return { requestCreated: true, message: "Deletion request submitted for approval" };
-    }
+    const kit = await ctx.db.get(assignment.kitId);
+    const entityName = kit ? `Assignment for ${kit.name}` : `Assignment ${args.id}`;
 
-    await ctx.db.delete(args.id);
-    return { success: true };
+    return await ctx.db.insert("deletionRequests", {
+      entityType: "assignment",
+      entityId: args.id,
+      entityName: entityName,
+      status: "pending",
+      requestedBy: userId,
+      reason: "User requested deletion",
+    });
   },
 });
 

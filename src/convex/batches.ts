@@ -265,7 +265,7 @@ export const addAssignment = mutation({
     const assignmentId = await ctx.db.insert("assignments", {
       kitId: args.kitId,
       clientId: batch.clientId,
-      clientType: batch.clientType,
+      clientType: batch.clientType ?? "b2b",
       quantity: args.quantity,
       grade: args.grade,
       notes: args.notes,

@@ -362,7 +362,7 @@ export default function Inventory() {
   const handleDelete = async (id: Id<"inventory">) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
     try {
-      const result = await deleteItem({ id });
+      const result = await removeItem({ id });
       if (result && 'requestCreated' in result && result.requestCreated) {
         toast.success("Deletion request submitted for admin approval");
       } else {

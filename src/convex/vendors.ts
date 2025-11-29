@@ -79,14 +79,13 @@ export const remove = mutation({
     const vendor = await ctx.db.get(args.id);
     if (!vendor) throw new Error("Vendor not found");
 
-    // Create deletion request instead of deleting immediately
-    await ctx.db.insert("deletionRequests", {
+    return await ctx.db.insert("deletionRequests", {
       entityType: "vendor",
       entityId: args.id,
       entityName: vendor.name,
-      requestedBy: userId,
       status: "pending",
-      reason: "Deletion requested by user",
+      requestedBy: userId,
+      reason: "User requested deletion",
     });
   },
 });

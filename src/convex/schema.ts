@@ -1,6 +1,6 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 
 // User roles for the system
 export const ROLES = {
@@ -500,6 +500,22 @@ const schema = defineSchema(
           delete: v.boolean(),
           archive: v.boolean(),
         })),
+        inventory: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          delete: v.boolean(),
+          editStock: v.boolean(),
+          createCategories: v.boolean(),
+          importData: v.boolean(),
+        })),
+        kitStatistics: v.optional(v.object({
+          view: v.boolean(),
+          viewStock: v.boolean(),
+          viewFiles: v.boolean(),
+          viewCapacityPricing: v.boolean(),
+          editStock: v.boolean(),
+        })),
         kits: v.optional(v.object({
           view: v.boolean(),
           create: v.boolean(),
@@ -581,6 +597,7 @@ const schema = defineSchema(
           verify: v.boolean(),
           dispatch: v.boolean(),
           updateStatus: v.boolean(),
+          edit: v.optional(v.boolean()),
         })),
         discrepancyTickets: v.optional(v.object({
           view: v.boolean(),
@@ -735,19 +752,23 @@ const schema = defineSchema(
 
     // Deletion requests for admin approval
     deletionRequests: defineTable({
-      entityType: v.string(), // "inventory", "client", "kit", etc.
+      entityType: v.string(),
       entityId: v.string(),
       entityName: v.string(),
       reason: v.optional(v.string()),
-      status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("rejected")
+      ),
       requestedBy: v.id("users"),
       reviewedBy: v.optional(v.id("users")),
       reviewedAt: v.optional(v.number()),
       rejectionReason: v.optional(v.string()),
     })
-    .index("by_status", ["status"])
-    .index("by_requestedBy", ["requestedBy"]),
-
+      .index("by_status", ["status"])
+      .index("by_requested_by", ["requestedBy"])
+      .index("by_entity_type", ["entityType"]),
   },
   {
     schemaValidation: false,

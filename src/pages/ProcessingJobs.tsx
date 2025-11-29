@@ -367,13 +367,17 @@ export default function ProcessingJobs() {
     }
   };
 
-  const handleDelete = async (jobId: string) => {
-    if (!confirm("Delete this completed job? This action cannot be undone.")) return;
+  const handleDelete = async (id: Id<"processingJobs">) => {
+    if (!confirm("Are you sure you want to delete this job?")) return;
     try {
-      await deleteJob({ id: jobId as any });
-      toast.success("Job deleted successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete job");
+      const result = await deleteJob({ id });
+      if (result && 'requestCreated' in result && result.requestCreated) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        toast.success("Job deleted");
+      }
+    } catch (err) {
+      toast.error("Failed to delete job");
     }
   };
 

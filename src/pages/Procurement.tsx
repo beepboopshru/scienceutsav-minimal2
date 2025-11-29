@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 import { exportProcurementPDF } from "@/lib/procurementExport";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function Procurement() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -27,6 +28,7 @@ export default function Procurement() {
   
   const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
+  const removeJob = useMutation(api.procurementJobs.remove);
   
   const [activeTab, setActiveTab] = useState("kit-wise");
 
@@ -334,6 +336,20 @@ export default function Procurement() {
       exportProcurementPDF("client", clientWiseData, "client-wise-procurement.pdf");
     } else {
       exportProcurementPDF("summary", materialSummary, "material-procurement-summary.pdf");
+    }
+  };
+
+  const handleDelete = async (id: Id<"procurementJobs">) => {
+    if (!confirm("Are you sure you want to delete this job?")) return;
+    try {
+      const result = await removeJob({ id });
+      if (result && 'requestCreated' in result && result.requestCreated) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        toast.success("Job deleted");
+      }
+    } catch (err) {
+      toast.error("Failed to delete job");
     }
   };
 
