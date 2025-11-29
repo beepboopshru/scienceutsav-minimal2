@@ -70,23 +70,31 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
 
     // Process sealed packet from kit structure (always show, even if not in inventory)
     const processPacket = (packetName: string, qtyPerKit: number, packetMaterials?: any[]) => {
+      // Try to find the sealed packet in inventory by name (case-insensitive)
       const invItem = inventoryByName.get(packetName.toLowerCase());
       
+      // Also try to find by exact match in case there's a case sensitivity issue
+      const invItemExact = inventory.find(i => 
+        i.name === packetName && i.type === "sealed_packet"
+      );
+      
+      const foundItem = invItem || invItemExact;
+      
       // Check if it's a sealed packet type in inventory
-      if (invItem && invItem.type === "sealed_packet") {
+      if (foundItem && foundItem.type === "sealed_packet") {
         const required = qtyPerKit * requiredQty;
-        const available = invItem.quantity || 0;
+        const available = foundItem.quantity || 0;
         const shortage = Math.max(0, required - available);
         
         requirements.push({
-          id: invItem._id,
-          name: invItem.name,
+          id: foundItem._id,
+          name: foundItem.name,
           required,
           available,
           shortage,
-          unit: invItem.unit,
+          unit: foundItem.unit,
           category: "Sealed Packet",
-          invItem,
+          invItem: foundItem,
           // Always pass packet materials as fallback, even if components exist
           packetMaterials: packetMaterials || [],
           assignmentDetails: {
@@ -128,6 +136,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       // The packet NAME itself is what needs to be sealed, not the materials inside
       structure.packets?.forEach((packet: any) => {
         // Always show sealed packets from kit structure, even if not in inventory
+        // Pass packet materials so they can be used as fallback if needed
         processPacket(packet.name, 1, packet.materials);
       });
     }
