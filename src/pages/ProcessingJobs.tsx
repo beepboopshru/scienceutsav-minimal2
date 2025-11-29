@@ -388,7 +388,7 @@ export default function ProcessingJobs() {
 
       if (insufficientMaterials.length > 0) {
         toast.error(
-          `Cannot start job - Insufficient materials:\n${insufficientMaterials.join("\n")}`,
+          `Cannot start job - Insufficient materials: ${insufficientMaterials.join(", ")}`,
           { duration: 5000 }
         );
         return;
@@ -397,6 +397,7 @@ export default function ProcessingJobs() {
       await startJob({ id: jobId as any });
       toast.success("Job started and materials deducted from inventory");
     } catch (error: any) {
+      console.error("Error starting job:", error);
       toast.error(error.message || "Failed to start job");
     }
   };
