@@ -568,6 +568,283 @@ export default function ProcessingJobs() {
               />
             </TabsContent>
           </Tabs>
+
+          {/* Pre-Processing Job Creation Dialog */}
+          <Dialog open={preProcessingOpen} onOpenChange={setPreProcessingOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Pre-Processing Job</DialogTitle>
+                <DialogDescription>
+                  Transform raw materials into pre-processed items
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="jobName">Job Name *</Label>
+                  <Input
+                    id="jobName"
+                    value={processingForm.name}
+                    onChange={(e) => setProcessingForm({ ...processingForm, name: e.target.value })}
+                    placeholder="Enter job name"
+                  />
+                </div>
+
+                <div>
+                  <Label>Source Materials (Input)</Label>
+                  <div className="space-y-2">
+                    {processingForm.sources.map((source, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <Label>Material</Label>
+                          <Popover
+                            open={sourceComboboxOpen[index]}
+                            onOpenChange={(open) =>
+                              setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: open })
+                            }
+                          >
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between">
+                                {source.sourceItemId
+                                  ? inventory?.find((i) => i._id === source.sourceItemId)?.name
+                                  : "Select material"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search materials..." />
+                                <CommandList>
+                                  <CommandEmpty>No material found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {inventory?.filter(i => i.type === "raw").map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        onSelect={() => {
+                                          const newSources = [...processingForm.sources];
+                                          newSources[index].sourceItemId = item._id;
+                                          setProcessingForm({ ...processingForm, sources: newSources });
+                                          setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: false });
+                                        }}
+                                      >
+                                        {item.name} ({item.quantity} {item.unit})
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="w-32">
+                          <Label>Quantity</Label>
+                          <Input
+                            type="number"
+                            value={source.sourceQuantity}
+                            onChange={(e) => {
+                              const newSources = [...processingForm.sources];
+                              newSources[index].sourceQuantity = parseFloat(e.target.value) || 0;
+                              setProcessingForm({ ...processingForm, sources: newSources });
+                            }}
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const newSources = processingForm.sources.filter((_, i) => i !== index);
+                            setProcessingForm({ ...processingForm, sources: newSources });
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setProcessingForm({
+                          ...processingForm,
+                          sources: [
+                            ...processingForm.sources,
+                            { sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 },
+                          ],
+                        })
+                      }
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Source Material
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <Label>Target Materials (Output)</Label>
+                  <div className="space-y-2">
+                    {processingForm.targets.map((target, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <Label>Material</Label>
+                          <Popover
+                            open={targetComboboxOpen[index]}
+                            onOpenChange={(open) =>
+                              setTargetComboboxOpen({ ...targetComboboxOpen, [index]: open })
+                            }
+                          >
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between">
+                                {target.targetItemId
+                                  ? inventory?.find((i) => i._id === target.targetItemId)?.name
+                                  : "Select material"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search materials..." />
+                                <CommandList>
+                                  <CommandEmpty>No material found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {inventory?.filter(i => i.type === "pre_processed").map((item) => (
+                                      <CommandItem
+                                        key={item._id}
+                                        onSelect={() => handleTargetSelection(index, item._id)}
+                                      >
+                                        {item.name} ({item.quantity} {item.unit})
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="w-32">
+                          <Label>Quantity</Label>
+                          <Input
+                            type="number"
+                            value={target.targetQuantity}
+                            onChange={(e) => handleTargetQuantityChange(index, parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const newTargets = processingForm.targets.filter((_, i) => i !== index);
+                            setProcessingForm({ ...processingForm, targets: newTargets });
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setProcessingForm({
+                          ...processingForm,
+                          targets: [
+                            ...processingForm.targets,
+                            { targetItemId: "" as Id<"inventory">, targetQuantity: 0 },
+                          ],
+                        })
+                      }
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Target Material
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <Label htmlFor="processedByType">Processed By Type *</Label>
+                  <Select
+                    value={processingForm.processedByType}
+                    onValueChange={(v: any) => setProcessingForm({ ...processingForm, processedByType: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_house">In-House</SelectItem>
+                      <SelectItem value="vendor">Vendor</SelectItem>
+                      <SelectItem value="service">Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {processingForm.processedByType === "vendor" && vendors && (
+                  <div>
+                    <Label htmlFor="vendor">Select Vendor</Label>
+                    <Select
+                      value={processingForm.processedBy}
+                      onValueChange={(v) => setProcessingForm({ ...processingForm, processedBy: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select vendor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vendors.map((vendor) => (
+                          <SelectItem key={vendor._id} value={vendor.name}>
+                            {vendor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {processingForm.processedByType === "service" && services && (
+                  <div>
+                    <Label htmlFor="service">Select Service</Label>
+                    <Select
+                      value={processingForm.processedBy}
+                      onValueChange={(v) => setProcessingForm({ ...processingForm, processedBy: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map((service) => (
+                          <SelectItem key={service._id} value={service.name}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={processingForm.notes}
+                    onChange={(e) => setProcessingForm({ ...processingForm, notes: e.target.value })}
+                    placeholder="Add any additional notes"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPreProcessingOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateProcessingJob}>
+                  <Scissors className="mr-2 h-4 w-4" />
+                  Create Job
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </motion.div>
       </div>
     </Layout>
