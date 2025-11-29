@@ -117,6 +117,12 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
         // Sealed packet not in inventory yet - still show it with 0 available
         const required = qtyPerKit * requiredQty;
         
+        console.log("=== DEBUG: Packet NOT in inventory ===");
+        console.log("packetName:", packetName);
+        console.log("packetMaterials received:", packetMaterials);
+        console.log("packetMaterials is array:", Array.isArray(packetMaterials));
+        console.log("packetMaterials length:", packetMaterials?.length);
+        
         requirements.push({
           id: `missing_${packetName}`,
           name: packetName,
@@ -141,9 +147,17 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     if (kit.isStructured && kit.packingRequirements) {
       const structure = parsePackingRequirements(kit.packingRequirements);
       
+      console.log("=== DEBUG: Kit Structure ===");
+      console.log("structure.packets:", structure.packets);
+      
       // Process sealed packets defined in the kit
       // The packet NAME itself is what needs to be sealed, not the materials inside
       structure.packets?.forEach((packet: any) => {
+        console.log(`=== DEBUG: Processing packet from kit structure ===`);
+        console.log("packet:", packet);
+        console.log("packet.name:", packet.name);
+        console.log("packet.materials:", packet.materials);
+        
         // Always show sealed packets from kit structure, even if not in inventory
         // Pass packet materials so they can be used as fallback if needed
         processPacket(packet.name, 1, packet.materials);
