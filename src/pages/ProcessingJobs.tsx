@@ -730,11 +730,6 @@ export default function ProcessingJobs() {
                 </Dialog>
               )}
 
-              <Button onClick={() => navigate("/inventory/sealing-jobs")} variant="secondary">
-                <Package className="mr-2 h-4 w-4" />
-                Sealing Jobs
-              </Button>
-
               <Button onClick={() => navigate("/inventory")} variant="outline">
                 Back to Inventory
               </Button>

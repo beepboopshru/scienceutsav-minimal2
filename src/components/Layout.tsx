@@ -335,6 +335,12 @@ export function Layout({ children }: LayoutProps) {
       roles: [hasPermission("processingJobs", "view") ? "allowed" : ""],
     },
     {
+      title: "Sealing Packet Jobs",
+      icon: Package,
+      path: "/inventory/sealing-jobs",
+      roles: [hasPermission("processingJobs", "view") ? "allowed" : ""],
+    },
+    {
       title: "Inventory Requests",
       icon: TrendingUp,
       path: "/operations-inventory-relations",

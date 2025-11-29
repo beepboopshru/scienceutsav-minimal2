@@ -67,7 +67,7 @@ export default function SealingJobs() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Sealing Jobs</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Sealing Packet Jobs</h1>
               <p className="text-muted-foreground mt-2">
                 Track sealed packet requirements and production
               </p>
