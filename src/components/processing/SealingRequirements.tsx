@@ -70,15 +70,22 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
 
     // Process sealed packet from kit structure (always show, even if not in inventory)
     const processPacket = (packetName: string, qtyPerKit: number, packetMaterials?: any[]) => {
-      // Try to find the sealed packet in inventory by name (case-insensitive)
-      const invItem = inventoryByName.get(packetName.toLowerCase());
+      // Try multiple lookup strategies to find the sealed packet in inventory
+      let foundItem = inventoryByName.get(packetName.toLowerCase());
       
-      // Also try to find by exact match in case there's a case sensitivity issue
-      const invItemExact = inventory.find(i => 
-        i.name === packetName && i.type === "sealed_packet"
-      );
+      // If not found, try exact match
+      if (!foundItem) {
+        foundItem = inventory.find(i => 
+          i.name === packetName && i.type === "sealed_packet"
+        );
+      }
       
-      const foundItem = invItem || invItemExact;
+      // If still not found, try case-insensitive search across all inventory
+      if (!foundItem) {
+        foundItem = inventory.find(i => 
+          i.name.toLowerCase() === packetName.toLowerCase() && i.type === "sealed_packet"
+        );
+      }
       
       // Check if it's a sealed packet type in inventory
       if (foundItem && foundItem.type === "sealed_packet") {
@@ -95,8 +102,8 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: foundItem.unit,
           category: "Sealed Packet",
           invItem: foundItem,
-          // Always pass packet materials as fallback, even if components exist
-          packetMaterials: packetMaterials || [],
+          // Pass packet materials only if no components exist in inventory
+          packetMaterials: (foundItem.components && foundItem.components.length > 0) ? [] : (packetMaterials || []),
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -314,13 +321,18 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                 </TableCell>
                 <TableCell>
                   {hasDeficit && (
-                    <Button size="sm" onClick={() => onStartJob(
-                      item.id, 
-                      item.shortage,
-                      item.packetMaterials && item.packetMaterials.length > 0 
-                        ? { name: item.name, materials: item.packetMaterials }
-                        : undefined
-                    )}>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        // Only pass packetInfo if the item doesn't have components in inventory
+                        const shouldPassPacketInfo = !hasComponents && item.packetMaterials && item.packetMaterials.length > 0;
+                        onStartJob(
+                          item.id, 
+                          item.shortage,
+                          shouldPassPacketInfo ? { name: item.name, materials: item.packetMaterials } : undefined
+                        );
+                      }}
+                    >
                       <Package className="mr-2 h-4 w-4" />
                       Start Job
                     </Button>
