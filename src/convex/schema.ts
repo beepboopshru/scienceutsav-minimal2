@@ -259,7 +259,7 @@ const schema = defineSchema(
     batches: defineTable({
       batchId: v.string(),
       clientId: v.string(), // Can be Id<"clients"> or Id<"b2cClients">
-      clientType: v.union(v.literal("b2b"), v.literal("b2c")),
+      clientType: v.optional(v.union(v.literal("b2b"), v.literal("b2c"))),
       createdBy: v.id("users"),
       notes: v.optional(v.string()),
       dispatchDate: v.optional(v.number()),

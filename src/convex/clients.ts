@@ -205,6 +205,17 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    await ctx.db.delete(args.id);
+    const client = await ctx.db.get(args.id);
+    if (!client) throw new Error("Client not found");
+
+    // Create deletion request instead of deleting immediately
+    await ctx.db.insert("deletionRequests", {
+      entityType: "client",
+      entityId: args.id,
+      entityName: client.name || client.organization || "Unknown Client",
+      requestedBy: userId,
+      status: "pending",
+      reason: "Deletion requested by user",
+    });
   },
 });

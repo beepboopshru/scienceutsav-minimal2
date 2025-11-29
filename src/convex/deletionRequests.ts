@@ -46,9 +46,10 @@ export const list = query({
     let requests;
 
     if (args.status) {
+      const status = args.status;
       requests = await ctx.db
         .query("deletionRequests")
-        .withIndex("by_status", (q) => q.eq("status", args.status))
+        .withIndex("by_status", (q) => q.eq("status", status))
         .collect();
     } else {
       requests = await ctx.db.query("deletionRequests").collect();

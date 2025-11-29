@@ -169,18 +169,14 @@ export const remove = mutation({
     const job = await ctx.db.get(args.id);
     if (!job) throw new Error("Processing job not found");
 
-    // If job is not completed, return all source materials
-    if (job.status === "in_progress") {
-      for (const source of job.sources) {
-        const sourceItem = await ctx.db.get(source.sourceItemId);
-        if (sourceItem) {
-          await ctx.db.patch(source.sourceItemId, {
-            quantity: sourceItem.quantity + source.sourceQuantity,
-          });
-        }
-      }
-    }
-
-    await ctx.db.delete(args.id);
+    // Create deletion request instead of deleting immediately
+    await ctx.db.insert("deletionRequests", {
+      entityType: "processingJob",
+      entityId: args.id,
+      entityName: job.name,
+      requestedBy: userId,
+      status: "pending",
+      reason: "Deletion requested by user",
+    });
   },
 });

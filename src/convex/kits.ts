@@ -333,7 +333,18 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    await ctx.db.delete(args.id);
+    const kit = await ctx.db.get(args.id);
+    if (!kit) throw new Error("Kit not found");
+
+    // Create deletion request instead of deleting immediately
+    await ctx.db.insert("deletionRequests", {
+      entityType: "kit",
+      entityId: args.id,
+      entityName: kit.name,
+      requestedBy: userId,
+      status: "pending",
+      reason: "Deletion requested by user",
+    });
   },
 });
 
