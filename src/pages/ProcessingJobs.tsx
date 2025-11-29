@@ -364,7 +364,7 @@ export default function ProcessingJobs() {
     }
   };
 
-  const handleStartJob = async (jobId: string) => {
+  const handleStartJob = async (jobId: Id<"processingJobs">) => {
     try {
       // Validate materials before starting
       const job = jobs?.find(j => j._id === jobId);
@@ -394,7 +394,7 @@ export default function ProcessingJobs() {
         return;
       }
 
-      await startJob({ id: jobId as any });
+      await startJob({ id: jobId });
       toast.success("Job started and materials deducted from inventory");
     } catch (error: any) {
       console.error("Error starting job:", error);
