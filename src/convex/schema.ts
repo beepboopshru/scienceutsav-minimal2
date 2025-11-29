@@ -330,7 +330,8 @@ const schema = defineSchema(
     })
       .index("by_type", ["type"])
       .index("by_vendor", ["vendorId"])
-      .index("by_subcategory", ["subcategory"]),
+      .index("by_subcategory", ["subcategory"])
+      .index("by_name", ["name"]),
 
     // Inventory categories for organizing materials
     inventoryCategories: defineTable({

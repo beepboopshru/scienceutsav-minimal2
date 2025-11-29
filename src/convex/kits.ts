@@ -1,6 +1,70 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, MutationCtx } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+
+// Helper to sync sealed packets from packing requirements to inventory
+async function syncSealedPackets(ctx: MutationCtx, packingRequirements?: string) {
+  if (!packingRequirements) return;
+
+  let structure;
+  try {
+    structure = JSON.parse(packingRequirements);
+  } catch (e) {
+    return;
+  }
+
+  const packets = structure.packets || [];
+  if (!Array.isArray(packets)) return;
+
+  for (const packet of packets) {
+    if (!packet.name) continue;
+
+    // Check if exists
+    const packetItem = await ctx.db
+      .query("inventory")
+      .withIndex("by_name", (q) => q.eq("name", packet.name))
+      .first();
+
+    // Resolve components
+    const components = [];
+    if (packet.materials && Array.isArray(packet.materials)) {
+      for (const mat of packet.materials) {
+        if (!mat.name) continue;
+        const matItem = await ctx.db
+          .query("inventory")
+          .withIndex("by_name", (q) => q.eq("name", mat.name))
+          .first();
+
+        if (matItem) {
+          components.push({
+            rawMaterialId: matItem._id,
+            quantityRequired: mat.quantity || 0,
+            unit: mat.unit || "pcs",
+          });
+        }
+      }
+    }
+
+    if (packetItem) {
+      // Update existing if it is a sealed packet
+      if (packetItem.type === "sealed_packet") {
+        await ctx.db.patch(packetItem._id, {
+          components: components,
+        });
+      }
+    } else {
+      // Create new sealed packet
+      await ctx.db.insert("inventory", {
+        name: packet.name,
+        type: "sealed_packet",
+        quantity: 0,
+        unit: "pcs",
+        components: components,
+        description: "Auto-generated from Kit Builder",
+      });
+    }
+  }
+}
 
 export const list = query({
   args: {},
@@ -73,6 +137,11 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    // Sync sealed packets if structured
+    if (args.isStructured && args.packingRequirements) {
+      await syncSealedPackets(ctx, args.packingRequirements);
+    }
 
     return await ctx.db.insert("kits", {
       ...args,
@@ -164,6 +233,18 @@ export const update = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     const { id, ...updates } = args;
+
+    // Sync sealed packets if structured
+    if (updates.isStructured && updates.packingRequirements) {
+      await syncSealedPackets(ctx, updates.packingRequirements);
+    } else if (updates.packingRequirements) {
+      // Also sync if just packing requirements updated, but check if kit is structured
+      const kit = await ctx.db.get(id);
+      if (kit && (kit.isStructured || updates.isStructured)) {
+        await syncSealedPackets(ctx, updates.packingRequirements);
+      }
+    }
+
     await ctx.db.patch(id, updates);
   },
 });
