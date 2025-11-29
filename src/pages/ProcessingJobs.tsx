@@ -506,6 +506,7 @@ export default function ProcessingJobs() {
                 inventory={inventory} 
                 onStartJob={handleStartRequirementJob}
                 activeJobs={jobs}
+                refreshTrigger={lastRefresh}
               />
             </TabsContent>
 

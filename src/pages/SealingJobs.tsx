@@ -304,6 +304,7 @@ export default function SealingJobs() {
                 activeJobs={sealingJobs}
                 onStartJob={handleStartRequirementJob}
                 onCreateItem={handleCreateItem}
+                refreshTrigger={lastRefresh}
               />
             </TabsContent>
 

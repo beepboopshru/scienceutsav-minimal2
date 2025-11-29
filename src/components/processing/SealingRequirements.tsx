@@ -16,9 +16,10 @@ interface SealingRequirementsProps {
   activeJobs?: any[];
   onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
   onCreateItem?: (name: string) => void;
+  refreshTrigger?: number;
 }
 
-export function SealingRequirements({ assignments, inventory, activeJobs = [], onStartJob, onCreateItem }: SealingRequirementsProps) {
+export function SealingRequirements({ assignments, inventory, activeJobs = [], onStartJob, onCreateItem, refreshTrigger }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
   // Normalize string helper: lowercase, trim, single spaces
@@ -27,12 +28,12 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
   const inventoryNormalized = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [normalize(i.name), i]));
-  }, [inventory]);
+  }, [inventory, refreshTrigger]);
 
   const inventoryById = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map((i: any) => [i._id, i]));
-  }, [inventory]);
+  }, [inventory, refreshTrigger]);
 
   // Calculate active job quantities by target item
   const activeJobQuantities = useMemo(() => {
@@ -246,7 +247,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
       ...kit,
       requirements: aggregateRequirements(kit.assignments)
     }));
-  }, [assignments, inventory]);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   const monthWiseData = useMemo(() => {
     const monthMap = new Map<string, any>();
@@ -267,7 +268,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         ...month,
         requirements: aggregateRequirements(month.assignments)
       }));
-  }, [assignments, inventory]);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   const clientWiseData = useMemo(() => {
     const clientMap = new Map<string, any>();
@@ -286,7 +287,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
       ...client,
       requirements: aggregateRequirements(client.assignments)
     }));
-  }, [assignments, inventory]);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   return (
     <div className="space-y-4">

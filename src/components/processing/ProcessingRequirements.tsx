@@ -15,16 +15,17 @@ interface ProcessingRequirementsProps {
   inventory: any[];
   activeJobs?: any[];
   onStartJob: (targetItemId: Id<"inventory">, quantity: number) => void;
+  refreshTrigger?: number;
 }
 
-export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob }: ProcessingRequirementsProps) {
+export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob, refreshTrigger }: ProcessingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
-  }, [inventory]);
+  }, [inventory, refreshTrigger]);
 
   // Calculate active job quantities by target item
   const activeJobQuantities = useMemo(() => {
@@ -173,7 +174,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       ...kit,
       requirements: aggregateRequirements(kit.assignments)
     })).filter(k => k.requirements.length > 0);
-  }, [assignments, inventory]);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   const monthWiseData = useMemo(() => {
     const monthMap = new Map<string, any>();
@@ -194,7 +195,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         ...month,
         requirements: aggregateRequirements(month.assignments)
       })).filter(m => m.requirements.length > 0);
-  }, [assignments, inventory]);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   const clientWiseData = useMemo(() => {
     const clientMap = new Map<string, any>();
@@ -213,7 +214,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       ...client,
       requirements: aggregateRequirements(client.assignments)
     })).filter(c => c.requirements.length > 0);
-  }, [assignments, inventory]);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   const toggleRow = (key: string) => {
     setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
