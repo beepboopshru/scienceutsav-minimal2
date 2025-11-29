@@ -322,7 +322,7 @@ export function Layout({ children }: LayoutProps) {
       path: "/inventory",
       roles: [hasPermission("inventory", "view") ? "allowed" : ""],
       subItems: [
-        { title: "Processing Jobs", path: "/inventory/processing-jobs" },
+        { title: "Pre-Processing Jobs", path: "/inventory/processing-jobs" },
         { title: "Bill Records", path: "/inventory/bill-records" },
         { title: "Procurement", path: "/procurement" },
       ],

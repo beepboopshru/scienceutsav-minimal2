@@ -430,7 +430,7 @@ export default function Inventory() {
             </div>
             <div className="flex gap-2">
               <Button onClick={() => navigate("/inventory/processing-jobs")} variant="outline">
-                Processing Jobs
+                Pre-Processing Jobs
               </Button>
               <Button onClick={() => navigate("/inventory/bill-records")} variant="outline">
                 <FileText className="mr-2 h-4 w-4" />

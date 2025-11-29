@@ -449,7 +449,7 @@ export default function ProcessingJobs() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Processing Jobs</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Pre-Processing Jobs</h1>
               <p className="text-muted-foreground mt-2">
                 Track material transformation and processing
               </p>

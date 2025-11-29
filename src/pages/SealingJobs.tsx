@@ -73,7 +73,7 @@ export default function SealingJobs() {
               </p>
             </div>
             <Button onClick={() => navigate("/processing-jobs")} variant="outline">
-              Back to Processing Jobs
+              Back to Pre-Processing Jobs
             </Button>
           </div>
 
@@ -94,7 +94,7 @@ export default function SealingJobs() {
             <TabsContent value="jobs" className="space-y-4">
               {/* Will show sealing jobs filtered from processing jobs */}
               <p className="text-muted-foreground text-center py-8">
-                Sealing jobs will be managed through the Processing Jobs page
+                Sealing jobs will be managed through the Pre-Processing Jobs page
               </p>
             </TabsContent>
           </Tabs>
