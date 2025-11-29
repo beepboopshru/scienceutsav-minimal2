@@ -54,7 +54,6 @@ export default function SealingJobs() {
   const [processedBy, setProcessedBy] = useState("");
   const [processedByType, setProcessedByType] = useState<"in_house" | "vendor" | "service">("in_house");
   const [notes, setNotes] = useState("");
-  const [packetInfo, setPacketInfo] = useState<{ name: string; materials: any[] } | null>(null);
 
   const createProcessingJob = useMutation(api.processingJobs.create);
   const startJob = useMutation(api.processingJobs.startJob);
@@ -89,11 +88,10 @@ export default function SealingJobs() {
     );
   }
 
-  const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number, packetData?: { name: string; materials: any[] }) => {
+  const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number) => {
     setSelectedTarget({ id: targetItemId as Id<"inventory">, quantity });
-    setPacketInfo(packetData || null);
     const targetItem = inventory.find(i => i._id === targetItemId);
-    const packetName = packetData?.name || targetItem?.name || "Packet";
+    const packetName = targetItem?.name || "Packet";
     setJobName(`Seal ${packetName} - ${quantity} units`);
     setCreateJobOpen(true);
   };
@@ -117,42 +115,17 @@ export default function SealingJobs() {
         return;
       }
       
-      let sources: Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }> = [];
-
-      // Priority 1: Use inventory BOM if it exists
-      if (targetItem.components && Array.isArray(targetItem.components) && targetItem.components.length > 0) {
-        sources = targetItem.components.map(comp => ({
-          sourceItemId: comp.rawMaterialId,
-          sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
-        }));
-      } 
-      // Priority 2: Use packet materials from kit structure (fallback)
-      else if (packetInfo?.materials && Array.isArray(packetInfo.materials) && packetInfo.materials.length > 0) {
-        const mappedSources = packetInfo.materials
-          .map(material => {
-            const invItem = inventory.find(i => i.name.toLowerCase() === material.name.toLowerCase());
-            if (!invItem) {
-              toast.error(`Material "${material.name}" not found in inventory`);
-              return null;
-            }
-            return {
-              sourceItemId: invItem._id,
-              sourceQuantity: material.quantity * selectedTarget.quantity,
-            };
-          })
-          .filter((s): s is { sourceItemId: Id<"inventory">; sourceQuantity: number } => s !== null);
-
-        if (mappedSources.length === 0) {
-          toast.error("No valid source materials found for this sealed packet");
-          return;
-        }
-        sources = mappedSources;
-      } 
-      // No valid sources found
-      else {
-        toast.error("Sealed packet must have BOM components defined in inventory or materials specified in kit structure");
+      // Sealed packets MUST have BOM components defined in inventory
+      if (!targetItem.components || !Array.isArray(targetItem.components) || targetItem.components.length === 0) {
+        toast.error(`Sealed packet "${targetItem.name}" must have BOM components defined in inventory before creating a sealing job`);
         return;
       }
+
+      // Use inventory BOM to calculate sources
+      const sources = targetItem.components.map(comp => ({
+        sourceItemId: comp.rawMaterialId,
+        sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
+      }));
 
       // Validate all source materials have sufficient stock
       for (const source of sources) {
@@ -193,7 +166,6 @@ export default function SealingJobs() {
     setProcessedByType("in_house");
     setNotes("");
     setSelectedTarget(null);
-    setPacketInfo(null);
   };
 
   const handleStartJob = async (id: Id<"processingJobs">) => {

@@ -12,7 +12,7 @@ import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPack
 interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
-  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, packetInfo?: { name: string; materials: any[] }) => void;
+  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number) => void;
 }
 
 export function SealingRequirements({ assignments, inventory, onStartJob }: SealingRequirementsProps) {
@@ -85,10 +85,6 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
         const available = foundItem.quantity || 0;
         const shortage = Math.max(0, required - available);
         
-        // Determine if we should pass packet materials as fallback
-        // Only pass if inventory item has NO components defined
-        const shouldPassMaterials = !foundItem.components || foundItem.components.length === 0;
-        
         requirements.push({
           id: foundItem._id,
           name: foundItem.name,
@@ -98,7 +94,6 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: foundItem.unit,
           category: "Sealed Packet",
           invItem: foundItem,
-          packetMaterials: shouldPassMaterials ? (packetMaterials || []) : [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -117,7 +112,6 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: "pcs",
           category: "Sealed Packet",
           invItem: null,
-          packetMaterials: packetMaterials || [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -313,21 +307,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                   {hasDeficit && (
                     <Button 
                       size="sm" 
-                      onClick={() => {
-                        // Always pass packetInfo with materials as fallback
-                        const packetInfo = (item.packetMaterials && item.packetMaterials.length > 0) 
-                          ? { name: item.name, materials: item.packetMaterials }
-                          : undefined;
-                        
-                        console.log("=== DEBUG: Start Job Button Click ===");
-                        console.log("item.id:", item.id);
-                        console.log("item.name:", item.name);
-                        console.log("hasComponents:", hasComponents);
-                        console.log("item.packetMaterials:", item.packetMaterials);
-                        console.log("packetInfo:", packetInfo);
-                        
-                        onStartJob(item.id, item.shortage, packetInfo);
-                      }}
+                      onClick={() => onStartJob(item.id, item.shortage)}
                     >
                       <Package className="mr-2 h-4 w-4" />
                       Start Job
