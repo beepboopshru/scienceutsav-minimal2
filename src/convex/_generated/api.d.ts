@@ -38,6 +38,7 @@ import type * as processingJobs from "../processingJobs.js";
 import type * as procurementJobs from "../procurementJobs.js";
 import type * as programs from "../programs.js";
 import type * as services from "../services.js";
+import type * as storage from "../storage.js";
 import type * as userPermissions from "../userPermissions.js";
 import type * as users from "../users.js";
 import type * as vendorImports from "../vendorImports.js";
@@ -77,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   procurementJobs: typeof procurementJobs;
   programs: typeof programs;
   services: typeof services;
+  storage: typeof storage;
   userPermissions: typeof userPermissions;
   users: typeof users;
   vendorImports: typeof vendorImports;

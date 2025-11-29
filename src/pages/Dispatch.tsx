@@ -61,6 +61,7 @@ export default function Dispatch() {
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list);
   const updateStatus = useMutation(api.assignments.updateStatus);
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
@@ -336,18 +337,10 @@ export default function Dispatch() {
       });
 
       // Generate upload URL using Convex mutation
-      const uploadUrl = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/storage/generateUploadUrl`, {
-        method: 'POST',
-      });
-
-      if (!uploadUrl.ok) {
-        throw new Error('Failed to generate upload URL');
-      }
-
-      const { url } = await uploadUrl.json();
+      const uploadUrl = await generateUploadUrl();
 
       // Upload the file
-      const uploadResponse = await fetch(url, {
+      const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'image/webp',
