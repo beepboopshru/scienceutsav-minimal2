@@ -87,7 +87,8 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: invItem.unit,
           category: "Sealed Packet",
           invItem,
-          packetMaterials: invItem.components && invItem.components.length > 0 ? [] : (packetMaterials || []),
+          // Always pass packet materials as fallback, even if components exist
+          packetMaterials: packetMaterials || [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,

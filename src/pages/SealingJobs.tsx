@@ -117,7 +117,7 @@ export default function SealingJobs() {
       let sources: Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }> = [];
 
       // If target item exists in inventory and has components (BOM), use those
-      if (targetItem && targetItem.components && targetItem.components.length > 0) {
+      if (targetItem?.components && Array.isArray(targetItem.components) && targetItem.components.length > 0) {
         console.log("Using target item components (BOM)");
         sources = targetItem.components.map(comp => ({
           sourceItemId: comp.rawMaterialId,
@@ -125,7 +125,7 @@ export default function SealingJobs() {
         }));
       } 
       // Otherwise, use packet materials from kit structure (for packets not yet in inventory)
-      else if (packetInfo && packetInfo.materials && packetInfo.materials.length > 0) {
+      else if (packetInfo?.materials && Array.isArray(packetInfo.materials) && packetInfo.materials.length > 0) {
         console.log("Using packet materials from kit structure");
         // Map packet materials to inventory items
         sources = packetInfo.materials
