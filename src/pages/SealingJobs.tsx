@@ -93,7 +93,7 @@ export default function SealingJobs() {
     // Check if target is a placeholder (missing from inventory)
     if (typeof targetItemId === 'string' && targetItemId.startsWith('missing_')) {
       const packetName = targetItemId.replace('missing_', '');
-      toast.error(`Please create the sealed packet "${packetName}" in inventory first.`);
+      toast.error(`Sealed packet not found in inventory. Please create an item named "${packetName}" (or similar) in inventory first.`);
       return;
     }
 

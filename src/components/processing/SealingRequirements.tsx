@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { parsePackingRequirements } from "@/lib/kitPacking";
+import { RequirementsTable } from "./RequirementsTable";
 
 interface SealingRequirementsProps {
   assignments: any[];
@@ -17,11 +18,13 @@ interface SealingRequirementsProps {
 
 export function SealingRequirements({ assignments, inventory, onStartJob }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
-  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
-  const inventoryByName = useMemo(() => {
+  // Normalize string helper: lowercase, trim, single spaces
+  const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+  const inventoryNormalized = useMemo(() => {
     if (!inventory) return new Map();
-    return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
+    return new Map(inventory.map(i => [normalize(i.name), i]));
   }, [inventory]);
 
   const calculateRequirements = (assignment: any) => {
@@ -36,27 +39,24 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     
     if (structure.packets) {
       structure.packets.forEach((packet: any) => {
-        const packetName = packet.name;
+        const packetName = packet.name.trim();
         
         // Find the sealed packet in inventory (Target)
-        // 1. Try exact match
-        let foundItem = inventoryByName.get(packetName.toLowerCase());
-        if (!foundItem) {
-          foundItem = inventory.find(i => i.name.toLowerCase() === packetName.toLowerCase());
-        }
+        // 1. Try exact match of packet name
+        let foundItem = inventoryNormalized.get(normalize(packetName));
 
         // 2. Try "[Kit Name] [Packet Name]"
         if (!foundItem) {
           const prefixedName = `${kit.name} ${packetName}`;
-          foundItem = inventoryByName.get(prefixedName.toLowerCase());
-          if (!foundItem) {
-            foundItem = inventory.find(i => i.name.toLowerCase() === prefixedName.toLowerCase());
-          }
+          foundItem = inventoryNormalized.get(normalize(prefixedName));
         }
 
         // Calculate components based on Kit Definition (Source)
         const components = packet.materials.map((mat: any) => {
-          const matInv = inventoryByName.get(mat.name.toLowerCase());
+          // Also try to find material with normalized name
+          const matName = mat.name.trim();
+          let matInv = inventoryNormalized.get(normalize(matName));
+          
           return {
             name: mat.name,
             quantityPerPacket: mat.quantity,
@@ -67,12 +67,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           };
         });
 
-        const required = requiredQty; // 1 packet per kit usually, or defined in structure? 
-        // The structure.packets is a list of containers. If there are multiple packets of same name, they appear multiple times or we assume 1?
-        // Usually structure.packets is a list of unique containers. 
-        // Assuming 1 packet of this type per kit for now based on previous logic, 
-        // but if the structure has quantity, we should use it. 
-        // The Container interface doesn't have quantity, it implies 1 container.
+        const required = requiredQty;
         
         if (foundItem) {
           requirements.push({
@@ -83,7 +78,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
             unit: foundItem.unit,
             category: "Sealed Packet",
             invItem: foundItem,
-            components: components, // Store the specific components for this requirement
+            components: components,
             assignmentDetails: {
               clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
               kitName: kit.name,
@@ -229,151 +224,6 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     }));
   }, [assignments, inventory]);
 
-  const toggleRow = (key: string) => {
-    setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const RequirementsTable = ({ items }: { items: any[] }) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[50px]"></TableHead>
-          <TableHead>Sealed Packet Name</TableHead>
-          <TableHead>Required</TableHead>
-          <TableHead>In Stock</TableHead>
-          <TableHead>Deficit/Surplus</TableHead>
-          <TableHead>Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item, idx) => {
-          const rowKey = `${item.id}_${idx}`;
-          const hasComponents = item.components && item.components.length > 0;
-          const hasDeficit = item.shortage > 0;
-          const hasSurplus = item.surplus > 0;
-          
-          return (
-            <>
-              <TableRow key={idx}>
-                <TableCell>
-                  {hasComponents && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toggleRow(rowKey)}
-                    >
-                      {expandedRows[rowKey] ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                </TableCell>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell>{item.required} {item.unit}</TableCell>
-                <TableCell>
-                  <Badge variant={hasDeficit ? "destructive" : "secondary"}>
-                    {item.available} {item.unit}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {hasDeficit && (
-                    <Badge variant="destructive">Deficit: {item.shortage} {item.unit}</Badge>
-                  )}
-                  {hasSurplus && (
-                    <Badge variant="secondary">Surplus: {item.surplus} {item.unit}</Badge>
-                  )}
-                  {!hasDeficit && !hasSurplus && (
-                    <Badge variant="outline">Exact Match</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {hasDeficit && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => onStartJob(item.id, item.shortage, item.components)}
-                    >
-                      <Package className="mr-2 h-4 w-4" />
-                      Start Job
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-              {expandedRows[rowKey] && (
-                <TableRow>
-                  <TableCell colSpan={6} className="bg-muted/50 p-4">
-                    <div className="space-y-4">
-                      {/* Component Breakdown */}
-                      {hasComponents && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Raw Materials Required (from Kit Definition):</p>
-                          <div className="grid gap-2">
-                            {item.components.map((comp: any, compIdx: number) => {
-                              const stockAvailable = comp.inventoryItem?.quantity || 0;
-                              const hasEnoughStock = stockAvailable >= comp.totalRequired;
-                              
-                              return (
-                                <div key={compIdx} className="flex items-center justify-between text-sm border rounded p-2">
-                                  <span className="font-medium">{comp.name}</span>
-                                  <div className="flex items-center gap-4">
-                                    <span className="text-muted-foreground">
-                                      Total Needed: {comp.totalRequired} {comp.unit}
-                                    </span>
-                                    <Badge variant={hasEnoughStock ? "secondary" : "destructive"}>
-                                      Stock: {stockAvailable} {comp.unit}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Assignment Details */}
-                      {item.assignments && item.assignments.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium">Assignment Details:</p>
-                          <div className="grid gap-2">
-                            {item.assignments.map((assignment: any, aIdx: number) => (
-                              <div key={aIdx} className="text-sm border rounded p-2 bg-background">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div>
-                                    <span className="text-muted-foreground">Client:</span>{" "}
-                                    <span className="font-medium">{assignment.clientName}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Kit:</span>{" "}
-                                    <span className="font-medium">{assignment.kitName}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Quantity:</span>{" "}
-                                    <span className="font-medium">{assignment.quantity}</span>
-                                  </div>
-                                  {assignment.productionMonth && (
-                                    <div>
-                                      <span className="text-muted-foreground">Month:</span>{" "}
-                                      <span className="font-medium">{assignment.productionMonth}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -402,7 +252,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                 {summaryData.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
-                  <RequirementsTable items={summaryData} />
+                  <RequirementsTable items={summaryData} onStartJob={onStartJob} />
                 )}
               </CardContent>
             </Card>
@@ -421,7 +271,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                         <CardDescription>Total Assigned: {kit.totalQuantity}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={kit.requirements} />
+                        <RequirementsTable items={kit.requirements} onStartJob={onStartJob} />
                       </CardContent>
                     </Card>
                   ))
@@ -444,7 +294,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={month.requirements} />
+                        <RequirementsTable items={month.requirements} onStartJob={onStartJob} />
                       </CardContent>
                     </Card>
                   ))
@@ -465,7 +315,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                         <CardTitle className="text-lg">{client.clientName}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={client.requirements} />
+                        <RequirementsTable items={client.requirements} onStartJob={onStartJob} />
                       </CardContent>
                     </Card>
                   ))
