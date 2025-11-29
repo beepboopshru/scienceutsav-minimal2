@@ -751,6 +751,7 @@ export default function ProcessingJobs() {
                 assignments={assignments} 
                 inventory={inventory} 
                 onStartJob={handleStartRequirementJob}
+                activeJobs={jobs}
               />
             </TabsContent>
 

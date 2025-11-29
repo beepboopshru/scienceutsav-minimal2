@@ -13,10 +13,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 interface ProcessingRequirementsProps {
   assignments: any[];
   inventory: any[];
+  activeJobs?: any[];
   onStartJob: (targetItemId: Id<"inventory">, quantity: number) => void;
 }
 
-export function ProcessingRequirements({ assignments, inventory, onStartJob }: ProcessingRequirementsProps) {
+export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob }: ProcessingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
@@ -24,6 +25,22 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
   }, [inventory]);
+
+  // Calculate active job quantities by target item
+  const activeJobQuantities = useMemo(() => {
+    const quantities = new Map<string, number>();
+    
+    activeJobs.forEach(job => {
+      if (job.status === "assigned" || job.status === "in_progress") {
+        job.targets.forEach((target: any) => {
+          const current = quantities.get(target.targetItemId) || 0;
+          quantities.set(target.targetItemId, current + target.targetQuantity);
+        });
+      }
+    });
+    
+    return quantities;
+  }, [activeJobs]);
 
   const calculateShortages = (assignment: any) => {
     const kit = assignment.kit;
@@ -119,11 +136,18 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
       });
     });
 
-    return Array.from(materialMap.values()).map((item) => ({
-      ...item,
-      shortage: Math.max(0, item.required - item.available),
-      kits: Array.from(item.kits),
-    })).filter(i => i.shortage > 0);
+    return Array.from(materialMap.values()).map((item) => {
+      // Subtract active job quantities from the shortage
+      const activeJobQty = activeJobQuantities.get(item.id) || 0;
+      const adjustedShortage = Math.max(0, item.required - item.available - activeJobQty);
+      
+      return {
+        ...item,
+        shortage: adjustedShortage,
+        activeJobQty,
+        kits: Array.from(item.kits),
+      };
+    }).filter(i => i.shortage > 0);
   };
 
   // Generate Data Views
@@ -203,6 +227,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
           <TableHead>Item Name</TableHead>
           <TableHead>Required</TableHead>
           <TableHead>Available</TableHead>
+          <TableHead>In Progress</TableHead>
           <TableHead>Shortage</TableHead>
           <TableHead>Action</TableHead>
         </TableRow>
@@ -234,6 +259,13 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
                 <TableCell>{item.required} {item.unit}</TableCell>
                 <TableCell>{item.available} {item.unit}</TableCell>
                 <TableCell>
+                  {item.activeJobQty > 0 ? (
+                    <Badge variant="outline">{item.activeJobQty} {item.unit}</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
                   <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
                 </TableCell>
                 <TableCell>
@@ -245,7 +277,7 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
               </TableRow>
               {hasComponents && expandedRows[rowKey] && (
                 <TableRow>
-                  <TableCell colSpan={6} className="bg-muted/50 p-4">
+                  <TableCell colSpan={7} className="bg-muted/50 p-4">
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Raw Materials Required (per unit):</p>
                       <div className="grid gap-2">

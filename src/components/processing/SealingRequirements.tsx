@@ -13,11 +13,12 @@ import { RequirementsTable } from "./RequirementsTable";
 interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
+  activeJobs?: any[];
   onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
   onCreateItem?: (name: string) => void;
 }
 
-export function SealingRequirements({ assignments, inventory, onStartJob, onCreateItem }: SealingRequirementsProps) {
+export function SealingRequirements({ assignments, inventory, activeJobs = [], onStartJob, onCreateItem }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
   // Normalize string helper: lowercase, trim, single spaces
@@ -32,6 +33,22 @@ export function SealingRequirements({ assignments, inventory, onStartJob, onCrea
     if (!inventory) return new Map();
     return new Map(inventory.map((i: any) => [i._id, i]));
   }, [inventory]);
+
+  // Calculate active job quantities by target item
+  const activeJobQuantities = useMemo(() => {
+    const quantities = new Map<string, number>();
+    
+    activeJobs.forEach(job => {
+      if (job.status === "assigned" || job.status === "in_progress") {
+        job.targets.forEach((target: any) => {
+          const current = quantities.get(target.targetItemId) || 0;
+          quantities.set(target.targetItemId, current + target.targetQuantity);
+        });
+      }
+    });
+    
+    return quantities;
+  }, [activeJobs]);
 
   const calculateRequirements = (assignment: any) => {
     const kit = assignment.kit;
@@ -192,12 +209,19 @@ export function SealingRequirements({ assignments, inventory, onStartJob, onCrea
       });
     });
 
-    return Array.from(materialMap.values()).map((item) => ({
-      ...item,
-      shortage: Math.max(0, item.required - item.available),
-      surplus: Math.max(0, item.available - item.required),
-      kits: Array.from(item.kits),
-    }));
+    return Array.from(materialMap.values()).map((item) => {
+      // Subtract active job quantities from the shortage calculation
+      const activeJobQty = activeJobQuantities.get(item.id) || 0;
+      const adjustedShortage = Math.max(0, item.required - item.available - activeJobQty);
+      
+      return {
+        ...item,
+        shortage: adjustedShortage,
+        activeJobQty,
+        surplus: Math.max(0, item.available - item.required),
+        kits: Array.from(item.kits),
+      };
+    }).filter(i => i.shortage > 0); // Only show items with actual shortages
   };
 
   const summaryData = aggregateRequirements(assignments);

@@ -274,6 +274,7 @@ export default function SealingJobs() {
               <SealingRequirements 
                 assignments={assignments} 
                 inventory={inventory} 
+                activeJobs={sealingJobs}
                 onStartJob={handleStartRequirementJob}
                 onCreateItem={handleCreateItem}
               />
