@@ -89,9 +89,27 @@ export default function SealingJobs() {
   }
 
   const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number) => {
-    setSelectedTarget({ id: targetItemId as Id<"inventory">, quantity });
+    // Check if target is a placeholder (missing from inventory)
+    if (typeof targetItemId === 'string' && targetItemId.startsWith('missing_')) {
+      const packetName = targetItemId.replace('missing_', '');
+      toast.error(`Please create the sealed packet "${packetName}" in inventory first with its BOM components`);
+      return;
+    }
+
     const targetItem = inventory.find(i => i._id === targetItemId);
-    const packetName = targetItem?.name || "Packet";
+    if (!targetItem) {
+      toast.error("Sealed packet not found in inventory");
+      return;
+    }
+
+    // Check if sealed packet has BOM components defined
+    if (!targetItem.components || !Array.isArray(targetItem.components) || targetItem.components.length === 0) {
+      toast.error(`Sealed packet "${targetItem.name}" must have BOM components defined in inventory before creating a sealing job`);
+      return;
+    }
+
+    setSelectedTarget({ id: targetItemId as Id<"inventory">, quantity });
+    const packetName = targetItem.name;
     setJobName(`Seal ${packetName} - ${quantity} units`);
     setCreateJobOpen(true);
   };
@@ -103,26 +121,14 @@ export default function SealingJobs() {
     }
 
     try {
-      // Check if target is a placeholder (missing from inventory)
-      if (typeof selectedTarget.id === 'string' && selectedTarget.id.startsWith('missing_')) {
-        toast.error("Please create the sealed packet item in inventory first with its BOM components");
-        return;
-      }
-
       const targetItem = inventory.find(i => i._id === selectedTarget.id);
       if (!targetItem) {
         toast.error("Target sealed packet not found in inventory");
         return;
       }
-      
-      // Sealed packets MUST have BOM components defined in inventory
-      if (!targetItem.components || !Array.isArray(targetItem.components) || targetItem.components.length === 0) {
-        toast.error(`Sealed packet "${targetItem.name}" must have BOM components defined in inventory before creating a sealing job`);
-        return;
-      }
 
       // Use inventory BOM to calculate sources
-      const sources = targetItem.components.map(comp => ({
+      const sources = targetItem.components!.map(comp => ({
         sourceItemId: comp.rawMaterialId,
         sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
       }));
