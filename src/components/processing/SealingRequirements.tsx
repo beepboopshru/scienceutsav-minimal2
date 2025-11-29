@@ -87,7 +87,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: invItem.unit,
           category: "Sealed Packet",
           invItem,
-          packetMaterials: packetMaterials || [],
+          packetMaterials: invItem.components && invItem.components.length > 0 ? [] : (packetMaterials || []),
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -100,14 +100,14 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
         const required = qtyPerKit * requiredQty;
         
         requirements.push({
-          id: invItem?._id || `missing_${packetName}`,
+          id: `missing_${packetName}`,
           name: packetName,
           required,
           available: 0,
           shortage: required,
           unit: "pcs",
           category: "Sealed Packet",
-          invItem: invItem || null,
+          invItem: null,
           packetMaterials: packetMaterials || [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",

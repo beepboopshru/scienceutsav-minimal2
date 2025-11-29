@@ -108,14 +108,14 @@ export default function SealingJobs() {
       const targetItem = inventory.find(i => i._id === selectedTarget.id);
       let sources: Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }> = [];
 
-      // If target item exists in inventory and has components, use those
+      // If target item exists in inventory and has components (BOM), use those
       if (targetItem && targetItem.components && targetItem.components.length > 0) {
         sources = targetItem.components.map(comp => ({
           sourceItemId: comp.rawMaterialId,
           sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
         }));
       } 
-      // Otherwise, use packet materials from kit structure
+      // Otherwise, use packet materials from kit structure (for packets not yet in inventory)
       else if (packetInfo && packetInfo.materials && packetInfo.materials.length > 0) {
         // Map packet materials to inventory items
         sources = packetInfo.materials
