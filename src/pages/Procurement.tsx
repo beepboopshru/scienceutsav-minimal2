@@ -28,6 +28,7 @@ export default function Procurement() {
   
   const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
+  
   const removeJob = useMutation(api.procurementJobs.remove);
   
   const [activeTab, setActiveTab] = useState("kit-wise");
