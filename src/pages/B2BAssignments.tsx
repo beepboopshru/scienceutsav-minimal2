@@ -1851,14 +1851,6 @@ export default function Assignments() {
                                   >
                                     <Edit2 className="h-4 w-4" />
                                   </Button>
-                                  {assignment.status === "in_progress" && (
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleDispatch(assignment._id)}
-                                    >
-                                      Dispatch
-                                    </Button>
-                                  )}
                                   <Button
                                     size="icon"
                                     variant="ghost"
