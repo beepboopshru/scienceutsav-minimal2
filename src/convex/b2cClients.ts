@@ -136,20 +136,32 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("b2cClients") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email))
+      .unique();
+
+    if (!user) throw new Error("User not found");
 
     const client = await ctx.db.get(args.id);
     if (!client) throw new Error("Client not found");
 
-    // Create deletion request instead of deleting immediately
-    await ctx.db.insert("deletionRequests", {
-      entityType: "b2cClient",
-      entityId: args.id,
-      entityName: client.buyerName,
-      requestedBy: userId,
-      status: "pending",
-      reason: "Deletion requested by user",
-    });
+    if (user.role !== "admin") {
+      await ctx.db.insert("deletionRequests", {
+        entityType: "b2cClient",
+        entityId: args.id,
+        entityName: client.name,
+        status: "pending",
+        requestedBy: user._id,
+        reason: "User requested deletion",
+      });
+      return { requestCreated: true, message: "Deletion request submitted for approval" };
+    }
+
+    await ctx.db.delete(args.id);
+    return { success: true };
   },
 });

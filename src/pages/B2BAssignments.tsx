@@ -370,6 +370,20 @@ export default function Assignments() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this assignment?")) return;
+    try {
+      const result = await deleteAssignment({ id: id as any });
+      if (result && 'requestCreated' in result && result.requestCreated) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        toast.success("Assignment deleted");
+      }
+    } catch (err) {
+      toast.error("Failed to delete assignment");
+    }
+  };
+
   const handleDeleteClick = (assignment: any) => {
     setSelectedAssignment(assignment);
     setDeleteDialogOpen(true);

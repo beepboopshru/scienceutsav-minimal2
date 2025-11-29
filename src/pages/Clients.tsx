@@ -121,13 +121,17 @@ export default function Clients() {
     // Deprecated
   };
 
-  const handleDelete = async (clientId: Id<"clients">) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this client?")) return;
     try {
-      await removeClient({ id: clientId });
-      toast.success("Client deleted successfully");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete client");
+      const result = await removeClient({ id: id as any });
+      if (result && 'requestCreated' in result && result.requestCreated) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        toast.success("Client deleted");
+      }
+    } catch (err) {
+      toast.error("Failed to delete client");
     }
   };
 

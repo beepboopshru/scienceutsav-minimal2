@@ -100,12 +100,13 @@ export const remove = mutation({
     const file = await ctx.db.get(args.id);
     if (!file) throw new Error("File not found");
 
-    // Delete from storage if it's a stored file
-    if (file.storageId) {
-      await ctx.storage.delete(file.storageId);
-    }
-
-    await ctx.db.delete(args.id);
+    await ctx.db.insert("deletionRequests", {
+      entityType: "laserFile",
+      entityId: args.id,
+      entityName: file.fileName,
+      status: "pending",
+      requestedBy: userId,
+    });
   },
 });
 

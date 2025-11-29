@@ -328,3 +328,22 @@ export const removeAssignment = mutation({
     await ctx.db.delete(args.assignmentId);
   },
 });
+
+export const remove = mutation({
+  args: { id: v.id("batches") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const batch = await ctx.db.get(args.id);
+    if (!batch) throw new Error("Batch not found");
+
+    await ctx.db.insert("deletionRequests", {
+      entityType: "batch",
+      entityId: args.id,
+      entityName: batch.batchId,
+      status: "pending",
+      requestedBy: userId,
+    });
+  },
+});

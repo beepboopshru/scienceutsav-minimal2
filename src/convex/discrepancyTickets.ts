@@ -147,3 +147,22 @@ export const deleteTicket = mutation({
     });
   },
 });
+
+export const remove = mutation({
+  args: { id: v.id("discrepancyTickets") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const ticket = await ctx.db.get(args.id);
+    if (!ticket) throw new Error("Ticket not found");
+
+    await ctx.db.insert("deletionRequests", {
+      entityType: "discrepancyTicket",
+      entityId: args.id,
+      entityName: `Ticket: ${ticket.discrepancy}`,
+      status: "pending",
+      requestedBy: userId,
+    });
+  },
+});

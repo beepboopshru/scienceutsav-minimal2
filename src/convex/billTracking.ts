@@ -135,12 +135,16 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const user = await ctx.db.get(userId);
-    if (user?.role !== "admin") {
-      throw new Error("Only admins can delete bills");
-    }
+    const bill = await ctx.db.get(args.id);
+    if (!bill) throw new Error("Bill record not found");
 
-    await ctx.db.delete(args.id);
+    await ctx.db.insert("deletionRequests", {
+      entityType: "billTracking",
+      entityId: args.id,
+      entityName: `${bill.companyName} - ${bill.requirement}`,
+      status: "pending",
+      requestedBy: userId,
+    });
   },
 });
 

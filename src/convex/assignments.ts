@@ -241,21 +241,33 @@ export const getByClient = query({
 export const remove = mutation({
   args: { id: v.id("assignments") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email))
+      .unique();
+
+    if (!user) throw new Error("User not found");
 
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
-    // Create deletion request instead of deleting immediately
-    await ctx.db.insert("deletionRequests", {
-      entityType: "assignment",
-      entityId: args.id,
-      entityName: `Assignment for Kit ${assignment.kitId}`,
-      requestedBy: userId,
-      status: "pending",
-      reason: "Deletion requested by user",
-    });
+    if (user.role !== "admin") {
+      await ctx.db.insert("deletionRequests", {
+        entityType: "assignment",
+        entityId: args.id,
+        entityName: `Assignment for ${assignment.schoolName || "Unknown School"}`, // Assuming schoolName exists or similar
+        status: "pending",
+        requestedBy: user._id,
+        reason: "User requested deletion",
+      });
+      return { requestCreated: true, message: "Deletion request submitted for approval" };
+    }
+
+    await ctx.db.delete(args.id);
+    return { success: true };
   },
 });
 

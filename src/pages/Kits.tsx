@@ -180,10 +180,14 @@ export default function Kits() {
   const handleDelete = async (kitId: string) => {
     if (!confirm("Delete this kit?")) return;
     try {
-      await removeKit({ id: kitId as any });
-      toast("Kit deleted");
+      const result = await removeKit({ id: kitId as any });
+      if (result && 'requestCreated' in result && result.requestCreated) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        toast.success("Kit deleted");
+      }
     } catch (err) {
-      toast("Failed to delete kit", { description: err instanceof Error ? err.message : "Unknown error" });
+      toast.error("Failed to delete kit", { description: err instanceof Error ? err.message : "Unknown error" });
     }
   };
 

@@ -89,7 +89,16 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    await ctx.db.delete(args.id);
+    const importRecord = await ctx.db.get(args.id);
+    if (!importRecord) throw new Error("Import record not found");
+
+    await ctx.db.insert("deletionRequests", {
+      entityType: "vendorImport",
+      entityId: args.id,
+      entityName: `Import ${importRecord.billNumber}`,
+      status: "pending",
+      requestedBy: userId,
+    });
   },
 });
 

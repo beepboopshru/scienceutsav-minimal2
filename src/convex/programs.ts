@@ -82,6 +82,15 @@ export const remove = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    await ctx.db.delete(args.id);
+    const program = await ctx.db.get(args.id);
+    if (!program) throw new Error("Program not found");
+
+    await ctx.db.insert("deletionRequests", {
+      entityType: "program",
+      entityId: args.id,
+      entityName: program.name,
+      status: "pending",
+      requestedBy: userId,
+    });
   },
 });

@@ -1,6 +1,6 @@
 import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
-import { Infer, v } from "convex/values";
+import { v } from "convex/values";
 
 // User roles for the system
 export const ROLES = {
@@ -259,7 +259,7 @@ const schema = defineSchema(
     batches: defineTable({
       batchId: v.string(),
       clientId: v.string(), // Can be Id<"clients"> or Id<"b2cClients">
-      clientType: v.optional(v.union(v.literal("b2b"), v.literal("b2c"))),
+      clientType: v.union(v.literal("b2b"), v.literal("b2c")),
       createdBy: v.id("users"),
       notes: v.optional(v.string()),
       dispatchDate: v.optional(v.number()),
@@ -735,23 +735,19 @@ const schema = defineSchema(
 
     // Deletion requests for admin approval
     deletionRequests: defineTable({
-      entityType: v.string(),
+      entityType: v.string(), // "inventory", "client", "kit", etc.
       entityId: v.string(),
       entityName: v.string(),
       reason: v.optional(v.string()),
-      status: v.union(
-        v.literal("pending"),
-        v.literal("approved"),
-        v.literal("rejected")
-      ),
+      status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
       requestedBy: v.id("users"),
       reviewedBy: v.optional(v.id("users")),
       reviewedAt: v.optional(v.number()),
       rejectionReason: v.optional(v.string()),
     })
-      .index("by_status", ["status"])
-      .index("by_requested_by", ["requestedBy"])
-      .index("by_entity_type", ["entityType"]),
+    .index("by_status", ["status"])
+    .index("by_requestedBy", ["requestedBy"]),
+
   },
   {
     schemaValidation: false,

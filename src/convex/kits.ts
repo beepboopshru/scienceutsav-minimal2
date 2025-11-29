@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 
 // Helper to sync sealed packets from packing requirements to inventory
@@ -330,21 +331,35 @@ export const getWithInventory = query({
 export const remove = mutation({
   args: { id: v.id("kits") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email))
+      .unique();
+
+    if (!user) throw new Error("User not found");
 
     const kit = await ctx.db.get(args.id);
     if (!kit) throw new Error("Kit not found");
 
-    // Create deletion request instead of deleting immediately
-    await ctx.db.insert("deletionRequests", {
-      entityType: "kit",
-      entityId: args.id,
-      entityName: kit.name,
-      requestedBy: userId,
-      status: "pending",
-      reason: "Deletion requested by user",
-    });
+    // If user is not admin, create a deletion request
+    if (user.role !== "admin") {
+      await ctx.db.insert("deletionRequests", {
+        entityType: "kit",
+        entityId: args.id,
+        entityName: kit.name,
+        status: "pending",
+        requestedBy: user._id,
+        reason: "User requested deletion",
+      });
+      return { requestCreated: true, message: "Deletion request submitted for approval" };
+    }
+
+    // If admin, delete immediately
+    await ctx.db.delete(args.id);
+    return { success: true, message: "Kit deleted" };
   },
 });
 
