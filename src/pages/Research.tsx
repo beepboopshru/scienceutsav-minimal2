@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import { ResearchFileManager } from "@/components/research/ResearchFileManager";
 import { parsePackingRequirements } from "@/lib/kitPacking";
 import { Download, Upload, Edit, Trash2, Plus, Package, Loader2, FileText, Image as ImageIcon, Wrench, BookOpen, Copy } from "lucide-react";
-import { KitImporter } from "@/components/research/KitImporter";
 
 // Helper to render structured materials (pouches/packets)
 function StructuredMaterials({ packingRequirements, inventory }: { packingRequirements?: string; inventory?: any[] }) {
@@ -348,30 +347,6 @@ export default function Research() {
         });
         toast("Kit updated successfully");
       } else {
-        // Create new kit
-        // If we have imported components, we should try to map them
-        // The create mutation accepts 'components' and 'packingRequirements'
-        
-        const componentsPayload = importedComponents.length > 0 ? importedComponents.map(c => ({
-          inventoryItemId: c.inventoryItemId || "skip", // We need to handle unmatched items. 
-          // The schema requires inventoryItemId to be a valid ID. 
-          // If it's null/skip, we can't add it as a structured component yet.
-          // We might need to add them as "miscellaneous" or filter out unmatched ones.
-          quantityPerKit: c.quantity || 1,
-          unit: c.unit || "pcs",
-          comments: c.name // Store original name in comments if needed
-        })).filter(c => c.inventoryItemId !== "skip" && c.inventoryItemId !== null) : undefined;
-
-        // For unmatched items, maybe add to miscellaneous?
-        const miscPayload = importedComponents
-          .filter(c => !c.inventoryItemId)
-          .map(c => ({
-            name: c.name,
-            quantity: c.quantity || 1,
-            unit: c.unit || "pcs",
-            notes: c.notes
-          }));
-
         await createKit({
           name: simpleKitFormData.name,
           programId: selectedProgramId,
@@ -382,16 +357,9 @@ export default function Research() {
           description: simpleKitFormData.description || undefined,
           stockCount: 0,
           lowStockThreshold: 5,
-          isStructured: false, // Default to simple, but with data
-          packingRequirements: importedPacking || undefined,
-          components: componentsPayload as any, // Cast to satisfy TS if needed
-          miscellaneous: miscPayload.length > 0 ? miscPayload : undefined
+          isStructured: false,
         });
-        toast("Kit created successfully with imported data");
-        
-        // Clear imported state
-        setImportedComponents([]);
-        setImportedPacking("");
+        toast("Kit created successfully");
       }
 
       setIsCreateSimpleKitOpen(false);
@@ -498,72 +466,6 @@ export default function Research() {
     } catch (error) {
       console.error("Failed to download kit sheet:", error);
       toast.error("Failed to generate kit sheet", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  };
-
-  const handleImportKit = async (importedData: any) => {
-    if (!selectedProgramId) {
-      toast.error("No program selected. Cannot create kit.");
-      return;
-    }
-
-    try {
-      toast.info("Creating kit from imported data...");
-
-      // Process components
-      const rawComponents = importedData.components || [];
-
-      const componentsPayload = rawComponents
-        .filter((c: any) => c.inventoryItemId)
-        .map((c: any) => ({
-          inventoryItemId: c.inventoryItemId,
-          quantityPerKit: c.quantity || 1,
-          unit: c.unit || "pcs",
-          comments: c.name, // Keep original name as comment
-        }));
-
-      const miscPayload = rawComponents
-        .filter((c: any) => !c.inventoryItemId)
-        .map((c: any) => ({
-          name: c.name,
-          quantity: c.quantity || 1,
-          unit: c.unit || "pcs",
-          notes: c.notes,
-        }));
-
-      // Process packing requirements
-      const packingReqs = importedData.packingRequirements;
-      const isStructured =
-        typeof packingReqs === "object" &&
-        (packingReqs.pouches?.length > 0 || packingReqs.packets?.length > 0);
-      const packingString =
-        typeof packingReqs === "object"
-          ? JSON.stringify(packingReqs)
-          : packingReqs || "";
-
-      // Create the kit
-      const newKitId = await createKit({
-        name: importedData.name || "Imported Kit",
-        programId: selectedProgramId,
-        category: importedData.category,
-        description: importedData.description,
-        stockCount: 0,
-        lowStockThreshold: 5,
-        isStructured: isStructured,
-        packingRequirements: packingString,
-        components: componentsPayload.length > 0 ? componentsPayload : undefined,
-        miscellaneous: miscPayload.length > 0 ? miscPayload : undefined,
-      });
-
-      toast.success("Kit created! Redirecting to builder...");
-
-      // Navigate to builder
-      navigate(`/kit-builder?edit=${newKitId}`);
-    } catch (error) {
-      console.error("Import failed:", error);
-      toast.error("Failed to create kit from import", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -865,8 +767,6 @@ export default function Research() {
           <div className="flex gap-2">
             {canCreateKits && (
               <>
-                <KitImporter onImport={handleImportKit} />
-                
                 <Button onClick={() => navigate(`/kit-builder?program=${selectedProgramId}`)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Kit Builder
