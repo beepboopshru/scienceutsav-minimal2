@@ -127,57 +127,47 @@ export default function Inventory() {
     categoryType: "raw_material" as "raw_material" | "pre_processed",
   });
 
-  // Reset filters when tab changes
-  useEffect(() => {
-    setSearchTerm("");
-    setFilterSubcategory("all");
-  }, [activeTab]);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
-    }
-    if (!isLoading && isAuthenticated && user && !user.isApproved) {
-      navigate("/pending-approval");
-    }
-  }, [isLoading, isAuthenticated, user, navigate]);
-
   // Create virtual packet items from kits
-  const virtualPackets: any[] = [];
-  if (kits) {
-    kits.forEach((kit) => {
-      if (kit.packingRequirements) {
-        try {
-          const packingData = JSON.parse(kit.packingRequirements);
-          if (packingData.packets && Array.isArray(packingData.packets)) {
-            packingData.packets.forEach((packet: any, index: number) => {
-              virtualPackets.push({
-                _id: `${kit._id}_packet_${index}`,
-                name: `[${kit.name}] ${packet.name}`,
-                description: `Sealed packet from ${kit.name}`,
-                type: "sealed_packet",
-                quantity: kit.stockCount,
-                unit: "packet",
-                minStockLevel: 0,
-                location: "",
-                notes: "",
-                subcategory: "sealed_packet",
-                isKitPacket: true,
-                sourceKit: kit,
-                componentType: "packet",
-                componentData: packet,
+  const virtualPackets = useMemo(() => {
+    const packets: any[] = [];
+    if (kits) {
+      kits.forEach((kit) => {
+        if (kit.packingRequirements) {
+          try {
+            const packingData = JSON.parse(kit.packingRequirements);
+            if (packingData.packets && Array.isArray(packingData.packets)) {
+              packingData.packets.forEach((packet: any, index: number) => {
+                packets.push({
+                  _id: `${kit._id}_packet_${index}`,
+                  name: `[${kit.name}] ${packet.name}`,
+                  description: `Sealed packet from ${kit.name}`,
+                  type: "sealed_packet",
+                  quantity: kit.stockCount,
+                  unit: "packet",
+                  minStockLevel: 0,
+                  location: "",
+                  notes: "",
+                  subcategory: "sealed_packet",
+                  isKitPacket: true,
+                  sourceKit: kit,
+                  componentType: "packet",
+                  componentData: packet,
+                });
               });
-            });
+            }
+          } catch (e) {
+            // Invalid JSON, skip
           }
-        } catch (e) {
-          // Invalid JSON, skip
         }
-      }
-    });
-  }
+      });
+    }
+    return packets;
+  }, [kits]);
 
   // Combine real inventory with virtual packets
-  const combinedInventory = [...(inventory || []), ...virtualPackets];
+  const combinedInventory = useMemo(() => {
+    return [...(inventory || []), ...virtualPackets];
+  }, [inventory, virtualPackets]);
 
   // Filter inventory based on active tab
   const filteredInventory = useMemo(() => {
@@ -215,6 +205,21 @@ export default function Inventory() {
       )
     );
   }, [activeTab, combinedInventory, kits]);
+
+  // Reset filters when tab changes
+  useEffect(() => {
+    setSearchTerm("");
+    setFilterSubcategory("all");
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/auth");
+    }
+    if (!isLoading && isAuthenticated && user && !user.isApproved) {
+      navigate("/pending-approval");
+    }
+  }, [isLoading, isAuthenticated, user, navigate]);
 
   if (isLoading || !user || !inventory || !categories) {
     return (
