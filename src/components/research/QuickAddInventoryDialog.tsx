@@ -21,6 +21,7 @@ interface QuickAddInventoryDialogProps {
   defaultName?: string;
   defaultType?: "raw" | "pre_processed" | "finished" | "sealed_packet";
   onSuccess: () => void;
+  isNestedCreation?: boolean; // Flag to indicate if this is a nested creation from BOM
 }
 
 export function QuickAddInventoryDialog({ 
@@ -29,7 +30,8 @@ export function QuickAddInventoryDialog({
   defaultSubcategory, 
   defaultName,
   defaultType,
-  onSuccess 
+  onSuccess,
+  isNestedCreation = false
 }: QuickAddInventoryDialogProps) {
   const createInventoryItem = useMutation(api.inventory.create);
   const inventory = useQuery(api.inventory.list);
@@ -63,6 +65,11 @@ export function QuickAddInventoryDialog({
   }>>([]);
 
   const [openComboboxIdx, setOpenComboboxIdx] = useState<number | null>(null);
+  const [nestedDialogOpen, setNestedDialogOpen] = useState(false);
+  const [nestedDialogContext, setNestedDialogContext] = useState<{
+    bomIdx: number;
+    defaultSubcategory?: string;
+  } | null>(null);
 
   const handleSave = async () => {
     if (!form.name || !form.unit || !form.subcategory) {
@@ -120,6 +127,12 @@ export function QuickAddInventoryDialog({
     const newBom = [...bom];
     newBom[index] = { ...newBom[index], [field]: value };
     setBom(newBom);
+  };
+
+  const handleNestedItemCreated = () => {
+    setNestedDialogOpen(false);
+    // The newly created item will now be available in the inventory list
+    // User can select it from the dropdown
   };
 
   const showBom = ["pre_processed", "finished", "sealed_packet"].includes(form.type);
@@ -246,7 +259,24 @@ export function QuickAddInventoryDialog({
                           <Command>
                             <CommandInput placeholder="Search inventory..." />
                             <CommandList>
-                              <CommandEmpty>No item found.</CommandEmpty>
+                              <CommandEmpty>
+                                <div className="p-2 text-center">
+                                  <p className="text-sm text-muted-foreground mb-2">No item found.</p>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      setNestedDialogContext({
+                                        bomIdx: idx,
+                                        defaultSubcategory: ""
+                                      });
+                                      setNestedDialogOpen(true);
+                                    }}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add New Raw Material
+                                  </Button>
+                                </div>
+                              </CommandEmpty>
                               <CommandGroup>
                                 {inventory?.map((invItem) => (
                                   <CommandItem
@@ -332,6 +362,18 @@ export function QuickAddInventoryDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Nested dialog for creating raw materials from within BOM */}
+      {!isNestedCreation && (
+        <QuickAddInventoryDialog
+          open={nestedDialogOpen}
+          onOpenChange={setNestedDialogOpen}
+          defaultType="raw"
+          defaultSubcategory={nestedDialogContext?.defaultSubcategory}
+          onSuccess={handleNestedItemCreated}
+          isNestedCreation={true}
+        />
+      )}
     </Dialog>
   );
 }
