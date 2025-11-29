@@ -1037,7 +1037,9 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : item.type === "finished" ? "Finished" : "Sealed Packet"}
+                          {activeTab === "finished" 
+                            ? "Finished Kits"
+                            : item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : item.type === "finished" ? "Finished" : "Sealed Packet"}
                         </Badge>
                       </TableCell>
                       <TableCell>
