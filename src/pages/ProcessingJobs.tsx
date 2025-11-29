@@ -604,7 +604,7 @@ export default function ProcessingJobs() {
                             }
                           >
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between">
+                              <Button variant="outline" className="w-full justify-between" disabled={!canEditBOM}>
                                 {source.sourceItemId
                                   ? inventory?.find((i) => i._id === source.sourceItemId)?.name
                                   : "Select material"}
@@ -646,6 +646,7 @@ export default function ProcessingJobs() {
                               newSources[index].sourceQuantity = parseFloat(e.target.value) || 0;
                               setProcessingForm({ ...processingForm, sources: newSources });
                             }}
+                            disabled={!canEditBOM}
                           />
                         </div>
                         <Button
@@ -655,6 +656,7 @@ export default function ProcessingJobs() {
                             const newSources = processingForm.sources.filter((_, i) => i !== index);
                             setProcessingForm({ ...processingForm, sources: newSources });
                           }}
+                          disabled={!canEditBOM}
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
@@ -672,6 +674,7 @@ export default function ProcessingJobs() {
                           ],
                         })
                       }
+                      disabled={!canEditBOM}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Source Material
