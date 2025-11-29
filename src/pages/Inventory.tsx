@@ -126,6 +126,12 @@ export default function Inventory() {
     categoryType: "raw_material" as "raw_material" | "pre_processed",
   });
 
+  // Reset filters when tab changes
+  useEffect(() => {
+    setSearchTerm("");
+    setFilterSubcategory("all");
+  }, [activeTab]);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
@@ -210,12 +216,6 @@ export default function Inventory() {
         .filter((subcat): subcat is string => typeof subcat === "string" && subcat.trim() !== "")
     )
   );
-
-  // Reset filters when tab changes
-  useEffect(() => {
-    setSearchTerm("");
-    setFilterSubcategory("all");
-  }, [activeTab]);
 
   const handleAddItem = async () => {
     try {
