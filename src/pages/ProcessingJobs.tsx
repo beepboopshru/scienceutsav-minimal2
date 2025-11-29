@@ -368,13 +368,21 @@ export default function ProcessingJobs() {
     console.log("handleStartJob called with jobId:", jobId);
     console.log("All jobs:", jobs);
     console.log("Jobs length:", jobs?.length);
+    
+    if (!jobs || jobs.length === 0) {
+      toast.error("No jobs data available. Please refresh the page.");
+      return;
+    }
+    
     try {
       // Validate materials before starting
-      const job = jobs?.find(j => j._id === jobId);
+      const job = jobs.find(j => j._id === jobId);
       console.log("Found job:", job);
-      console.log("Job ID match check:", jobs?.map(j => ({ id: j._id, matches: j._id === jobId })));
+      console.log("Job ID match check:", jobs.map(j => ({ id: j._id, matches: j._id === jobId })));
+      
       if (!job) {
-        toast.error("Job not found");
+        console.error("Job not found. JobId:", jobId, "Available job IDs:", jobs.map(j => j._id));
+        toast.error(`Job not found. Please refresh the page and try again.`);
         return;
       }
 
