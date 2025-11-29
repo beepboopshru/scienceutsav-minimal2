@@ -14,9 +14,10 @@ interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
   onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
+  onCreateItem?: (name: string) => void;
 }
 
-export function SealingRequirements({ assignments, inventory, onStartJob }: SealingRequirementsProps) {
+export function SealingRequirements({ assignments, inventory, onStartJob, onCreateItem }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
   // Normalize string helper: lowercase, trim, single spaces
@@ -291,7 +292,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                 {summaryData.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
-                  <RequirementsTable items={summaryData} onStartJob={onStartJob} />
+                  <RequirementsTable items={summaryData} onStartJob={onStartJob} onCreateItem={onCreateItem} />
                 )}
               </CardContent>
             </Card>
@@ -310,7 +311,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                         <CardDescription>Total Assigned: {kit.totalQuantity}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={kit.requirements} onStartJob={onStartJob} />
+                        <RequirementsTable items={kit.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
                       </CardContent>
                     </Card>
                   ))
@@ -333,7 +334,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={month.requirements} onStartJob={onStartJob} />
+                        <RequirementsTable items={month.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
                       </CardContent>
                     </Card>
                   ))
@@ -354,7 +355,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                         <CardTitle className="text-lg">{client.clientName}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={client.requirements} onStartJob={onStartJob} />
+                        <RequirementsTable items={client.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
                       </CardContent>
                     </Card>
                   ))

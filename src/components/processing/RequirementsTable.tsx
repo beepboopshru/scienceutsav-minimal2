@@ -8,9 +8,10 @@ import { Id } from "@/convex/_generated/dataModel";
 interface RequirementsTableProps {
   items: any[];
   onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
+  onCreateItem?: (name: string) => void;
 }
 
-export function RequirementsTable({ items, onStartJob }: RequirementsTableProps) {
+export function RequirementsTable({ items, onStartJob, onCreateItem }: RequirementsTableProps) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const toggleRow = (key: string) => {
@@ -35,6 +36,7 @@ export function RequirementsTable({ items, onStartJob }: RequirementsTableProps)
           const hasComponents = item.components && item.components.length > 0;
           const hasDeficit = item.shortage > 0;
           const hasSurplus = item.surplus > 0;
+          const isMissing = typeof item.id === 'string' && item.id.startsWith('missing_');
           
           return (
             <>
@@ -73,14 +75,27 @@ export function RequirementsTable({ items, onStartJob }: RequirementsTableProps)
                   )}
                 </TableCell>
                 <TableCell>
-                  {hasDeficit && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => onStartJob(item.id, item.shortage, item.components)}
-                    >
-                      <Package className="mr-2 h-4 w-4" />
-                      Start Job
-                    </Button>
+                  {isMissing ? (
+                    onCreateItem && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => onCreateItem(item.name)}
+                      >
+                        <Package className="mr-2 h-4 w-4" />
+                        Create Item
+                      </Button>
+                    )
+                  ) : (
+                    hasDeficit && (
+                      <Button 
+                        size="sm" 
+                        onClick={() => onStartJob(item.id, item.shortage, item.components)}
+                      >
+                        <Package className="mr-2 h-4 w-4" />
+                        Start Job
+                      </Button>
+                    )
                   )}
                 </TableCell>
               </TableRow>

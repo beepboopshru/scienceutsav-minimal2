@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -18,6 +18,8 @@ interface QuickAddInventoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultSubcategory?: string;
+  defaultName?: string;
+  defaultType?: "raw" | "pre_processed" | "finished" | "sealed_packet";
   onSuccess: () => void;
 }
 
@@ -25,6 +27,8 @@ export function QuickAddInventoryDialog({
   open, 
   onOpenChange, 
   defaultSubcategory, 
+  defaultName,
+  defaultType,
   onSuccess 
 }: QuickAddInventoryDialogProps) {
   const createInventoryItem = useMutation(api.inventory.create);
@@ -36,9 +40,20 @@ export function QuickAddInventoryDialog({
     description: "",
     type: "raw" as "raw" | "pre_processed" | "finished" | "sealed_packet",
     unit: "",
-    subcategory: defaultSubcategory || "",
+    subcategory: "",
     notes: "",
   });
+
+  useEffect(() => {
+    if (open) {
+      setForm(prev => ({
+        ...prev,
+        name: defaultName || "",
+        type: defaultType || "raw",
+        subcategory: defaultSubcategory || "",
+      }));
+    }
+  }, [open, defaultName, defaultType, defaultSubcategory]);
 
   const [bom, setBom] = useState<Array<{
     rawMaterialId: string; // temporary string, will be cast to Id

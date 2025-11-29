@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { QuickAddInventoryDialog } from "@/components/research/QuickAddInventoryDialog";
 
 export default function SealingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -48,6 +49,8 @@ export default function SealingJobs() {
   
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
   const [createJobOpen, setCreateJobOpen] = useState(false);
+  const [createItemOpen, setCreateItemOpen] = useState(false);
+  const [newItemName, setNewItemName] = useState("");
   const [selectedTarget, setSelectedTarget] = useState<{ id: Id<"inventory">; quantity: number } | null>(null);
   const [selectedComponents, setSelectedComponents] = useState<any[]>([]);
   
@@ -132,6 +135,11 @@ export default function SealingJobs() {
     const packetName = targetItem.name;
     setJobName(`Seal ${packetName} - ${quantity} units`);
     setCreateJobOpen(true);
+  };
+
+  const handleCreateItem = (name: string) => {
+    setNewItemName(name);
+    setCreateItemOpen(true);
   };
 
   const handleCreateJob = async () => {
@@ -267,6 +275,7 @@ export default function SealingJobs() {
                 assignments={assignments} 
                 inventory={inventory} 
                 onStartJob={handleStartRequirementJob}
+                onCreateItem={handleCreateItem}
               />
             </TabsContent>
 
@@ -394,6 +403,19 @@ export default function SealingJobs() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Quick Add Inventory Dialog */}
+          <QuickAddInventoryDialog
+            open={createItemOpen}
+            onOpenChange={setCreateItemOpen}
+            defaultName={newItemName}
+            defaultType="sealed_packet"
+            defaultSubcategory="sealed_packet"
+            onSuccess={() => {
+              setCreateItemOpen(false);
+              toast.success("Item created. You can now start the job.");
+            }}
+          />
         </motion.div>
       </div>
     </Layout>
