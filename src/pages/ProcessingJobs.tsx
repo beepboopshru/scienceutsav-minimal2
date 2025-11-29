@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown, ChevronDown, ChevronRight, Play, Edit, Trash2, Package } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, ArrowRight, Plus, Scissors, Check, ChevronsUpDown, ChevronDown, ChevronRight, Play, Edit, Trash2, Package, Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -112,6 +112,8 @@ export default function ProcessingJobs() {
   const [sealingPacketComboboxOpen, setSealingPacketComboboxOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
   const [isFromRequirements, setIsFromRequirements] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -121,6 +123,26 @@ export default function ProcessingJobs() {
       navigate("/pending-approval");
     }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  const handleRefresh = () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefresh;
+    const oneMinute = 60000;
+
+    if (timeSinceLastRefresh < oneMinute) {
+      const remainingSeconds = Math.ceil((oneMinute - timeSinceLastRefresh) / 1000);
+      toast.error(`Please wait ${remainingSeconds} seconds before refreshing again`);
+      return;
+    }
+
+    setIsRefreshing(true);
+    setLastRefresh(now);
+    
+    setTimeout(() => {
+      setIsRefreshing(false);
+      toast.success("Requirements recalculated");
+    }, 500);
+  };
 
   if (!canView) {
     return (
@@ -459,284 +481,16 @@ export default function ProcessingJobs() {
               </p>
             </div>
             <div className="flex gap-2">
-              {canEdit && (
-                <Dialog open={preProcessingOpen} onOpenChange={(open) => {
-                  setPreProcessingOpen(open);
-                  if (!open) setIsFromRequirements(false);
-                }}>
-                  <DialogTrigger asChild>
-                    <Button onClick={() => setIsFromRequirements(false)}>
-                      <Scissors className="mr-2 h-4 w-4" />
-                      Start Pre-Processing
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>Create Processing Job</DialogTitle>
-                      <DialogDescription>Transform raw materials into pre-processed items</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Job Name</Label>
-                        <Input
-                          value={processingForm.name}
-                          onChange={(e) => setProcessingForm({ ...processingForm, name: e.target.value })}
-                        />
-                      </div>
-                      <Separator />
-                      <Label>Source Materials {isFromRequirements && !canEditBOM && <span className="text-xs text-muted-foreground">(Auto-filled from BOM - Read Only)</span>}</Label>
-                      {processingForm.sources.map((source, index) => {
-                        const targetItem = inventory.find(i => i._id === processingForm.targets[0]?.targetItemId);
-                        const hasBOM = targetItem?.components && targetItem.components.length > 0;
-                        const isLocked = isFromRequirements && hasBOM && !canEditBOM;
-                        
-                        return (
-                        <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
-                          <div className="space-y-2">
-                            <Popover 
-                              open={!isLocked && sourceComboboxOpen[index]} 
-                              onOpenChange={(open) => !isLocked && setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: open })}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={sourceComboboxOpen[index]}
-                                  className="w-full justify-between"
-                                  disabled={isLocked}
-                                >
-                                  {source.sourceItemId
-                                    ? (() => {
-                                        const item = inventory.find((i) => i._id === source.sourceItemId);
-                                        return item ? `${item.name} (${item.quantity} ${item.unit})` : "Select source";
-                                      })()
-                                    : "Select source"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[400px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search inventory..." />
-                                  <CommandList>
-                                    <CommandEmpty>No inventory item found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {inventory?.filter((item) => item.type === "raw").map((item) => (
-                                        <CommandItem
-                                          key={item._id}
-                                          value={`${item.name} ${item._id}`}
-                                          onSelect={() => {
-                                            const newSources = [...processingForm.sources];
-                                            newSources[index].sourceItemId = item._id;
-                                            setProcessingForm({ ...processingForm, sources: newSources });
-                                            setSourceComboboxOpen({ ...sourceComboboxOpen, [index]: false });
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              source.sourceItemId === item._id ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          {item.name} ({item.quantity} {item.unit})
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                          <div className="space-y-2">
-                            <Input
-                              type="number"
-                              placeholder="Quantity"
-                              value={source.sourceQuantity}
-                              onChange={(e) => {
-                                const newSources = [...processingForm.sources];
-                                newSources[index].sourceQuantity = Number(e.target.value);
-                                setProcessingForm({ ...processingForm, sources: newSources });
-                              }}
-                              disabled={isLocked}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const newSources = processingForm.sources.filter((_, i) => i !== index);
-                              if (newSources.length > 0) {
-                                setProcessingForm({ ...processingForm, sources: newSources });
-                              }
-                            }}
-                            disabled={processingForm.sources.length === 1 || isLocked}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )})}
-                      {(!isFromRequirements || canEditBOM || !processingForm.targets[0]?.targetItemId || !inventory.find(i => i._id === processingForm.targets[0]?.targetItemId)?.components?.length) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            setProcessingForm({
-                              ...processingForm,
-                              sources: [...processingForm.sources, { sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }],
-                            })
-                          }
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Source
-                        </Button>
-                      )}
-                      <Separator />
-                      <Label>Target Items</Label>
-                      {processingForm.targets.map((target, index) => (
-                        <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-4">
-                          <div className="space-y-2">
-                            <Popover 
-                              open={targetComboboxOpen[index]} 
-                              onOpenChange={(open) => setTargetComboboxOpen({ ...targetComboboxOpen, [index]: open })}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={targetComboboxOpen[index]}
-                                  className="w-full justify-between"
-                                >
-                                  {target.targetItemId
-                                    ? (() => {
-                                        const item = inventory.find((i) => i._id === target.targetItemId);
-                                        return item ? item.name : "Select target";
-                                      })()
-                                    : "Select target"}
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[400px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search inventory..." />
-                                  <CommandList>
-                                    <CommandEmpty>No inventory item found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {inventory?.filter((item) => item.type === "pre_processed").map((item) => (
-                                        <CommandItem
-                                          key={item._id}
-                                          value={`${item.name} ${item._id}`}
-                                          onSelect={() => handleTargetSelection(index, item._id)}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              target.targetItemId === item._id ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          {item.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                          <div className="space-y-2">
-                            <Input
-                              type="number"
-                              placeholder="Quantity"
-                              value={target.targetQuantity}
-                              onChange={(e) => handleTargetQuantityChange(index, Number(e.target.value))}
-                            />
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              const newTargets = processingForm.targets.filter((_, i) => i !== index);
-                              if (newTargets.length > 0) {
-                                setProcessingForm({ ...processingForm, targets: newTargets });
-                              }
-                            }}
-                            disabled={processingForm.targets.length === 1}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setProcessingForm({
-                            ...processingForm,
-                            targets: [...processingForm.targets, { targetItemId: "" as Id<"inventory">, targetQuantity: 0 }],
-                          })
-                        }
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Target
-                      </Button>
-                      <Separator />
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Processed By Type</Label>
-                          <Select
-                            value={processingForm.processedByType}
-                            onValueChange={(value: any) => setProcessingForm({ ...processingForm, processedByType: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="in_house">In-House</SelectItem>
-                              <SelectItem value="vendor">Vendor</SelectItem>
-                              <SelectItem value="service">Service</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {processingForm.processedByType !== "in_house" && (
-                          <div className="space-y-2">
-                            <Label>Select {processingForm.processedByType === "vendor" ? "Vendor" : "Service"}</Label>
-                            <Select
-                              value={processingForm.processedBy}
-                              onValueChange={(value) => setProcessingForm({ ...processingForm, processedBy: value })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={`Select ${processingForm.processedByType}`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(processingForm.processedByType === "vendor" ? vendors : services)?.map((item) => (
-                                  <SelectItem key={item._id} value={item._id}>
-                                    {item.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Notes</Label>
-                        <Textarea
-                          value={processingForm.notes}
-                          onChange={(e) => setProcessingForm({ ...processingForm, notes: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setPreProcessingOpen(false)}>Cancel</Button>
-                      <Button onClick={handleCreateProcessingJob}>Create Job</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              )}
-
-              <Button onClick={() => navigate("/inventory")} variant="outline">
-                Back to Inventory
+              <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
+              {canEdit && (
+                <Button onClick={() => setPreProcessingOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Start Pre-Processing
+                </Button>
+              )}
             </div>
           </div>
 

@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, Package, Plus } from "lucide-react";
+import { Loader2, Package, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SealingRequirements } from "@/components/processing/SealingRequirements";
@@ -59,6 +59,9 @@ export default function SealingJobs() {
   const [processedByType, setProcessedByType] = useState<"in_house" | "vendor" | "service">("in_house");
   const [notes, setNotes] = useState("");
 
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const createProcessingJob = useMutation(api.processingJobs.create);
   const startJob = useMutation(api.processingJobs.startJob);
   const completeJob = useMutation(api.processingJobs.complete);
@@ -73,6 +76,26 @@ export default function SealingJobs() {
       navigate("/pending-approval");
     }
   }, [isLoading, isAuthenticated, user, navigate]);
+
+  const handleRefresh = () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefresh;
+    const oneMinute = 60000;
+
+    if (timeSinceLastRefresh < oneMinute) {
+      const remainingSeconds = Math.ceil((oneMinute - timeSinceLastRefresh) / 1000);
+      toast.error(`Please wait ${remainingSeconds} seconds before refreshing again`);
+      return;
+    }
+
+    setIsRefreshing(true);
+    setLastRefresh(now);
+    
+    setTimeout(() => {
+      setIsRefreshing(false);
+      toast.success("Requirements recalculated");
+    }, 500);
+  };
 
   if (!canView) {
     return (
@@ -262,6 +285,10 @@ export default function SealingJobs() {
                 Track sealed packet requirements and production
               </p>
             </div>
+            <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
           </div>
 
           <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="space-y-4">

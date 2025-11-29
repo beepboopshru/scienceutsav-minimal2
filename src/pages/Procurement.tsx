@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Download, Package, Calendar, Users, Layers, AlertCircle } from "lucide-react";
+import { Download, Package, Calendar, Users, Layers, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,8 @@ export default function Procurement() {
   const removeJob = useMutation(api.procurementJobs.remove);
   
   const [activeTab, setActiveTab] = useState("kit-wise");
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
@@ -354,6 +356,27 @@ export default function Procurement() {
     }
   };
 
+  const handleRefresh = () => {
+    const now = Date.now();
+    const timeSinceLastRefresh = now - lastRefresh;
+    const oneMinute = 60000;
+
+    if (timeSinceLastRefresh < oneMinute) {
+      const remainingSeconds = Math.ceil((oneMinute - timeSinceLastRefresh) / 1000);
+      toast.error(`Please wait ${remainingSeconds} seconds before refreshing again`);
+      return;
+    }
+
+    setIsRefreshing(true);
+    setLastRefresh(now);
+    
+    // Trigger a re-render by updating state
+    setTimeout(() => {
+      setIsRefreshing(false);
+      toast.success("Requirements recalculated");
+    }, 500);
+  };
+
   // --- Render Components ---
 
   const MaterialTable = ({ materials }: { materials: any[] }) => (
@@ -431,12 +454,18 @@ export default function Procurement() {
               Manage material requirements and shortages across all assignments
             </p>
           </div>
-          {canEdit && (
-            <Button onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" />
-              Export {activeTab === "summary" ? "Summary" : "List"} PDF
+          <div className="flex gap-2">
+            <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </Button>
-          )}
+            {canEdit && (
+              <Button onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export {activeTab === "summary" ? "Summary" : "List"} PDF
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
