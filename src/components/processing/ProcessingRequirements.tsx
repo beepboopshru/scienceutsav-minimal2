@@ -34,26 +34,49 @@ export function ProcessingRequirements({ assignments, inventory, onStartJob }: P
 
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
       const invItem = inventoryByName.get(name.toLowerCase());
-      // Only care about pre-processed items
-      if (!invItem || invItem.type !== "pre_processed") {
-        return;
-      }
-
-      const required = qtyPerKit * requiredQty;
-      const available = invItem.quantity || 0;
-      const shortage = Math.max(0, required - available);
       
-      if (shortage > 0) {
-        requirements.push({
-          id: invItem._id,
-          name,
-          required,
-          available,
-          shortage,
-          unit,
-          category,
-          invItem
+      // Check if this is a sealed packet - if so, explode its BOM for pre-processed items
+      if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
+        // Look for pre-processed components in the sealed packet BOM
+        invItem.components.forEach((comp: any) => {
+          const compItem = inventory.find(i => i._id === comp.rawMaterialId);
+          if (compItem && compItem.type === "pre_processed") {
+            const compRequired = comp.quantityRequired * qtyPerKit * requiredQty;
+            const compAvailable = compItem.quantity || 0;
+            const compShortage = Math.max(0, compRequired - compAvailable);
+            
+            if (compShortage > 0) {
+              requirements.push({
+                id: compItem._id,
+                name: compItem.name,
+                required: compRequired,
+                available: compAvailable,
+                shortage: compShortage,
+                unit: comp.unit,
+                category: `${category} (from Sealed Packet: ${name})`,
+                invItem: compItem
+              });
+            }
+          }
         });
+      } else if (invItem && invItem.type === "pre_processed") {
+        // Regular pre-processed item (not from sealed packet)
+        const required = qtyPerKit * requiredQty;
+        const available = invItem.quantity || 0;
+        const shortage = Math.max(0, required - available);
+        
+        if (shortage > 0) {
+          requirements.push({
+            id: invItem._id,
+            name,
+            required,
+            available,
+            shortage,
+            unit,
+            category,
+            invItem
+          });
+        }
       }
     };
 

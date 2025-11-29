@@ -85,16 +85,43 @@ export default function Procurement() {
       const shortage = Math.max(0, required - available);
       const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
       
-      if (shortage > 0 || required > 0) {
-        shortages.push({
-          name,
-          required,
-          available,
-          shortage,
-          unit,
-          category,
-          subcategory: finalSubcategory,
+      // Check if this is a sealed packet - if so, explode its BOM
+      if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
+        // Don't add the sealed packet itself to procurement
+        // Instead, add its raw material components
+        invItem.components.forEach((comp: any) => {
+          const compItem = inventoryById.get(comp.rawMaterialId);
+          if (compItem && compItem.type === "raw") {
+            const compRequired = comp.quantityRequired * qtyPerKit * requiredQty;
+            const compAvailable = compItem.quantity || 0;
+            const compShortage = Math.max(0, compRequired - compAvailable);
+            
+            if (compShortage > 0 || compRequired > 0) {
+              shortages.push({
+                name: compItem.name,
+                required: compRequired,
+                available: compAvailable,
+                shortage: compShortage,
+                unit: comp.unit,
+                category: `${category} (from Sealed Packet: ${name})`,
+                subcategory: compItem.subcategory || "Uncategorized",
+              });
+            }
+          }
         });
+      } else {
+        // Regular material (not a sealed packet)
+        if (shortage > 0 || required > 0) {
+          shortages.push({
+            name,
+            required,
+            available,
+            shortage,
+            unit,
+            category,
+            subcategory: finalSubcategory,
+          });
+        }
       }
     };
 
@@ -114,7 +141,7 @@ export default function Procurement() {
   const aggregateMaterials = (assignmentList: any[]) => {
     const materialMap = new Map<string, any>();
 
-    // 1. Collect direct requirements
+    // 1. Collect direct requirements (already includes sealed packet BOM explosion from calculateShortages)
     assignmentList.forEach((assignment) => {
       const shortages = calculateShortages(assignment);
       shortages.direct.forEach((item: any) => {
@@ -141,7 +168,7 @@ export default function Procurement() {
       });
     });
 
-    // 2. BOM Explosion for Shortages
+    // 2. BOM Explosion for Shortages (for pre-processed items that have raw material BOMs)
     const queue = Array.from(materialMap.keys());
     
     while (queue.length > 0) {
