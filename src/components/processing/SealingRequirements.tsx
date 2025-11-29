@@ -12,7 +12,7 @@ import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPack
 interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
-  onStartJob: (targetItemId: Id<"inventory">, quantity: number) => void;
+  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, packetInfo?: { name: string; materials: any[] }) => void;
 }
 
 export function SealingRequirements({ assignments, inventory, onStartJob }: SealingRequirementsProps) {
@@ -69,7 +69,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     };
 
     // Process sealed packet from kit structure (always show, even if not in inventory)
-    const processPacket = (packetName: string, qtyPerKit: number) => {
+    const processPacket = (packetName: string, qtyPerKit: number, packetMaterials?: any[]) => {
       const invItem = inventoryByName.get(packetName.toLowerCase());
       
       // Check if it's a sealed packet type in inventory
@@ -87,6 +87,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: invItem.unit,
           category: "Sealed Packet",
           invItem,
+          packetMaterials: packetMaterials || [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -107,6 +108,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: "pcs",
           category: "Sealed Packet",
           invItem: invItem || null,
+          packetMaterials: packetMaterials || [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -125,7 +127,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       // The packet NAME itself is what needs to be sealed, not the materials inside
       structure.packets?.forEach((packet: any) => {
         // Always show sealed packets from kit structure, even if not in inventory
-        processPacket(packet.name, 1);
+        processPacket(packet.name, 1, packet.materials);
       });
     }
 
@@ -302,7 +304,13 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                 </TableCell>
                 <TableCell>
                   {hasDeficit && (
-                    <Button size="sm" onClick={() => onStartJob(item.id, item.shortage)}>
+                    <Button size="sm" onClick={() => onStartJob(
+                      item.id, 
+                      item.shortage,
+                      item.packetMaterials && item.packetMaterials.length > 0 
+                        ? { name: item.name, materials: item.packetMaterials }
+                        : undefined
+                    )}>
                       <Package className="mr-2 h-4 w-4" />
                       Start Job
                     </Button>
