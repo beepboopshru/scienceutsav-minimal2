@@ -76,10 +76,10 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       const structure = parsePackingRequirements(kit.packingRequirements);
       
       // Process sealed packets defined in the kit
+      // The packet NAME itself is what needs to be sealed, not the materials inside
       structure.packets?.forEach((packet: any) => {
-        packet.materials?.forEach((material: any) => {
-          processMaterial(material.name, material.quantity, material.unit, "Sealed Packet");
-        });
+        // Look for the packet name in inventory as a sealed_packet type
+        processMaterial(packet.name, 1, "pcs", "Sealed Packet");
       });
     }
 
