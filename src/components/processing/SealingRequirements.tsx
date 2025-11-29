@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 
 interface SealingRequirementsProps {
   assignments: any[];
@@ -24,6 +25,11 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     return inventory.filter(item => item.type === "sealed_packet");
   }, [inventory]);
 
+  const inventoryByName = useMemo(() => {
+    if (!inventory) return new Map();
+    return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
+  }, [inventory]);
+
   const calculateRequirements = (assignment: any) => {
     const kit = assignment.kit;
     if (!kit || !sealedPackets.length) return [];
@@ -31,81 +37,52 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     const requirements: any[] = [];
     const requiredQty = assignment.quantity;
 
-    // Check each sealed packet to see if it's needed for this kit
-    // This assumes sealed packets are named or linked to kits
-    // For now, we'll look for sealed packets that match materials in the kit
-    sealedPackets.forEach(sealedPacket => {
-      // Check if this sealed packet is mentioned in any kit materials
-      let qtyPerKit = 0;
-      let category = "Sealed Packet";
-
-      // Check in packingRequirements
-      if (kit.isStructured && kit.packingRequirements) {
-        try {
-          const structure = JSON.parse(kit.packingRequirements);
-          const checkContainers = (containers: any[]) => {
-            containers?.forEach((container: any) => {
-              container.materials?.forEach((material: any) => {
-                if (material.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
-                  qtyPerKit += material.quantity;
-                }
-              });
-            });
-          };
-          checkContainers(structure.pouches || []);
-          checkContainers(structure.packets || []);
-        } catch (e) {
-          console.error("Failed to parse packing requirements", e);
-        }
+    // Process a material and check if it's a sealed packet
+    const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
+      const invItem = inventoryByName.get(name.toLowerCase());
+      
+      // Only process if this material is a sealed packet type
+      if (!invItem || invItem.type !== "sealed_packet") {
+        return;
       }
 
-      // Check in spareKits
-      kit.spareKits?.forEach((s: any) => {
-        if (s.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
-          qtyPerKit += s.quantity;
-          category = "Spare Kit";
+      const required = qtyPerKit * requiredQty;
+      const available = invItem.quantity || 0;
+      const shortage = Math.max(0, required - available);
+      
+      requirements.push({
+        id: invItem._id,
+        name: invItem.name,
+        required,
+        available,
+        shortage,
+        unit: invItem.unit,
+        category,
+        invItem,
+        assignmentDetails: {
+          clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
+          kitName: kit.name,
+          quantity: assignment.quantity,
+          productionMonth: assignment.productionMonth,
         }
       });
+    };
 
-      // Check in bulkMaterials
-      kit.bulkMaterials?.forEach((b: any) => {
-        if (b.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
-          qtyPerKit += b.quantity;
-          category = "Bulk Material";
-        }
-      });
+    // Check main components (packingRequirements)
+    if (kit.isStructured && kit.packingRequirements) {
+      const structure = parsePackingRequirements(kit.packingRequirements);
+      const totalMaterials = calculateTotalMaterials(structure);
+      totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
+    }
 
-      // Check in miscellaneous
-      kit.miscellaneous?.forEach((m: any) => {
-        if (m.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
-          qtyPerKit += m.quantity;
-          category = "Miscellaneous";
-        }
-      });
+    // Check spare kits
+    kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit"));
 
-      if (qtyPerKit > 0) {
-        const required = qtyPerKit * requiredQty;
-        const available = sealedPacket.quantity || 0;
-        const shortage = Math.max(0, required - available);
-        
-        requirements.push({
-          id: sealedPacket._id,
-          name: sealedPacket.name,
-          required,
-          available,
-          shortage,
-          unit: sealedPacket.unit,
-          category,
-          invItem: sealedPacket,
-          assignmentDetails: {
-            clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
-            kitName: kit.name,
-            quantity: assignment.quantity,
-            productionMonth: assignment.productionMonth,
-          }
-        });
-      }
-    });
+    // Check bulk materials
+    kit.bulkMaterials?.forEach((b: any) => processMaterial(b.name, b.quantity, b.unit, "Bulk Material"));
+
+    // Check miscellaneous
+    kit.miscellaneous?.forEach((m: any) => processMaterial(m.name, m.quantity, m.unit, "Miscellaneous"));
 
     return requirements;
   };
