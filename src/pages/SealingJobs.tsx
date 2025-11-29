@@ -105,30 +105,30 @@ export default function SealingJobs() {
     }
 
     try {
+      // Check if target is a placeholder (missing from inventory)
+      if (typeof selectedTarget.id === 'string' && selectedTarget.id.startsWith('missing_')) {
+        toast.error("Please create the sealed packet item in inventory first with its BOM components");
+        return;
+      }
+
       const targetItem = inventory.find(i => i._id === selectedTarget.id);
-      
-      // Debug logging
-      console.log("=== DEBUG: handleCreateJob ===");
-      console.log("selectedTarget.id:", selectedTarget.id);
-      console.log("targetItem found:", targetItem);
-      console.log("targetItem?.components:", targetItem?.components);
-      console.log("packetInfo:", packetInfo);
+      if (!targetItem) {
+        toast.error("Target sealed packet not found in inventory");
+        return;
+      }
       
       let sources: Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }> = [];
 
-      // If target item exists in inventory and has components (BOM), use those
-      if (targetItem?.components && Array.isArray(targetItem.components) && targetItem.components.length > 0) {
-        console.log("Using target item components (BOM)");
+      // Priority 1: Use inventory BOM if it exists
+      if (targetItem.components && Array.isArray(targetItem.components) && targetItem.components.length > 0) {
         sources = targetItem.components.map(comp => ({
           sourceItemId: comp.rawMaterialId,
           sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
         }));
       } 
-      // Otherwise, use packet materials from kit structure (for packets not yet in inventory)
+      // Priority 2: Use packet materials from kit structure (fallback)
       else if (packetInfo?.materials && Array.isArray(packetInfo.materials) && packetInfo.materials.length > 0) {
-        console.log("Using packet materials from kit structure");
-        // Map packet materials to inventory items
-        sources = packetInfo.materials
+        const mappedSources = packetInfo.materials
           .map(material => {
             const invItem = inventory.find(i => i.name.toLowerCase() === material.name.toLowerCase());
             if (!invItem) {
@@ -142,32 +142,36 @@ export default function SealingJobs() {
           })
           .filter((s): s is { sourceItemId: Id<"inventory">; sourceQuantity: number } => s !== null);
 
-        if (sources.length === 0) {
+        if (mappedSources.length === 0) {
           toast.error("No valid source materials found for this sealed packet");
           return;
         }
-      } else {
-        console.log("ERROR: No components or packet materials found");
-        console.log("targetItem exists:", !!targetItem);
-        console.log("targetItem has components:", targetItem?.components?.length);
-        console.log("packetInfo exists:", !!packetInfo);
-        console.log("packetInfo has materials:", packetInfo?.materials?.length);
-        toast.error("Target item must have components defined or packet materials specified");
+        sources = mappedSources;
+      } 
+      // No valid sources found
+      else {
+        toast.error("Sealed packet must have BOM components defined in inventory or materials specified in kit structure");
         return;
       }
 
-      // If target doesn't exist in inventory, we need to create it first or handle differently
-      let targetId = selectedTarget.id;
-      if (typeof targetId === 'string' && targetId.startsWith('missing_')) {
-        toast.error("Please create the sealed packet item in inventory first with its BOM components");
-        return;
+      // Validate all source materials have sufficient stock
+      for (const source of sources) {
+        const sourceItem = inventory.find(i => i._id === source.sourceItemId);
+        if (!sourceItem) {
+          toast.error(`Source material not found in inventory`);
+          return;
+        }
+        if (sourceItem.quantity < source.sourceQuantity) {
+          toast.error(`Insufficient stock for ${sourceItem.name}. Required: ${source.sourceQuantity} ${sourceItem.unit}, Available: ${sourceItem.quantity} ${sourceItem.unit}`);
+          return;
+        }
       }
 
       await createProcessingJob({
         name: jobName,
         sources,
         targets: [{
-          targetItemId: targetId,
+          targetItemId: selectedTarget.id,
           targetQuantity: selectedTarget.quantity,
         }],
         processedBy: processedBy || undefined,

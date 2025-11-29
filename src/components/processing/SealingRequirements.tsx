@@ -70,30 +70,24 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
 
     // Process sealed packet from kit structure (always show, even if not in inventory)
     const processPacket = (packetName: string, qtyPerKit: number, packetMaterials?: any[]) => {
-      // Try multiple lookup strategies to find the sealed packet in inventory
+      // Look up sealed packet in inventory (case-insensitive)
       let foundItem = inventoryByName.get(packetName.toLowerCase());
       
-      // If not found, try exact match (any type)
-      if (!foundItem) {
-        foundItem = inventory.find(i => i.name === packetName);
-      }
-      
-      // If still not found, try case-insensitive search across all inventory
+      // If not found by map, try exact search across all inventory
       if (!foundItem) {
         foundItem = inventory.find(i => i.name.toLowerCase() === packetName.toLowerCase());
       }
       
-      // Debug logging
-      console.log(`=== DEBUG: processPacket for "${packetName}" ===`);
-      console.log("foundItem:", foundItem);
-      console.log("foundItem type:", foundItem?.type);
-      console.log("foundItem has components:", foundItem?.components?.length);
+      const required = qtyPerKit * requiredQty;
       
-      // Check if we found the item in inventory (regardless of type initially)
       if (foundItem) {
-        const required = qtyPerKit * requiredQty;
+        // Sealed packet exists in inventory
         const available = foundItem.quantity || 0;
         const shortage = Math.max(0, required - available);
+        
+        // Determine if we should pass packet materials as fallback
+        // Only pass if inventory item has NO components defined
+        const shouldPassMaterials = !foundItem.components || foundItem.components.length === 0;
         
         requirements.push({
           id: foundItem._id,
@@ -104,8 +98,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           unit: foundItem.unit,
           category: "Sealed Packet",
           invItem: foundItem,
-          // Pass packet materials only if no components exist in inventory
-          packetMaterials: (foundItem.components && foundItem.components.length > 0) ? [] : (packetMaterials || []),
+          packetMaterials: shouldPassMaterials ? (packetMaterials || []) : [],
           assignmentDetails: {
             clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
             kitName: kit.name,
@@ -114,15 +107,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           }
         });
       } else {
-        // Sealed packet not in inventory yet - still show it with 0 available
-        const required = qtyPerKit * requiredQty;
-        
-        console.log("=== DEBUG: Packet NOT in inventory ===");
-        console.log("packetName:", packetName);
-        console.log("packetMaterials received:", packetMaterials);
-        console.log("packetMaterials is array:", Array.isArray(packetMaterials));
-        console.log("packetMaterials length:", packetMaterials?.length);
-        
+        // Sealed packet not in inventory yet - show with 0 available
         requirements.push({
           id: `missing_${packetName}`,
           name: packetName,
@@ -147,19 +132,8 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     if (kit.isStructured && kit.packingRequirements) {
       const structure = parsePackingRequirements(kit.packingRequirements);
       
-      console.log("=== DEBUG: Kit Structure ===");
-      console.log("structure.packets:", structure.packets);
-      
       // Process sealed packets defined in the kit
-      // The packet NAME itself is what needs to be sealed, not the materials inside
       structure.packets?.forEach((packet: any) => {
-        console.log(`=== DEBUG: Processing packet from kit structure ===`);
-        console.log("packet:", packet);
-        console.log("packet.name:", packet.name);
-        console.log("packet.materials:", packet.materials);
-        
-        // Always show sealed packets from kit structure, even if not in inventory
-        // Pass packet materials so they can be used as fallback if needed
         processPacket(packet.name, 1, packet.materials);
       });
     }
