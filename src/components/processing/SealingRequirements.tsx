@@ -39,9 +39,19 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
         const packetName = packet.name;
         
         // Find the sealed packet in inventory (Target)
+        // 1. Try exact match
         let foundItem = inventoryByName.get(packetName.toLowerCase());
         if (!foundItem) {
           foundItem = inventory.find(i => i.name.toLowerCase() === packetName.toLowerCase());
+        }
+
+        // 2. Try "[Kit Name] [Packet Name]"
+        if (!foundItem) {
+          const prefixedName = `${kit.name} ${packetName}`;
+          foundItem = inventoryByName.get(prefixedName.toLowerCase());
+          if (!foundItem) {
+            foundItem = inventory.find(i => i.name.toLowerCase() === prefixedName.toLowerCase());
+          }
         }
 
         // Calculate components based on Kit Definition (Source)
@@ -82,9 +92,11 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
             }
           });
         } else {
+          // Suggest the prefixed name if not found
+          const suggestedName = `${kit.name} ${packetName}`;
           requirements.push({
-            id: `missing_${packetName}`,
-            name: packetName,
+            id: `missing_${suggestedName}`,
+            name: suggestedName,
             required,
             available: 0,
             unit: "pcs",
