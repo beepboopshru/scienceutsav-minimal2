@@ -421,6 +421,9 @@ export function Layout({ children }: LayoutProps) {
       path: "/user-management",
       roles: [hasPermission("userManagement", "view") ? "allowed" : ""],
     },
+  ];
+
+  const settingsSection: NavItem[] = [
     {
       title: "Themes",
       icon: Settings,
@@ -708,6 +711,28 @@ export function Layout({ children }: LayoutProps) {
                 </SidebarGroupContent>
               </SidebarGroup>
             )}
+
+            {/* Settings */}
+            <SidebarGroup>
+              <SidebarGroupLabel>Settings</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {settingsSection.map((item) => (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.path)}
+                      >
+                        <Link to={item.path}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </SidebarContent>
 
           <SidebarFooter className="border-t border-border">
