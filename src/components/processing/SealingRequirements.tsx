@@ -41,6 +41,9 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
       const invItem = inventoryByName.get(name.toLowerCase());
       
+      // Debug: Log what we're checking
+      console.log(`Checking material: ${name}, Found in inventory:`, invItem ? `Yes (type: ${invItem.type})` : 'No');
+      
       // Only process if this material is a sealed packet type
       if (!invItem || invItem.type !== "sealed_packet") {
         return;
