@@ -54,6 +54,7 @@ export default function SealingJobs() {
   const [processedBy, setProcessedBy] = useState("");
   const [processedByType, setProcessedByType] = useState<"in_house" | "vendor" | "service">("in_house");
   const [notes, setNotes] = useState("");
+  const [packetInfo, setPacketInfo] = useState<{ name: string; materials: any[] } | null>(null);
 
   const createProcessingJob = useMutation(api.processingJobs.create);
   const startJob = useMutation(api.processingJobs.startJob);
@@ -87,8 +88,6 @@ export default function SealingJobs() {
       </div>
     );
   }
-
-  const [packetInfo, setPacketInfo] = useState<{ name: string; materials: any[] } | null>(null);
 
   const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number, packetData?: { name: string; materials: any[] }) => {
     setSelectedTarget({ id: targetItemId as Id<"inventory">, quantity });
