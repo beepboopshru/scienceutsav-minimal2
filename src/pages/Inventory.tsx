@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { 
@@ -200,12 +200,25 @@ export default function Inventory() {
   const combinedInventory = [...inventory, ...virtualPackets];
 
   // Filter inventory based on active tab
-  const filteredInventory = combinedInventory.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = item.type === activeTab;
-    const matchesSubcategory = filterSubcategory === "all" || item.subcategory === filterSubcategory;
-    return matchesSearch && matchesType && matchesSubcategory;
-  });
+  const filteredInventory = useMemo(() => {
+    if (activeTab === "finished") {
+      // For finished tab, show kits instead of inventory items
+      if (!kits) return [];
+      return kits.filter((kit) => {
+        const matchesSearch = searchTerm.trim() === "" || kit.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesProgram = filterSubcategory === "all" || kit.programId === filterSubcategory;
+        return matchesSearch && matchesProgram;
+      });
+    } else {
+      // For other tabs, show inventory items
+      return combinedInventory.filter((item) => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = item.type === activeTab;
+        const matchesSubcategory = filterSubcategory === "all" || item.subcategory === filterSubcategory;
+        return matchesSearch && matchesType && matchesSubcategory;
+      });
+    }
+  }, [activeTab, kits, combinedInventory, searchTerm, filterSubcategory]);
 
   // Get unique subcategories for current tab
   const availableSubcategories = Array.from(
@@ -990,7 +1003,7 @@ export default function Inventory() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInventory.map((item) => (
+                  {filteredInventory.map((item: any) => (
                     <TableRow key={item._id}>
                       <TableCell className="font-medium">
                         <div>
