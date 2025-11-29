@@ -37,6 +37,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Inventory() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -61,8 +62,8 @@ export default function Inventory() {
   const updateKit = useMutation(api.kits.update);
   const generateUploadUrl = useMutation(api.vendorImports.generateUploadUrl);
 
+  const [activeTab, setActiveTab] = useState<"raw" | "pre_processed" | "finished" | "sealed_packet">("raw");
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
   const [filterSubcategory, setFilterSubcategory] = useState<string>("all");
   const [editingQuantity, setEditingQuantity] = useState<Id<"inventory"> | string | null>(null);
   const [tempQuantity, setTempQuantity] = useState<number>(0);
@@ -192,23 +193,29 @@ export default function Inventory() {
   // Combine real inventory with virtual packets
   const combinedInventory = [...inventory, ...virtualPackets];
 
-  // Filter inventory
+  // Filter inventory based on active tab
   const filteredInventory = combinedInventory.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === "all" || item.type === filterType;
+    const matchesType = item.type === activeTab;
     const matchesSubcategory = filterSubcategory === "all" || item.subcategory === filterSubcategory;
     return matchesSearch && matchesType && matchesSubcategory;
   });
 
-  // Get unique subcategories for current type filter
+  // Get unique subcategories for current tab
   const availableSubcategories = Array.from(
     new Set(
       combinedInventory
-        .filter((item) => filterType === "all" || item.type === filterType)
+        .filter((item) => item.type === activeTab)
         .map((item) => item.subcategory)
         .filter((subcat): subcat is string => typeof subcat === "string" && subcat.trim() !== "")
     )
   );
+
+  // Reset filters when tab changes
+  useEffect(() => {
+    setSearchTerm("");
+    setFilterSubcategory("all");
+  }, [activeTab]);
 
   const handleAddItem = async () => {
     try {
@@ -907,66 +914,67 @@ export default function Inventory() {
             )}
           </div>
 
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Filters</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search items..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="raw">Raw Material</SelectItem>
-                      <SelectItem value="pre_processed">Pre-Processed</SelectItem>
-                      <SelectItem value="finished">Finished</SelectItem>
-                      <SelectItem value="sealed_packet">Sealed Packet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Subcategory</Label>
-                  <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Subcategories</SelectItem>
-                      {availableSubcategories.filter(Boolean).map((subcat) => (
-                        <SelectItem key={subcat} value={subcat}>
-                          {subcat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Tabbed Inventory View */}
+          <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)} className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+              <TabsTrigger value="raw">Raw Materials</TabsTrigger>
+              <TabsTrigger value="pre_processed">Pre-Processed</TabsTrigger>
+              <TabsTrigger value="finished">Finished</TabsTrigger>
+              <TabsTrigger value="sealed_packet">Sealed Packets</TabsTrigger>
+            </TabsList>
 
-          {/* Inventory Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Inventory Items ({filteredInventory.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <TabsContent value={activeTab} className="space-y-4">
+              {/* Filters */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Filters</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Search</Label>
+                      <div className="relative">
+                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search items..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Subcategory</Label>
+                      <Select value={filterSubcategory} onValueChange={setFilterSubcategory}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Subcategories</SelectItem>
+                          {availableSubcategories.filter(Boolean).map((subcat) => (
+                            <SelectItem key={subcat} value={subcat}>
+                              {categories?.find(cat => cat.value === subcat)?.name || subcat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Inventory Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {activeTab === "raw" && "Raw Materials"}
+                    {activeTab === "pre_processed" && "Pre-Processed Items"}
+                    {activeTab === "finished" && "Finished Goods"}
+                    {activeTab === "sealed_packet" && "Sealed Packets"}
+                    {" "}({filteredInventory.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1046,7 +1054,7 @@ export default function Inventory() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {!item.isKitPacket && (
+                        {!item.isKitPacket && item.type !== "pre_processed" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -1124,6 +1132,8 @@ export default function Inventory() {
               </Table>
             </CardContent>
           </Card>
+            </TabsContent>
+          </Tabs>
 
           {/* Edit Item Dialog */}
           <Dialog open={editItemOpen} onOpenChange={setEditItemOpen}>
