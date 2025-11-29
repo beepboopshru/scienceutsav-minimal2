@@ -99,6 +99,9 @@ export default function Dispatch() {
     workbookWorksheetConceptMap: false,
     spareKitsTools: false,
   });
+  const [ewayNumber, setEwayNumber] = useState("");
+  const [dispatchDocument, setDispatchDocument] = useState<File | null>(null);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -298,15 +301,73 @@ export default function Dispatch() {
       return;
     }
 
+    if (!ewayNumber.trim()) {
+      toast.error("Please enter the e-way number");
+      return;
+    }
+
+    if (!dispatchDocument) {
+      toast.error("Please upload a dispatch document");
+      return;
+    }
+
     if (!selectedAssignmentForDispatch) return;
 
     try {
-      await updateStatus({ id: selectedAssignmentForDispatch, status: "dispatched" });
+      setIsUploadingDocument(true);
+
+      // Convert PNG to WebP and upload
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = URL.createObjectURL(dispatchDocument);
+      });
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+
+      const webpBlob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
+      });
+
+      // Upload to Convex storage
+      const uploadUrl = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/storage/upload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      }).then(r => r.json()).then(d => d.url);
+
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: webpBlob,
+      });
+
+      const { storageId } = await uploadResponse.json();
+
+      // Update assignment with e-way number and document
+      await updateStatus({ 
+        id: selectedAssignmentForDispatch, 
+        status: "dispatched",
+        ewayNumber: ewayNumber.trim(),
+        dispatchDocumentId: storageId,
+      });
+
       toast.success("Status updated to Dispatched");
       setChecklistDialogOpen(false);
       setSelectedAssignmentForDispatch(null);
+      setEwayNumber("");
+      setDispatchDocument(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update status");
+    } finally {
+      setIsUploadingDocument(false);
     }
   };
 
@@ -941,7 +1002,7 @@ export default function Dispatch() {
 
         {/* Dispatch Checklist Dialog */}
         <Dialog open={checklistDialogOpen} onOpenChange={setChecklistDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Dispatch Checklist</DialogTitle>
               <DialogDescription>
@@ -997,13 +1058,59 @@ export default function Dispatch() {
                   Spare kits and tools included
                 </Label>
               </div>
+
+              <div className="space-y-2 pt-4 border-t">
+                <Label htmlFor="ewayNumber">E-Way Number *</Label>
+                <Input
+                  id="ewayNumber"
+                  placeholder="Enter e-way number..."
+                  value={ewayNumber}
+                  onChange={(e) => setEwayNumber(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dispatchDocument">Dispatch Document (PNG) *</Label>
+                <Input
+                  id="dispatchDocument"
+                  type="file"
+                  accept="image/png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.type !== 'image/png') {
+                        toast.error('Please upload a PNG file');
+                        e.target.value = '';
+                        return;
+                      }
+                      setDispatchDocument(file);
+                    }
+                  }}
+                />
+                {dispatchDocument && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {dispatchDocument.name} (will be converted to WebP)
+                  </p>
+                )}
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setChecklistDialogOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setChecklistDialogOpen(false);
+                setEwayNumber("");
+                setDispatchDocument(null);
+              }}>
                 Cancel
               </Button>
-              <Button onClick={handleConfirmDispatch}>
-                Confirm Dispatch
+              <Button onClick={handleConfirmDispatch} disabled={isUploadingDocument}>
+                {isUploadingDocument ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Confirm Dispatch"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

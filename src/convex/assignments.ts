@@ -105,6 +105,8 @@ export const updateStatus = mutation({
       v.literal("dispatched"),
       v.literal("delivered")
     ),
+    ewayNumber: v.optional(v.string()),
+    dispatchDocumentId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -138,12 +140,20 @@ export const updateStatus = mutation({
       updates.deliveredAt = Date.now();
     }
 
+    if (args.ewayNumber) {
+      updates.ewayNumber = args.ewayNumber;
+    }
+
+    if (args.dispatchDocumentId) {
+      updates.dispatchDocumentId = args.dispatchDocumentId;
+    }
+
     await ctx.db.patch(args.id, updates);
 
     // If status is dispatched or delivered, move to order history
     if (args.status === "dispatched" || args.status === "delivered") {
       // Create order history record
-      await ctx.db.insert("orderHistory", {
+      const orderHistoryData: any = {
         kitId: assignment.kitId,
         clientId: assignment.clientId,
         clientType: assignment.clientType,
@@ -157,7 +167,17 @@ export const updateStatus = mutation({
         deliveredAt: updates.deliveredAt || assignment.deliveredAt,
         notes: assignment.notes,
         originalAssignmentId: args.id,
-      });
+      };
+
+      if (updates.ewayNumber || (assignment as any).ewayNumber) {
+        orderHistoryData.ewayNumber = updates.ewayNumber || (assignment as any).ewayNumber;
+      }
+
+      if (updates.dispatchDocumentId || (assignment as any).dispatchDocumentId) {
+        orderHistoryData.dispatchDocumentId = updates.dispatchDocumentId || (assignment as any).dispatchDocumentId;
+      }
+
+      await ctx.db.insert("orderHistory", orderHistoryData);
 
       // Delete the assignment
       await ctx.db.delete(args.id);
