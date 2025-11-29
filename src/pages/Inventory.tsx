@@ -51,6 +51,7 @@ export default function Inventory() {
   const categories = useQuery(api.inventoryCategories.list, {});
   const vendors = useQuery(api.vendors.list);
   const kits = useQuery(api.kits.list);
+  const programs = useQuery(api.programs.list);
   
   const createItem = useMutation(api.inventory.create);
   const updateItem = useMutation(api.inventory.update);
@@ -141,27 +142,6 @@ export default function Inventory() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (isLoading || !user || !inventory || !categories) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
-      </div>
-    );
-  }
-
-  if (!canView) {
-    return (
-      <Layout>
-        <div className="p-8 max-w-6xl mx-auto">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground">You don't have permission to view this page.</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   // Create virtual packet items from kits
   const virtualPackets: any[] = [];
   if (kits) {
@@ -197,7 +177,7 @@ export default function Inventory() {
   }
 
   // Combine real inventory with virtual packets
-  const combinedInventory = [...inventory, ...virtualPackets];
+  const combinedInventory = [...(inventory || []), ...virtualPackets];
 
   // Filter inventory based on active tab
   const filteredInventory = useMemo(() => {
@@ -221,14 +201,41 @@ export default function Inventory() {
   }, [activeTab, kits, combinedInventory, searchTerm, filterSubcategory]);
 
   // Get unique subcategories for current tab
-  const availableSubcategories = Array.from(
-    new Set(
-      combinedInventory
-        .filter((item) => item.type === activeTab)
-        .map((item) => item.subcategory)
-        .filter((subcat): subcat is string => typeof subcat === "string" && subcat.trim() !== "")
-    )
-  );
+  const availableSubcategories = useMemo(() => {
+    if (activeTab === "finished") {
+      if (!kits) return [];
+      return Array.from(new Set(kits.map(k => k.programId).filter(Boolean)));
+    }
+    return Array.from(
+      new Set(
+        combinedInventory
+          .filter((item) => item.type === activeTab)
+          .map((item) => item.subcategory)
+          .filter((subcat): subcat is string => typeof subcat === "string" && subcat.trim() !== "")
+      )
+    );
+  }, [activeTab, combinedInventory, kits]);
+
+  if (isLoading || !user || !inventory || !categories) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-foreground" />
+      </div>
+    );
+  }
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="p-8 max-w-6xl mx-auto">
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to view this page.</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const handleAddItem = async () => {
     try {
@@ -966,7 +973,9 @@ export default function Inventory() {
                           <SelectItem value="all">All Subcategories</SelectItem>
                           {availableSubcategories.filter(Boolean).map((subcat) => (
                             <SelectItem key={subcat} value={subcat}>
-                              {categories?.find(cat => cat.value === subcat)?.name || subcat}
+                              {activeTab === "finished" 
+                                ? programs?.find(p => p._id === subcat)?.name || subcat
+                                : categories?.find(cat => cat.value === subcat)?.name || subcat}
                             </SelectItem>
                           ))}
                         </SelectContent>
