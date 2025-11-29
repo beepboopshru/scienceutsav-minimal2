@@ -68,8 +68,6 @@ export default function Inventory() {
   const [filterSubcategory, setFilterSubcategory] = useState<string>("all");
   const [editingQuantity, setEditingQuantity] = useState<Id<"inventory"> | string | null>(null);
   const [tempQuantity, setTempQuantity] = useState<number>(0);
-  const [viewPacketOpen, setViewPacketOpen] = useState(false);
-  const [selectedPacket, setSelectedPacket] = useState<any>(null);
   const [vendorInfoOpen, setVendorInfoOpen] = useState(false);
   const [selectedItemForVendors, setSelectedItemForVendors] = useState<any>(null);
   const [bomViewerOpen, setBomViewerOpen] = useState(false);
@@ -83,7 +81,7 @@ export default function Inventory() {
 
   const getVendorsForItem = useQuery(
     api.vendors.getVendorsForItem,
-    selectedItemForVendors && !selectedItemForVendors.isKitPacket
+    selectedItemForVendors
       ? { itemId: selectedItemForVendors._id }
       : "skip"
   );
@@ -127,47 +125,10 @@ export default function Inventory() {
     categoryType: "raw_material" as "raw_material" | "pre_processed",
   });
 
-  // Create virtual packet items from kits
-  const virtualPackets = useMemo(() => {
-    const packets: any[] = [];
-    if (kits) {
-      kits.forEach((kit) => {
-        if (kit.packingRequirements) {
-          try {
-            const packingData = JSON.parse(kit.packingRequirements);
-            if (packingData.packets && Array.isArray(packingData.packets)) {
-              packingData.packets.forEach((packet: any, index: number) => {
-                packets.push({
-                  _id: `${kit._id}_packet_${index}`,
-                  name: `[${kit.name}] ${packet.name}`,
-                  description: `Sealed packet from ${kit.name}`,
-                  type: "sealed_packet",
-                  quantity: kit.stockCount,
-                  unit: "packet",
-                  minStockLevel: 0,
-                  location: "",
-                  notes: "",
-                  subcategory: "sealed_packet",
-                  isKitPacket: true,
-                  sourceKit: kit,
-                  componentType: "packet",
-                  componentData: packet,
-                });
-              });
-            }
-          } catch (e) {
-            // Invalid JSON, skip
-          }
-        }
-      });
-    }
-    return packets;
-  }, [kits]);
-
   // Combine real inventory with virtual packets
   const combinedInventory = useMemo(() => {
-    return [...(inventory || []), ...virtualPackets];
-  }, [inventory, virtualPackets]);
+    return inventory || [];
+  }, [inventory]);
 
   // Filter inventory based on active tab
   const filteredInventory = useMemo(() => {
@@ -291,18 +252,9 @@ export default function Inventory() {
 
   const handleQuantitySave = async (itemId: Id<"inventory"> | string, item: any) => {
     try {
-      if (item.isKitPacket && item.sourceKit) {
-        // For virtual packets, update the kit's stockCount
-        await updateKit({ 
-          id: item.sourceKit._id, 
-          stockCount: tempQuantity 
-        });
-        toast.success("Kit stock count updated");
-      } else {
-        // For real inventory items
-        await updateQuantity({ id: itemId as Id<"inventory">, quantity: tempQuantity });
-        toast.success("Quantity updated");
-      }
+      // For real inventory items
+      await updateQuantity({ id: itemId as Id<"inventory">, quantity: tempQuantity });
+      toast.success("Quantity updated");
       setEditingQuantity(null);
     } catch (error: any) {
       toast.error(error.message || "Failed to update quantity");
@@ -405,11 +357,6 @@ export default function Inventory() {
       components: item.components || [],
     });
     setEditItemOpen(true);
-  };
-
-  const openViewPacketDialog = (packet: any) => {
-    setSelectedPacket(packet);
-    setViewPacketOpen(true);
   };
 
   return (
@@ -1022,8 +969,7 @@ export default function Inventory() {
                       <TableCell className="font-medium">
                         <div>
                           <div className="flex items-center gap-2">
-                            {item.isKitPacket && <Package className="h-4 w-4 text-muted-foreground" />}
-                            {!item.isKitPacket && item.type === "pre_processed" && item.components && item.components.length > 0 && (
+                            {item.type === "pre_processed" && item.components && item.components.length > 0 && (
                               <ListTree className="h-4 w-4 text-blue-500" />
                             )}
                             {item.name}
@@ -1064,7 +1010,7 @@ export default function Inventory() {
                           <span
                             className={canEdit ? "cursor-pointer hover:underline" : ""}
                             onClick={canEdit ? () => handleQuantityEdit(item) : undefined}
-                            title={canEdit ? (item.isKitPacket ? "Click to edit kit stock count" : "Click to edit quantity") : ""}
+                            title={canEdit ? "Click to edit quantity" : ""}
                           >
                             {item.quantity}
                           </span>
@@ -1083,7 +1029,7 @@ export default function Inventory() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {!item.isKitPacket && item.type !== "pre_processed" && (
+                        {item.type !== "pre_processed" && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -1098,16 +1044,6 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          {item.isKitPacket ? (
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              onClick={() => openViewPacketDialog(item)}
-                              title="View Components"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          ) : (
                             <>
                               {item.type === "pre_processed" && item.components && item.components.length > 0 && (
                                 <Button 
@@ -1152,7 +1088,6 @@ export default function Inventory() {
                                 </>
                               )}
                             </>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1495,52 +1430,6 @@ export default function Inventory() {
               </div>
               <DialogFooter>
                 <Button onClick={() => setBomViewerOpen(false)}>Close</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* View Packet Dialog */}
-          <Dialog open={viewPacketOpen} onOpenChange={setViewPacketOpen}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Packet Components</DialogTitle>
-                <DialogDescription>
-                  {selectedPacket?.sourceKit && `From kit: ${selectedPacket.sourceKit.name}`}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">Sealed Packet</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    This is a virtual item derived from kit definitions
-                  </span>
-                </div>
-                <Separator />
-                <div>
-                  <Label className="text-base">Materials in Packet</Label>
-                  <div className="mt-4 space-y-3">
-                    {selectedPacket?.componentData?.materials?.map((material: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded">
-                        <div>
-                          <p className="font-medium">{material.name}</p>
-                          {material.notes && (
-                            <p className="text-sm text-muted-foreground">{material.notes}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{material.quantity} {material.unit}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <Separator />
-                <p className="text-sm text-muted-foreground">
-                  To modify this packet, edit the source kit in the Kits page.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => setViewPacketOpen(false)}>Close</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
