@@ -142,9 +142,10 @@ export default function Dispatch() {
     );
   }
 
-  // Filter assignments: show transferred_to_dispatch, ready_for_dispatch, and dispatched
+  // Filter assignments: show transferred_to_dispatch and ready_for_dispatch only
+  // Dispatched assignments are hidden until manually set to delivered
   let filteredAssignments = assignments?.filter(
-    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch" || a.status === "dispatched"
+    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch"
   ) || [];
 
   // Apply customer type filter
