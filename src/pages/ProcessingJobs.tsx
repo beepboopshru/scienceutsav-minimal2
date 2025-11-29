@@ -366,10 +366,13 @@ export default function ProcessingJobs() {
 
   const handleStartJob = async (jobId: Id<"processingJobs">) => {
     console.log("handleStartJob called with jobId:", jobId);
+    console.log("All jobs:", jobs);
+    console.log("Jobs length:", jobs?.length);
     try {
       // Validate materials before starting
       const job = jobs?.find(j => j._id === jobId);
       console.log("Found job:", job);
+      console.log("Job ID match check:", jobs?.map(j => ({ id: j._id, matches: j._id === jobId })));
       if (!job) {
         toast.error("Job not found");
         return;
