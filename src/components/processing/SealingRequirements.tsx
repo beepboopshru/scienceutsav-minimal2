@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 import { Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -19,64 +18,94 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
   const [activeTab, setActiveTab] = useState("summary");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
-  const inventoryByName = useMemo(() => {
-    if (!inventory) return new Map();
-    return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
+  // Get all sealed packet inventory items
+  const sealedPackets = useMemo(() => {
+    if (!inventory) return [];
+    return inventory.filter(item => item.type === "sealed_packet");
   }, [inventory]);
 
-  const calculateShortages = (assignment: any) => {
+  const calculateRequirements = (assignment: any) => {
     const kit = assignment.kit;
-    if (!kit || !inventory) return [];
+    if (!kit || !sealedPackets.length) return [];
 
     const requirements: any[] = [];
     const requiredQty = assignment.quantity;
 
-    const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
-      const invItem = inventoryByName.get(name.toLowerCase());
-      
-      // Debug: log if item not found
-      if (!invItem) {
-        console.log(`Material "${name}" not found in inventory`);
-        return;
+    // Check each sealed packet to see if it's needed for this kit
+    // This assumes sealed packets are named or linked to kits
+    // For now, we'll look for sealed packets that match materials in the kit
+    sealedPackets.forEach(sealedPacket => {
+      // Check if this sealed packet is mentioned in any kit materials
+      let qtyPerKit = 0;
+      let category = "Sealed Packet";
+
+      // Check in packingRequirements
+      if (kit.isStructured && kit.packingRequirements) {
+        try {
+          const structure = JSON.parse(kit.packingRequirements);
+          const checkContainers = (containers: any[]) => {
+            containers?.forEach((container: any) => {
+              container.materials?.forEach((material: any) => {
+                if (material.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
+                  qtyPerKit += material.quantity;
+                }
+              });
+            });
+          };
+          checkContainers(structure.pouches || []);
+          checkContainers(structure.packets || []);
+        } catch (e) {
+          console.error("Failed to parse packing requirements", e);
+        }
       }
 
-      // Only include sealed packets
-      if (invItem.type !== "sealed_packet") {
-        console.log(`Material "${name}" is type "${invItem.type}", not sealed_packet`);
-        return;
-      }
-
-      const required = qtyPerKit * requiredQty;
-      const available = invItem.quantity || 0;
-      const shortage = Math.max(0, required - available);
-      
-      requirements.push({
-        id: invItem._id,
-        name,
-        required,
-        available,
-        shortage,
-        unit,
-        category,
-        invItem,
-        assignmentDetails: {
-          clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
-          kitName: kit.name,
-          quantity: assignment.quantity,
-          productionMonth: assignment.productionMonth,
+      // Check in spareKits
+      kit.spareKits?.forEach((s: any) => {
+        if (s.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
+          qtyPerKit += s.quantity;
+          category = "Spare Kit";
         }
       });
-    };
 
-    if (kit.isStructured && kit.packingRequirements) {
-      const structure = parsePackingRequirements(kit.packingRequirements);
-      const totalMaterials = calculateTotalMaterials(structure);
-      totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
-    }
+      // Check in bulkMaterials
+      kit.bulkMaterials?.forEach((b: any) => {
+        if (b.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
+          qtyPerKit += b.quantity;
+          category = "Bulk Material";
+        }
+      });
 
-    kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit"));
-    kit.bulkMaterials?.forEach((b: any) => processMaterial(b.name, b.quantity, b.unit, "Bulk Material"));
-    kit.miscellaneous?.forEach((m: any) => processMaterial(m.name, m.quantity, m.unit, "Miscellaneous"));
+      // Check in miscellaneous
+      kit.miscellaneous?.forEach((m: any) => {
+        if (m.name.toLowerCase() === sealedPacket.name.toLowerCase()) {
+          qtyPerKit += m.quantity;
+          category = "Miscellaneous";
+        }
+      });
+
+      if (qtyPerKit > 0) {
+        const required = qtyPerKit * requiredQty;
+        const available = sealedPacket.quantity || 0;
+        const shortage = Math.max(0, required - available);
+        
+        requirements.push({
+          id: sealedPacket._id,
+          name: sealedPacket.name,
+          required,
+          available,
+          shortage,
+          unit: sealedPacket.unit,
+          category,
+          invItem: sealedPacket,
+          assignmentDetails: {
+            clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
+            kitName: kit.name,
+            quantity: assignment.quantity,
+            productionMonth: assignment.productionMonth,
+          }
+        });
+      }
+    });
 
     return requirements;
   };
@@ -85,7 +114,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     const materialMap = new Map<string, any>();
 
     assignmentList.forEach((assignment) => {
-      const reqs = calculateShortages(assignment);
+      const reqs = calculateRequirements(assignment);
       reqs.forEach((item: any) => {
         const key = item.name.toLowerCase();
         if (materialMap.has(key)) {
