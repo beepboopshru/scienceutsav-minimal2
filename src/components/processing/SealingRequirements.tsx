@@ -71,11 +71,16 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       });
     };
 
-    // Check main components (packingRequirements)
+    // Check sealed packets from kit structure (this is the primary source)
     if (kit.isStructured && kit.packingRequirements) {
       const structure = parsePackingRequirements(kit.packingRequirements);
-      const totalMaterials = calculateTotalMaterials(structure);
-      totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
+      
+      // Process sealed packets defined in the kit
+      structure.packets?.forEach((packet: any) => {
+        packet.materials?.forEach((material: any) => {
+          processMaterial(material.name, material.quantity, material.unit, "Sealed Packet");
+        });
+      });
     }
 
     // Check spare kits
