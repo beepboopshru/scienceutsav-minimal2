@@ -27,6 +27,11 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     return new Map(inventory.map(i => [normalize(i.name), i]));
   }, [inventory]);
 
+  const inventoryById = useMemo(() => {
+    if (!inventory) return new Map();
+    return new Map(inventory.map((i: any) => [i._id, i]));
+  }, [inventory]);
+
   const calculateRequirements = (assignment: any) => {
     const kit = assignment.kit;
     if (!kit || !kit.packingRequirements) return [];
@@ -64,21 +69,41 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           }
         }
 
-        // Calculate components based on Kit Definition (Source)
-        const components = packet.materials.map((mat: any) => {
-          // Also try to find material with normalized name
-          const matName = mat.name.trim();
-          let matInv = inventoryNormalized.get(normalize(matName));
-          
-          return {
-            name: mat.name,
-            quantityPerPacket: mat.quantity,
-            totalRequired: mat.quantity * requiredQty,
-            unit: mat.unit,
-            inventoryItem: matInv,
-            inventoryId: matInv?._id
-          };
-        });
+        // Calculate components based on Inventory BOM if available, otherwise Kit Definition
+        let components: any[] = [];
+
+        if (foundItem) {
+          // Use Inventory BOM
+          if (foundItem.components) {
+            components = foundItem.components.map((comp: any) => {
+              const rawMaterial = inventoryById.get(comp.rawMaterialId);
+              return {
+                name: rawMaterial ? rawMaterial.name : "Unknown Material",
+                quantityPerPacket: comp.quantityRequired,
+                totalRequired: comp.quantityRequired * requiredQty,
+                unit: comp.unit,
+                inventoryItem: rawMaterial,
+                inventoryId: comp.rawMaterialId
+              };
+            });
+          }
+        } else {
+          // Fallback to Kit Definition for missing items (so user knows what to expect/create)
+          components = packet.materials.map((mat: any) => {
+            // Also try to find material with normalized name
+            const matName = mat.name.trim();
+            let matInv = inventoryNormalized.get(normalize(matName));
+            
+            return {
+              name: mat.name,
+              quantityPerPacket: mat.quantity,
+              totalRequired: mat.quantity * requiredQty,
+              unit: mat.unit,
+              inventoryItem: matInv,
+              inventoryId: matInv?._id
+            };
+          });
+        }
 
         const required = requiredQty;
         

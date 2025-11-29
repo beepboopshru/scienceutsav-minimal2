@@ -114,6 +114,12 @@ export default function SealingJobs() {
       return;
     }
 
+    // Validate that the sealed packet has a BOM defined (components list is not empty)
+    if (components.length === 0) {
+      toast.error(`The sealed packet "${targetItem.name}" has no components defined in its Inventory BOM. Please edit the item in Inventory to add components.`);
+      return;
+    }
+
     // Validate components exist in inventory
     const missingComponents = components.filter(c => !c.inventoryId);
     if (missingComponents.length > 0) {
