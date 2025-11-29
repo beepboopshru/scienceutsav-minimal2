@@ -41,9 +41,6 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
       const invItem = inventoryByName.get(name.toLowerCase());
       
-      // Debug: Log what we're checking
-      console.log(`Checking material: ${name}, Found in inventory:`, invItem ? `Yes (type: ${invItem.type})` : 'No');
-      
       // Only process if this material is a sealed packet type
       if (!invItem || invItem.type !== "sealed_packet") {
         return;
@@ -71,6 +68,55 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       });
     };
 
+    // Process sealed packet from kit structure (always show, even if not in inventory)
+    const processPacket = (packetName: string, qtyPerKit: number) => {
+      const invItem = inventoryByName.get(packetName.toLowerCase());
+      
+      // Check if it's a sealed packet type in inventory
+      if (invItem && invItem.type === "sealed_packet") {
+        const required = qtyPerKit * requiredQty;
+        const available = invItem.quantity || 0;
+        const shortage = Math.max(0, required - available);
+        
+        requirements.push({
+          id: invItem._id,
+          name: invItem.name,
+          required,
+          available,
+          shortage,
+          unit: invItem.unit,
+          category: "Sealed Packet",
+          invItem,
+          assignmentDetails: {
+            clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
+            kitName: kit.name,
+            quantity: assignment.quantity,
+            productionMonth: assignment.productionMonth,
+          }
+        });
+      } else {
+        // Sealed packet not in inventory yet - still show it with 0 available
+        const required = qtyPerKit * requiredQty;
+        
+        requirements.push({
+          id: invItem?._id || `missing_${packetName}`,
+          name: packetName,
+          required,
+          available: 0,
+          shortage: required,
+          unit: "pcs",
+          category: "Sealed Packet",
+          invItem: invItem || null,
+          assignmentDetails: {
+            clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
+            kitName: kit.name,
+            quantity: assignment.quantity,
+            productionMonth: assignment.productionMonth,
+          }
+        });
+      }
+    };
+
     // Check sealed packets from kit structure (this is the primary source)
     if (kit.isStructured && kit.packingRequirements) {
       const structure = parsePackingRequirements(kit.packingRequirements);
@@ -78,8 +124,8 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       // Process sealed packets defined in the kit
       // The packet NAME itself is what needs to be sealed, not the materials inside
       structure.packets?.forEach((packet: any) => {
-        // Look for the packet name in inventory as a sealed_packet type
-        processMaterial(packet.name, 1, "pcs", "Sealed Packet");
+        // Always show sealed packets from kit structure, even if not in inventory
+        processPacket(packet.name, 1);
       });
     }
 

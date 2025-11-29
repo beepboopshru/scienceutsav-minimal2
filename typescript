@@ -1,34 +1,3 @@
-const handleCreateProcessingJob = async () => {
-  // ...
-};
-
-const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number) => {
-  const item = inventory.find(i => i._id === targetItemId);
-  if (!item) return;
-
-  // Calculate sources immediately
-  let sources = [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }];
-  if (item.components && item.components.length > 0) {
-    sources = item.components.map((component) => ({
-      sourceItemId: component.rawMaterialId,
-      sourceQuantity: component.quantityRequired * quantity,
-    }));
-  }
-
-  setProcessingForm({
-    name: `Process ${item.name}`,
-    sources: sources,
-    targets: [{ targetItemId, targetQuantity: quantity }],
-    processedBy: "",
-    processedByType: "in_house",
-    notes: "Auto-generated from requirements",
-  });
-  
-  setPreProcessingOpen(true);
-};
-
-return (
-  <Layout>
-    // ... new JSX
-  </Layout>
-);
+if (!invItem || invItem.type !== "sealed_packet") {
+  return;
+}
