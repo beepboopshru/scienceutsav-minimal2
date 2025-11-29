@@ -316,7 +316,7 @@ export default function Dispatch() {
     try {
       setIsUploadingDocument(true);
 
-      // Convert PNG to WebP and upload
+      // Convert PNG to WebP
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
@@ -335,24 +335,23 @@ export default function Dispatch() {
         canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
       });
 
-      // Upload to Convex storage
-      const uploadUrlResponse = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/storage/upload`, {
+      // Generate upload URL using Convex mutation
+      const uploadUrl = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/storage/generateUploadUrl`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
       });
 
-      if (!uploadUrlResponse.ok) {
-        throw new Error('Failed to get upload URL');
+      if (!uploadUrl.ok) {
+        throw new Error('Failed to generate upload URL');
       }
 
-      const uploadUrlData = await uploadUrlResponse.json();
-      const uploadUrl = uploadUrlData.url;
+      const { url } = await uploadUrl.json();
 
-      const uploadResponse = await fetch(uploadUrl, {
+      // Upload the file
+      const uploadResponse = await fetch(url, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'image/webp',
+        },
         body: webpBlob,
       });
 
@@ -360,8 +359,7 @@ export default function Dispatch() {
         throw new Error('Failed to upload document');
       }
 
-      const uploadResult = await uploadResponse.json();
-      const storageId = uploadResult.storageId;
+      const { storageId } = await uploadResponse.json();
 
       // Update assignment with e-way number and document
       await updateStatus({ 
