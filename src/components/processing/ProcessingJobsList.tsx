@@ -132,7 +132,10 @@ export function ProcessingJobsList({
                           <TableCell>
                             {canEdit && activeTab === "assigned" && (
                               <div className="flex gap-2">
-                                <Button size="sm" onClick={() => onStartJob(job._id)}>
+                                <Button size="sm" onClick={() => {
+                                  console.log("Start Job button clicked for job:", job._id);
+                                  onStartJob(job._id);
+                                }}>
                                   <Play className="mr-2 h-4 w-4" />
                                   Start Job
                                 </Button>

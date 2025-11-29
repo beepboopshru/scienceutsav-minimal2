@@ -365,9 +365,11 @@ export default function ProcessingJobs() {
   };
 
   const handleStartJob = async (jobId: Id<"processingJobs">) => {
+    console.log("handleStartJob called with jobId:", jobId);
     try {
       // Validate materials before starting
       const job = jobs?.find(j => j._id === jobId);
+      console.log("Found job:", job);
       if (!job) {
         toast.error("Job not found");
         return;
@@ -387,6 +389,7 @@ export default function ProcessingJobs() {
       }
 
       if (insufficientMaterials.length > 0) {
+        console.log("Insufficient materials:", insufficientMaterials);
         toast.error(
           `Cannot start job - Insufficient materials: ${insufficientMaterials.join(", ")}`,
           { duration: 5000 }
@@ -394,6 +397,7 @@ export default function ProcessingJobs() {
         return;
       }
 
+      console.log("Starting job with id:", jobId);
       await startJob({ id: jobId });
       toast.success("Job started and materials deducted from inventory");
     } catch (error: any) {
