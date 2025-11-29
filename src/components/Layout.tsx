@@ -321,11 +321,18 @@ export function Layout({ children }: LayoutProps) {
       icon: Warehouse,
       path: "/inventory",
       roles: [hasPermission("inventory", "view") ? "allowed" : ""],
-      subItems: [
-        { title: "Pre-Processing Jobs", path: "/inventory/processing-jobs" },
-        { title: "Bill Records", path: "/inventory/bill-records" },
-        { title: "Procurement", path: "/procurement" },
-      ],
+    },
+    {
+      title: "Procurement Jobs",
+      icon: TrendingUp,
+      path: "/procurement",
+      roles: [hasPermission("inventory", "view") ? "allowed" : ""],
+    },
+    {
+      title: "Pre-Processing Jobs",
+      icon: Package,
+      path: "/inventory/processing-jobs",
+      roles: [hasPermission("processingJobs", "view") ? "allowed" : ""],
     },
     {
       title: "Inventory Requests",
@@ -353,6 +360,12 @@ export function Layout({ children }: LayoutProps) {
       icon: FileText,
       path: "/bill-tracking",
       roles: [hasPermission("billTracking", "view") ? "allowed" : ""],
+    },
+    {
+      title: "Bill Records",
+      icon: FileText,
+      path: "/inventory/bill-records",
+      roles: [hasPermission("inventory", "view") ? "allowed" : ""],
     },
   ];
 
