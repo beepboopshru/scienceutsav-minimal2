@@ -1028,7 +1028,7 @@ export default function Inventory() {
                             )}
                             {item.name}
                           </div>
-                          {item.description && (
+                          {activeTab !== "finished" && item.description && (
                             <div className="text-sm text-muted-foreground mt-0.5">
                               {item.description}
                             </div>
