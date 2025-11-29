@@ -233,6 +233,18 @@ export default function AdminZone() {
                     <SelectItem value="role_changed">Role Changed</SelectItem>
                     <SelectItem value="user_deleted">User Deleted</SelectItem>
                     <SelectItem value="assignments_cleared">Assignments Cleared</SelectItem>
+                    <SelectItem value="all_assignments_cleared">All Assignments Cleared</SelectItem>
+                    <SelectItem value="assignment_archived">Assignment Archived</SelectItem>
+                    <SelectItem value="assignment_status_updated">Assignment Status Updated</SelectItem>
+                    <SelectItem value="bill_created">Bill Created</SelectItem>
+                    <SelectItem value="bill_status_updated">Bill Status Updated</SelectItem>
+                    <SelectItem value="vendor_bill_payment_status_updated">Vendor Bill Payment Updated</SelectItem>
+                    <SelectItem value="discrepancy_ticket_created">Discrepancy Ticket Created</SelectItem>
+                    <SelectItem value="discrepancy_ticket_updated">Discrepancy Ticket Updated</SelectItem>
+                    <SelectItem value="discrepancy_ticket_deleted">Discrepancy Ticket Deleted</SelectItem>
+                    <SelectItem value="auth_cleanup">Auth Cleanup</SelectItem>
+                    <SelectItem value="order_archived">Order Archived</SelectItem>
+                    <SelectItem value="order_status_updated">Order Status Updated</SelectItem>
                   </SelectContent>
                 </Select>
                 
