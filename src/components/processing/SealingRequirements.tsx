@@ -45,10 +45,16 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
         // 1. Try exact match of packet name
         let foundItem = inventoryNormalized.get(normalize(packetName));
 
-        // 2. Try "[Kit Name] [Packet Name]"
+        // 2. Try "[Kit Name] [Packet Name]" (without brackets)
         if (!foundItem) {
           const prefixedName = `${kit.name} ${packetName}`;
           foundItem = inventoryNormalized.get(normalize(prefixedName));
+        }
+
+        // 3. Try "[Kit Name] [Packet Name]" (with brackets)
+        if (!foundItem) {
+          const bracketedName = `[${kit.name}] ${packetName}`;
+          foundItem = inventoryNormalized.get(normalize(bracketedName));
         }
 
         // Calculate components based on Kit Definition (Source)
@@ -87,8 +93,8 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
             }
           });
         } else {
-          // Suggest the prefixed name if not found
-          const suggestedName = `${kit.name} ${packetName}`;
+          // Suggest the bracketed name if not found (preferred format)
+          const suggestedName = `[${kit.name}] ${packetName}`;
           requirements.push({
             id: `missing_${suggestedName}`,
             name: suggestedName,
