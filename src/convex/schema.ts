@@ -280,13 +280,14 @@ const schema = defineSchema(
           v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
         )
       ),
-      status: v.union(
-        v.literal("assigned"),
-        v.literal("in_progress"),
-        v.literal("transferred_to_dispatch"),
-        v.literal("dispatched"),
-        v.literal("delivered")
-      ),
+    status: v.union(
+      v.literal("assigned"),
+      v.literal("in_progress"),
+      v.literal("transferred_to_dispatch"),
+      v.literal("ready_for_dispatch"),
+      v.literal("dispatched"),
+      v.literal("delivered")
+    ),
       notes: v.optional(v.string()),
       dispatchedAt: v.optional(v.number()),
       deliveredAt: v.optional(v.number()),

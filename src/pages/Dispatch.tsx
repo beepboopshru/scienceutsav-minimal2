@@ -141,9 +141,9 @@ export default function Dispatch() {
     );
   }
 
-  // Filter assignments: show transferred_to_dispatch and dispatched
+  // Filter assignments: show transferred_to_dispatch, ready_for_dispatch, and dispatched
   let filteredAssignments = assignments?.filter(
-    (a) => a.status === "transferred_to_dispatch" || a.status === "dispatched"
+    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch" || a.status === "dispatched"
   ) || [];
 
   // Apply customer type filter
@@ -272,8 +272,8 @@ export default function Dispatch() {
   };
 
   const handleStatusChange = async (assignmentId: Id<"assignments">, newStatus: string) => {
-    if (newStatus === "dispatched") {
-      // Open checklist dialog
+    if (newStatus === "dispatched" || newStatus === "ready_for_dispatch") {
+      // Open checklist dialog for both dispatched and ready_for_dispatch
       setSelectedAssignmentForDispatch(assignmentId);
       setChecklistItems({
         kitCount: false,
@@ -336,20 +336,32 @@ export default function Dispatch() {
       });
 
       // Upload to Convex storage
-      const uploadUrl = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/storage/upload`, {
+      const uploadUrlResponse = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/storage/upload`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({}),
-      }).then(r => r.json()).then(d => d.url);
+      });
+
+      if (!uploadUrlResponse.ok) {
+        throw new Error('Failed to get upload URL');
+      }
+
+      const uploadUrlData = await uploadUrlResponse.json();
+      const uploadUrl = uploadUrlData.url;
 
       const uploadResponse = await fetch(uploadUrl, {
         method: 'POST',
         body: webpBlob,
       });
 
-      const { storageId } = await uploadResponse.json();
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload document');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      const storageId = uploadResult.storageId;
 
       // Update assignment with e-way number and document
       await updateStatus({ 
@@ -777,6 +789,12 @@ export default function Dispatch() {
                                     Transferred to Dispatch
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
+                                    onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
+                                    disabled={assignment.status === "ready_for_dispatch"}
+                                  >
+                                    Ready for Dispatch
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
                                     onClick={() => handleStatusChange(assignment._id, "dispatched")}
                                     disabled={assignment.status === "dispatched"}
                                   >
@@ -903,6 +921,12 @@ export default function Dispatch() {
                                         disabled={assignment.status === "transferred_to_dispatch"}
                                       >
                                         Transferred to Dispatch
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
+                                        disabled={assignment.status === "ready_for_dispatch"}
+                                      >
+                                        Ready for Dispatch
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         onClick={() => handleStatusChange(assignment._id, "dispatched")}
