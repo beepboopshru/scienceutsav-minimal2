@@ -39,6 +39,7 @@ import OrderRecords from "./pages/OrderRecords.tsx";
 import Themes from "./pages/Themes";
 import ClientForm from "./pages/ClientForm";
 import SealingJobs from "./pages/SealingJobs";
+import DeletionRequests from "./pages/DeletionRequests";
 import "./types/global.d.ts";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
@@ -91,6 +92,7 @@ function App() {
         <Route path="/view-kit-files" element={<ViewKitFiles />} />
         <Route path="/user-management" element={<UserManagement />} />
         <Route path="/admin-zone" element={<AdminZone />} />
+        <Route path="/deletion-requests" element={<DeletionRequests />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
         <Route path="/inventory/sealing-jobs" element={<SealingJobs />} />

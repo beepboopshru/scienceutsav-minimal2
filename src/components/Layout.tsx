@@ -427,6 +427,12 @@ export function Layout({ children }: LayoutProps) {
       path: "/user-management",
       roles: [hasPermission("userManagement", "view") ? "allowed" : ""],
     },
+    {
+      title: "Deletion Requests",
+      icon: Trash2,
+      path: "/deletion-requests",
+      roles: [user?.role === "admin" ? "allowed" : ""],
+    },
   ];
 
   const settingsSection: NavItem[] = [

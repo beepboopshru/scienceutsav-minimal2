@@ -732,6 +732,26 @@ const schema = defineSchema(
       .index("by_status", ["status"])
       .index("by_priority", ["priority"])
       .index("by_created_by", ["createdBy"]),
+
+    // Deletion requests for admin approval
+    deletionRequests: defineTable({
+      entityType: v.string(),
+      entityId: v.string(),
+      entityName: v.string(),
+      reason: v.optional(v.string()),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("rejected")
+      ),
+      requestedBy: v.id("users"),
+      reviewedBy: v.optional(v.id("users")),
+      reviewedAt: v.optional(v.number()),
+      rejectionReason: v.optional(v.string()),
+    })
+      .index("by_status", ["status"])
+      .index("by_requested_by", ["requestedBy"])
+      .index("by_entity_type", ["entityType"]),
   },
   {
     schemaValidation: false,
