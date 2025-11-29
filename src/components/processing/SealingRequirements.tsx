@@ -73,22 +73,24 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       // Try multiple lookup strategies to find the sealed packet in inventory
       let foundItem = inventoryByName.get(packetName.toLowerCase());
       
-      // If not found, try exact match
+      // If not found, try exact match (any type)
       if (!foundItem) {
-        foundItem = inventory.find(i => 
-          i.name === packetName && i.type === "sealed_packet"
-        );
+        foundItem = inventory.find(i => i.name === packetName);
       }
       
       // If still not found, try case-insensitive search across all inventory
       if (!foundItem) {
-        foundItem = inventory.find(i => 
-          i.name.toLowerCase() === packetName.toLowerCase() && i.type === "sealed_packet"
-        );
+        foundItem = inventory.find(i => i.name.toLowerCase() === packetName.toLowerCase());
       }
       
-      // Check if it's a sealed packet type in inventory
-      if (foundItem && foundItem.type === "sealed_packet") {
+      // Debug logging
+      console.log(`=== DEBUG: processPacket for "${packetName}" ===`);
+      console.log("foundItem:", foundItem);
+      console.log("foundItem type:", foundItem?.type);
+      console.log("foundItem has components:", foundItem?.components?.length);
+      
+      // Check if we found the item in inventory (regardless of type initially)
+      if (foundItem) {
         const required = qtyPerKit * requiredQty;
         const available = foundItem.quantity || 0;
         const shortage = Math.max(0, required - available);
@@ -324,13 +326,19 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                     <Button 
                       size="sm" 
                       onClick={() => {
-                        // Only pass packetInfo if the item doesn't have components in inventory
-                        const shouldPassPacketInfo = !hasComponents && item.packetMaterials && item.packetMaterials.length > 0;
-                        onStartJob(
-                          item.id, 
-                          item.shortage,
-                          shouldPassPacketInfo ? { name: item.name, materials: item.packetMaterials } : undefined
-                        );
+                        // Always pass packetInfo with materials as fallback
+                        const packetInfo = (item.packetMaterials && item.packetMaterials.length > 0) 
+                          ? { name: item.name, materials: item.packetMaterials }
+                          : undefined;
+                        
+                        console.log("=== DEBUG: Start Job Button Click ===");
+                        console.log("item.id:", item.id);
+                        console.log("item.name:", item.name);
+                        console.log("hasComponents:", hasComponents);
+                        console.log("item.packetMaterials:", item.packetMaterials);
+                        console.log("packetInfo:", packetInfo);
+                        
+                        onStartJob(item.id, item.shortage, packetInfo);
                       }}
                     >
                       <Package className="mr-2 h-4 w-4" />
