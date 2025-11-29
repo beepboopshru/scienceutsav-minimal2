@@ -106,10 +106,19 @@ export default function SealingJobs() {
 
     try {
       const targetItem = inventory.find(i => i._id === selectedTarget.id);
+      
+      // Debug logging
+      console.log("=== DEBUG: handleCreateJob ===");
+      console.log("selectedTarget.id:", selectedTarget.id);
+      console.log("targetItem found:", targetItem);
+      console.log("targetItem?.components:", targetItem?.components);
+      console.log("packetInfo:", packetInfo);
+      
       let sources: Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }> = [];
 
       // If target item exists in inventory and has components (BOM), use those
       if (targetItem && targetItem.components && targetItem.components.length > 0) {
+        console.log("Using target item components (BOM)");
         sources = targetItem.components.map(comp => ({
           sourceItemId: comp.rawMaterialId,
           sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
@@ -117,6 +126,7 @@ export default function SealingJobs() {
       } 
       // Otherwise, use packet materials from kit structure (for packets not yet in inventory)
       else if (packetInfo && packetInfo.materials && packetInfo.materials.length > 0) {
+        console.log("Using packet materials from kit structure");
         // Map packet materials to inventory items
         sources = packetInfo.materials
           .map(material => {
@@ -137,6 +147,11 @@ export default function SealingJobs() {
           return;
         }
       } else {
+        console.log("ERROR: No components or packet materials found");
+        console.log("targetItem exists:", !!targetItem);
+        console.log("targetItem has components:", targetItem?.components?.length);
+        console.log("packetInfo exists:", !!packetInfo);
+        console.log("packetInfo has materials:", packetInfo?.materials?.length);
         toast.error("Target item must have components defined or packet materials specified");
         return;
       }
