@@ -79,13 +79,31 @@ export const startJob = mutation({
       throw new Error("Can only start jobs with 'assigned' status");
     }
 
+    // Validate all source materials have sufficient stock BEFORE deducting
+    const insufficientMaterials: string[] = [];
+    for (const source of job.sources) {
+      const sourceItem = await ctx.db.get(source.sourceItemId);
+      if (!sourceItem) {
+        throw new Error(`Source material not found: ${source.sourceItemId}`);
+      }
+      if (sourceItem.quantity < source.sourceQuantity) {
+        insufficientMaterials.push(
+          `${sourceItem.name}: Required ${source.sourceQuantity} ${sourceItem.unit}, Available ${sourceItem.quantity} ${sourceItem.unit}`
+        );
+      }
+    }
+
+    // If any materials are insufficient, throw a detailed error
+    if (insufficientMaterials.length > 0) {
+      throw new Error(
+        `Insufficient stock for the following materials:\n${insufficientMaterials.join("\n")}`
+      );
+    }
+
     // Deduct source materials when starting the job
     for (const source of job.sources) {
       const sourceItem = await ctx.db.get(source.sourceItemId);
       if (!sourceItem) throw new Error(`Source item not found: ${source.sourceItemId}`);
-      if (sourceItem.quantity < source.sourceQuantity) {
-        throw new Error(`Insufficient quantity for ${sourceItem.name}`);
-      }
 
       await ctx.db.patch(source.sourceItemId, {
         quantity: sourceItem.quantity - source.sourceQuantity,

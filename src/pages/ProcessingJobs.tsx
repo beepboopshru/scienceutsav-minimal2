@@ -366,6 +366,34 @@ export default function ProcessingJobs() {
 
   const handleStartJob = async (jobId: string) => {
     try {
+      // Validate materials before starting
+      const job = jobs?.find(j => j._id === jobId);
+      if (!job) {
+        toast.error("Job not found");
+        return;
+      }
+
+      // Check if all source materials have sufficient stock
+      const insufficientMaterials: string[] = [];
+      for (const source of job.sources) {
+        const sourceItem = inventory?.find(i => i._id === source.sourceItemId);
+        if (!sourceItem) {
+          insufficientMaterials.push(`Material not found: ${source.sourceItemId}`);
+        } else if (sourceItem.quantity < source.sourceQuantity) {
+          insufficientMaterials.push(
+            `${sourceItem.name}: Need ${source.sourceQuantity} ${sourceItem.unit}, Have ${sourceItem.quantity} ${sourceItem.unit}`
+          );
+        }
+      }
+
+      if (insufficientMaterials.length > 0) {
+        toast.error(
+          `Cannot start job - Insufficient materials:\n${insufficientMaterials.join("\n")}`,
+          { duration: 5000 }
+        );
+        return;
+      }
+
       await startJob({ id: jobId as any });
       toast.success("Job started and materials deducted from inventory");
     } catch (error: any) {
