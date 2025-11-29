@@ -49,6 +49,7 @@ export default function SealingJobs() {
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
   const [createJobOpen, setCreateJobOpen] = useState(false);
   const [selectedTarget, setSelectedTarget] = useState<{ id: Id<"inventory">; quantity: number } | null>(null);
+  const [selectedComponents, setSelectedComponents] = useState<any[]>([]);
   
   const [jobName, setJobName] = useState("");
   const [processedBy, setProcessedBy] = useState("");
@@ -88,11 +89,11 @@ export default function SealingJobs() {
     );
   }
 
-  const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number) => {
+  const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => {
     // Check if target is a placeholder (missing from inventory)
     if (typeof targetItemId === 'string' && targetItemId.startsWith('missing_')) {
       const packetName = targetItemId.replace('missing_', '');
-      toast.error(`Please create the sealed packet "${packetName}" in inventory first with its BOM components`);
+      toast.error(`Please create the sealed packet "${packetName}" in inventory first.`);
       return;
     }
 
@@ -102,13 +103,15 @@ export default function SealingJobs() {
       return;
     }
 
-    // Check if sealed packet has BOM components defined
-    if (!targetItem.components || !Array.isArray(targetItem.components) || targetItem.components.length === 0) {
-      toast.error(`Sealed packet "${targetItem.name}" must have BOM components defined in inventory before creating a sealing job`);
+    // Validate components exist in inventory
+    const missingComponents = components.filter(c => !c.inventoryId);
+    if (missingComponents.length > 0) {
+      toast.error(`Some components for this packet are missing from inventory: ${missingComponents.map(c => c.name).join(", ")}`);
       return;
     }
 
     setSelectedTarget({ id: targetItemId as Id<"inventory">, quantity });
+    setSelectedComponents(components);
     const packetName = targetItem.name;
     setJobName(`Seal ${packetName} - ${quantity} units`);
     setCreateJobOpen(true);
@@ -127,10 +130,10 @@ export default function SealingJobs() {
         return;
       }
 
-      // Use inventory BOM to calculate sources
-      const sources = targetItem.components!.map(comp => ({
-        sourceItemId: comp.rawMaterialId,
-        sourceQuantity: comp.quantityRequired * selectedTarget.quantity,
+      // Use the components passed from the requirement (Kit Definition)
+      const sources = selectedComponents.map(comp => ({
+        sourceItemId: comp.inventoryId,
+        sourceQuantity: comp.totalRequired, // This is the total required for the job quantity
       }));
 
       // Validate all source materials have sufficient stock
@@ -172,6 +175,7 @@ export default function SealingJobs() {
     setProcessedByType("in_house");
     setNotes("");
     setSelectedTarget(null);
+    setSelectedComponents([]);
   };
 
   const handleStartJob = async (id: Id<"processingJobs">) => {
@@ -270,7 +274,7 @@ export default function SealingJobs() {
               <DialogHeader>
                 <DialogTitle>Create Sealing Job</DialogTitle>
                 <DialogDescription>
-                  Create a new job to seal packets. Source materials will be auto-calculated based on the packet's BOM.
+                  Create a new job to seal packets. Source materials are calculated based on the Kit's packing requirements.
                 </DialogDescription>
               </DialogHeader>
 
@@ -345,6 +349,21 @@ export default function SealingJobs() {
                     rows={3}
                   />
                 </div>
+                
+                {/* Show components summary */}
+                {selectedComponents.length > 0 && (
+                  <div className="bg-muted/50 p-3 rounded-md text-sm">
+                    <p className="font-medium mb-2">Required Components:</p>
+                    <ul className="space-y-1">
+                      {selectedComponents.map((comp, idx) => (
+                        <li key={idx} className="flex justify-between">
+                          <span>{comp.name}</span>
+                          <span>{comp.totalRequired} {comp.unit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
 
               <DialogFooter>

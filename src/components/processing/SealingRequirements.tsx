@@ -7,23 +7,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
-import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
+import { parsePackingRequirements } from "@/lib/kitPacking";
 
 interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
-  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number) => void;
+  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
 }
 
 export function SealingRequirements({ assignments, inventory, onStartJob }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-
-  // Get all sealed packet inventory items
-  const sealedPackets = useMemo(() => {
-    if (!inventory) return [];
-    return inventory.filter(item => item.type === "sealed_packet");
-  }, [inventory]);
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
@@ -32,114 +26,81 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
 
   const calculateRequirements = (assignment: any) => {
     const kit = assignment.kit;
-    if (!kit || !sealedPackets.length) return [];
+    if (!kit || !kit.packingRequirements) return [];
 
     const requirements: any[] = [];
     const requiredQty = assignment.quantity;
 
-    // Process a material and check if it's a sealed packet
-    const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
-      const invItem = inventoryByName.get(name.toLowerCase());
-      
-      // Only process if this material is a sealed packet type
-      if (!invItem || invItem.type !== "sealed_packet") {
-        return;
-      }
+    // Parse kit packing requirements to get packets and their materials
+    const structure = parsePackingRequirements(kit.packingRequirements);
+    
+    if (structure.packets) {
+      structure.packets.forEach((packet: any) => {
+        const packetName = packet.name;
+        
+        // Find the sealed packet in inventory (Target)
+        let foundItem = inventoryByName.get(packetName.toLowerCase());
+        if (!foundItem) {
+          foundItem = inventory.find(i => i.name.toLowerCase() === packetName.toLowerCase());
+        }
 
-      const required = qtyPerKit * requiredQty;
-      const available = invItem.quantity || 0;
-      const shortage = Math.max(0, required - available);
-      
-      requirements.push({
-        id: invItem._id,
-        name: invItem.name,
-        required,
-        available,
-        shortage,
-        unit: invItem.unit,
-        category,
-        invItem,
-        assignmentDetails: {
-          clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
-          kitName: kit.name,
-          quantity: assignment.quantity,
-          productionMonth: assignment.productionMonth,
+        // Calculate components based on Kit Definition (Source)
+        const components = packet.materials.map((mat: any) => {
+          const matInv = inventoryByName.get(mat.name.toLowerCase());
+          return {
+            name: mat.name,
+            quantityPerPacket: mat.quantity,
+            totalRequired: mat.quantity * requiredQty,
+            unit: mat.unit,
+            inventoryItem: matInv,
+            inventoryId: matInv?._id
+          };
+        });
+
+        const required = requiredQty; // 1 packet per kit usually, or defined in structure? 
+        // The structure.packets is a list of containers. If there are multiple packets of same name, they appear multiple times or we assume 1?
+        // Usually structure.packets is a list of unique containers. 
+        // Assuming 1 packet of this type per kit for now based on previous logic, 
+        // but if the structure has quantity, we should use it. 
+        // The Container interface doesn't have quantity, it implies 1 container.
+        
+        if (foundItem) {
+          requirements.push({
+            id: foundItem._id,
+            name: foundItem.name,
+            required,
+            available: foundItem.quantity || 0,
+            unit: foundItem.unit,
+            category: "Sealed Packet",
+            invItem: foundItem,
+            components: components, // Store the specific components for this requirement
+            assignmentDetails: {
+              clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
+              kitName: kit.name,
+              quantity: assignment.quantity,
+              productionMonth: assignment.productionMonth,
+            }
+          });
+        } else {
+          requirements.push({
+            id: `missing_${packetName}`,
+            name: packetName,
+            required,
+            available: 0,
+            unit: "pcs",
+            category: "Sealed Packet",
+            invItem: null,
+            components: components,
+            assignmentDetails: {
+              clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
+              kitName: kit.name,
+              quantity: assignment.quantity,
+              productionMonth: assignment.productionMonth,
+            }
+          });
         }
       });
-    };
-
-    // Process sealed packet from kit structure (always show, even if not in inventory)
-    const processPacket = (packetName: string, qtyPerKit: number, packetMaterials?: any[]) => {
-      // Look up sealed packet in inventory (case-insensitive)
-      let foundItem = inventoryByName.get(packetName.toLowerCase());
-      
-      // If not found by map, try exact search across all inventory
-      if (!foundItem) {
-        foundItem = inventory.find(i => i.name.toLowerCase() === packetName.toLowerCase());
-      }
-      
-      const required = qtyPerKit * requiredQty;
-      
-      if (foundItem) {
-        // Sealed packet exists in inventory
-        const available = foundItem.quantity || 0;
-        const shortage = Math.max(0, required - available);
-        
-        requirements.push({
-          id: foundItem._id,
-          name: foundItem.name,
-          required,
-          available,
-          shortage,
-          unit: foundItem.unit,
-          category: "Sealed Packet",
-          invItem: foundItem,
-          assignmentDetails: {
-            clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
-            kitName: kit.name,
-            quantity: assignment.quantity,
-            productionMonth: assignment.productionMonth,
-          }
-        });
-      } else {
-        // Sealed packet not in inventory yet - show with 0 available
-        requirements.push({
-          id: `missing_${packetName}`,
-          name: packetName,
-          required,
-          available: 0,
-          shortage: required,
-          unit: "pcs",
-          category: "Sealed Packet",
-          invItem: null,
-          assignmentDetails: {
-            clientName: assignment.client?.name || assignment.client?.buyerName || "Unknown",
-            kitName: kit.name,
-            quantity: assignment.quantity,
-            productionMonth: assignment.productionMonth,
-          }
-        });
-      }
-    };
-
-    // Check sealed packets from kit structure (this is the primary source)
-    if (kit.isStructured && kit.packingRequirements) {
-      const structure = parsePackingRequirements(kit.packingRequirements);
-      
-      // Process sealed packets defined in the kit
-      structure.packets?.forEach((packet: any) => {
-        processPacket(packet.name, 1, packet.materials);
-      });
     }
-
-    // Check spare kits
-    kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit"));
-
-    // Check bulk materials
-    kit.bulkMaterials?.forEach((b: any) => processMaterial(b.name, b.quantity, b.unit, "Bulk Material"));
-
-    // Check miscellaneous
-    kit.miscellaneous?.forEach((m: any) => processMaterial(m.name, m.quantity, m.unit, "Miscellaneous"));
 
     return requirements;
   };
@@ -156,6 +117,17 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
           existing.required += item.required;
           existing.kits.add(assignment.kit?.name || "Unknown");
           existing.assignments.push(item.assignmentDetails);
+          
+          // Aggregate components
+          item.components.forEach((comp: any) => {
+            const existingComp = existing.components.find((c: any) => c.name.toLowerCase() === comp.name.toLowerCase());
+            if (existingComp) {
+              existingComp.totalRequired += comp.totalRequired;
+            } else {
+              existing.components.push({ ...comp });
+            }
+          });
+          
         } else {
           materialMap.set(key, {
             id: item.id,
@@ -167,6 +139,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
             kits: new Set([assignment.kit?.name || "Unknown"]),
             invItem: item.invItem,
             assignments: [item.assignmentDetails],
+            components: item.components.map((c: any) => ({ ...c })), // Deep copy
           });
         }
       });
@@ -263,7 +236,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       <TableBody>
         {items.map((item, idx) => {
           const rowKey = `${item.id}_${idx}`;
-          const hasComponents = item.invItem?.components && item.invItem.components.length > 0;
+          const hasComponents = item.components && item.components.length > 0;
           const hasDeficit = item.shortage > 0;
           const hasSurplus = item.surplus > 0;
           
@@ -307,7 +280,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                   {hasDeficit && (
                     <Button 
                       size="sm" 
-                      onClick={() => onStartJob(item.id, item.shortage)}
+                      onClick={() => onStartJob(item.id, item.shortage, item.components)}
                     >
                       <Package className="mr-2 h-4 w-4" />
                       Start Job
@@ -322,23 +295,18 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
                       {/* Component Breakdown */}
                       {hasComponents && (
                         <div className="space-y-2">
-                          <p className="text-sm font-medium">Raw Materials Required (per packet):</p>
+                          <p className="text-sm font-medium">Raw Materials Required (from Kit Definition):</p>
                           <div className="grid gap-2">
-                            {item.invItem.components.map((comp: any, compIdx: number) => {
-                              const rawMaterial = inventory.find(inv => inv._id === comp.rawMaterialId);
-                              const totalNeeded = comp.quantityRequired * item.shortage;
-                              const stockAvailable = rawMaterial?.quantity || 0;
-                              const hasEnoughStock = stockAvailable >= totalNeeded;
+                            {item.components.map((comp: any, compIdx: number) => {
+                              const stockAvailable = comp.inventoryItem?.quantity || 0;
+                              const hasEnoughStock = stockAvailable >= comp.totalRequired;
                               
                               return (
                                 <div key={compIdx} className="flex items-center justify-between text-sm border rounded p-2">
-                                  <span className="font-medium">{rawMaterial?.name || "Unknown"}</span>
+                                  <span className="font-medium">{comp.name}</span>
                                   <div className="flex items-center gap-4">
                                     <span className="text-muted-foreground">
-                                      Per Packet: {comp.quantityRequired} {comp.unit}
-                                    </span>
-                                    <span className="text-muted-foreground">
-                                      Total Needed: {totalNeeded} {comp.unit}
+                                      Total Needed: {comp.totalRequired} {comp.unit}
                                     </span>
                                     <Badge variant={hasEnoughStock ? "secondary" : "destructive"}>
                                       Stock: {stockAvailable} {comp.unit}
@@ -399,7 +367,7 @@ export function SealingRequirements({ assignments, inventory, onStartJob }: Seal
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Sealed Packet Requirements</h2>
         <p className="text-sm text-muted-foreground">
-          Auto-populated based on current B2B and B2C assignments
+          Auto-populated based on Kit Assignments and their Packing Requirements
         </p>
       </div>
 
