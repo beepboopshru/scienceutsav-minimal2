@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { exportProcurementPDF } from "@/lib/procurementExport";
 import { aggregateMaterials, type MaterialShortage } from "@/lib/procurementUtils";
@@ -30,15 +32,21 @@ export default function Procurement() {
   const inventory = useQuery(api.inventory.list);
   const vendors = useQuery(api.vendors.list);
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
+  const procurementJobs = useQuery(api.procurementJobs.list);
 
   // Mutations
   const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
+  const markJobComplete = useMutation(api.procurementJobs.markAsComplete);
 
   // Local state
   const [activeTab, setActiveTab] = useState("summary");
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [purchasingQuantities, setPurchasingQuantities] = useState<Map<string, number>>(new Map());
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
   // Load saved purchasing quantities
   useEffect(() => {
@@ -61,6 +69,17 @@ export default function Procurement() {
     if (!inventory) return new Map();
     return new Map(inventory.map((i) => [i._id, i]));
   }, [inventory]);
+
+  // Filter procurement jobs
+  const filteredProcurementJobs = useMemo(() => {
+    if (!procurementJobs) return [];
+    
+    return procurementJobs.filter((job: any) => {
+      if (statusFilter !== "all" && job.status !== statusFilter) return false;
+      if (priorityFilter !== "all" && job.priority !== priorityFilter) return false;
+      return true;
+    });
+  }, [procurementJobs, statusFilter, priorityFilter]);
 
   // Generate aggregated data views
   const materialSummary = useMemo(() => {
@@ -181,6 +200,17 @@ export default function Procurement() {
       setIsRefreshing(false);
       toast.success("Requirements recalculated");
     }, 500);
+  };
+
+  const handleMarkComplete = async (jobId: string) => {
+    try {
+      await markJobComplete({ id: jobId as any });
+      toast.success("Procurement job marked as complete");
+    } catch (error) {
+      toast.error("Failed to mark procurement as complete", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   };
 
   const handleExport = () => {
@@ -380,6 +410,114 @@ export default function Procurement() {
     </div>
   );
 
+  const ProcurementJobsSection = () => (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Procurement Jobs</CardTitle>
+        <CardDescription>View and manage procurement requests</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1">
+            <Label className="text-xs">Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Label className="text-xs">Priority</Label>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="border rounded-md overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Job ID</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Materials</TableHead>
+                <TableHead>Assignments</TableHead>
+                <TableHead>Created By</TableHead>
+                <TableHead>Created On</TableHead>
+                {canEdit && <TableHead>Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredProcurementJobs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground">
+                    No procurement jobs found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProcurementJobs.map((job: any) => (
+                  <TableRow key={job._id}>
+                    <TableCell className="font-medium">{job.jobId}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        job.status === "completed" ? "default" :
+                        job.status === "in_progress" ? "secondary" : "outline"
+                      }>
+                        {job.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        job.priority === "high" ? "destructive" :
+                        job.priority === "medium" ? "default" : "secondary"
+                      }>
+                        {job.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{job.materialShortages?.length || 0}</TableCell>
+                    <TableCell>{job.assignmentIds?.length || 0}</TableCell>
+                    <TableCell className="text-sm">{job.creatorName}</TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(job._creationTime).toLocaleDateString()}
+                    </TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        {job.status !== "completed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMarkComplete(job._id)}
+                          >
+                            Mark Complete
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <Layout>
       <div className="p-8 h-full flex flex-col">
@@ -403,6 +541,8 @@ export default function Procurement() {
             )}
           </div>
         </div>
+
+        <ProcurementJobsSection />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">

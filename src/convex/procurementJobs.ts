@@ -87,6 +87,35 @@ export const create = mutation({
   },
 });
 
+export const markAsComplete = mutation({
+  args: {
+    id: v.id("procurementJobs"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "edit");
+
+    const job = await ctx.db.get(args.id);
+    if (!job) throw new Error("Procurement job not found");
+
+    // Update job status to completed
+    await ctx.db.patch(args.id, {
+      status: "completed",
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLogs", {
+      userId: userId,
+      actionType: "procurement_completed",
+      details: `Marked procurement job ${job.jobId} as complete`,
+      performedBy: userId,
+    });
+
+    return { success: true };
+  },
+});
+
 export const updateStatus = mutation({
   args: {
     id: v.id("procurementJobs"),
