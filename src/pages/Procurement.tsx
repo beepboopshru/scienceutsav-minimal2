@@ -56,12 +56,12 @@ export default function Procurement() {
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
-  }, [inventory, lastRefresh]);
+  }, [inventory]);
 
   const inventoryById = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i._id, i]));
-  }, [inventory, lastRefresh]);
+  }, [inventory]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
