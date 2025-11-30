@@ -1052,7 +1052,7 @@ export default function Dispatch() {
                             )}
                           </td>
                         )}
-                        <td colSpan={canEdit ? 8 : 8} className="p-4">
+                        <td colSpan={canEdit ? 8 : 9} className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div>
