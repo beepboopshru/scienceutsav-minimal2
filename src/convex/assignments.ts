@@ -110,6 +110,7 @@ export const updateStatus = mutation({
     ewayDocumentId: v.optional(v.id("_storage")),
     dispatchNumber: v.optional(v.string()),
     dispatchDocumentId: v.optional(v.id("_storage")),
+    trackingLink: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -159,6 +160,10 @@ export const updateStatus = mutation({
       updates.dispatchDocumentId = args.dispatchDocumentId;
     }
 
+    if (args.trackingLink) {
+      updates.trackingLink = args.trackingLink;
+    }
+
     await ctx.db.patch(args.id, updates);
 
     // Only move to order history when status is delivered
@@ -194,6 +199,10 @@ export const updateStatus = mutation({
 
       if (updates.dispatchDocumentId || (assignment as any).dispatchDocumentId) {
         orderHistoryData.dispatchDocumentId = updates.dispatchDocumentId || (assignment as any).dispatchDocumentId;
+      }
+
+      if (updates.trackingLink || (assignment as any).trackingLink) {
+        orderHistoryData.trackingLink = updates.trackingLink || (assignment as any).trackingLink;
       }
 
       await ctx.db.insert("orderHistory", orderHistoryData);

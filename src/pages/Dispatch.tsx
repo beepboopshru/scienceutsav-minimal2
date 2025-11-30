@@ -108,6 +108,7 @@ export default function Dispatch() {
   const [ewayDocument, setEwayDocument] = useState<File | null>(null);
   const [dispatchNumber, setDispatchNumber] = useState("");
   const [dispatchDocument, setDispatchDocument] = useState<File | null>(null);
+  const [trackingLink, setTrackingLink] = useState("");
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
   // Advanced filters
@@ -261,6 +262,7 @@ export default function Dispatch() {
       ewayDocumentId: assignment.ewayDocumentId,
       dispatchNumber: assignment.dispatchNumber,
       dispatchDocumentId: assignment.dispatchDocumentId,
+      trackingLink: assignment.trackingLink,
       assignmentId: assignment._id,
     };
     setSelectedClientForView(clientWithDispatchInfo);
@@ -412,6 +414,7 @@ export default function Dispatch() {
         ewayDocumentId: ewayStorageId,
         dispatchNumber: dispatchNumber.trim(),
         dispatchDocumentId: dispatchStorageId,
+        trackingLink: trackingLink.trim() || undefined,
       });
 
       toast.success("Status updated to Ready for Dispatch");
@@ -421,6 +424,7 @@ export default function Dispatch() {
       setEwayDocument(null);
       setDispatchNumber("");
       setDispatchDocument(null);
+      setTrackingLink("");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to update status");
     } finally {
@@ -1058,6 +1062,20 @@ export default function Dispatch() {
                           </Button>
                         </div>
                       )}
+                      {(selectedClientForView as any).trackingLink && (
+                        <div className="space-y-1">
+                          <span className="text-sm font-medium text-muted-foreground">Tracking Link</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open((selectedClientForView as any).trackingLink, '_blank')}
+                            className="mt-1"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Track Shipment
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     {!(selectedClientForView as any).ewayNumber && 
                      !(selectedClientForView as any).dispatchNumber && 
@@ -1266,6 +1284,17 @@ export default function Dispatch() {
                   </p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="trackingLink">Tracking Link (Optional)</Label>
+                <Input
+                  id="trackingLink"
+                  type="url"
+                  placeholder="Enter tracking URL..."
+                  value={trackingLink}
+                  onChange={(e) => setTrackingLink(e.target.value)}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => {
@@ -1274,6 +1303,7 @@ export default function Dispatch() {
                 setEwayDocument(null);
                 setDispatchNumber("");
                 setDispatchDocument(null);
+                setTrackingLink("");
               }}>
                 Cancel
               </Button>
