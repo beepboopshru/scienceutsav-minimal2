@@ -15,6 +15,7 @@ interface Material {
   programs?: string[];
   purchasingQty?: number;
   vendorPrice?: number | null;
+  vendorName?: string;
 }
 
 interface GroupedData {
@@ -79,6 +80,7 @@ export const exportProcurementPDF = (
         
         return [
           item.name,
+          item.vendorName || "-",
           item.category,
           `${item.required} ${item.unit}`,
           `${item.available} ${item.unit}`,
@@ -91,12 +93,12 @@ export const exportProcurementPDF = (
 
       autoTable(doc, {
         startY: finalY,
-        head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Est. Cost", "Used In"]],
+        head: [["Material", "Vendor", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Est. Cost", "Used In"]],
         body: tableData,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [71, 85, 105] },
         didParseCell: (data) => {
-          if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
+          if (data.column.index === 5 && data.cell.text[0] !== "In Stock") {
             data.cell.styles.textColor = [220, 38, 38];
             data.cell.styles.fontStyle = "bold";
           }
@@ -146,6 +148,7 @@ export const exportProcurementPDF = (
             
             return [
               item.name,
+              item.vendorName || "-",
               item.category,
               `${item.required} ${item.unit}`,
               `${item.available} ${item.unit}`,
@@ -157,18 +160,18 @@ export const exportProcurementPDF = (
 
           autoTable(doc, {
             startY: finalY,
-            head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Est. Cost"]],
+            head: [["Material", "Vendor", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Est. Cost"]],
             body: tableData,
             styles: { fontSize: 8 },
             headStyles: { fillColor: [71, 85, 105] },
             didParseCell: (data) => {
-              // Shortage column (index 4) - red and bold if not "In Stock"
-              if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
+              // Shortage column (index 5) - red and bold if not "In Stock"
+              if (data.column.index === 5 && data.cell.text[0] !== "In Stock") {
                 data.cell.styles.textColor = [220, 38, 38];
                 data.cell.styles.fontStyle = "bold";
               }
-              // Purchasing Qty column (index 5) - bold
-              if (data.column.index === 5) {
+              // Purchasing Qty column (index 6) - bold
+              if (data.column.index === 6) {
                 data.cell.styles.fontStyle = "bold";
               }
             },

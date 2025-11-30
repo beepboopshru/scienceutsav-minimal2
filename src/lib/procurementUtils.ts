@@ -13,6 +13,7 @@ export interface MaterialShortage {
   programs: string[];
   vendorPrice: number | null;
   inventoryId?: string;
+  vendorName?: string;
 }
 
 export interface Assignment {
@@ -68,6 +69,26 @@ export function getVendorPrice(
     }
   }
   return null;
+}
+
+/**
+ * Get vendor name for an inventory item
+ */
+export function getVendorName(
+  inventoryId: string | undefined,
+  vendors: Vendor[]
+): string | undefined {
+  if (!inventoryId || !vendors) return undefined;
+
+  for (const vendor of vendors) {
+    if (vendor.itemPrices) {
+      const priceEntry = vendor.itemPrices.find((p) => p.itemId === inventoryId);
+      if (priceEntry) {
+        return vendor.name;
+      }
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -224,12 +245,14 @@ export function aggregateMaterials(
       } else {
         const invItem = inventoryByName.get(item.name.toLowerCase());
         const vendorPrice = getVendorPrice(invItem?._id, vendors);
+        const vendorName = getVendorName(invItem?._id, vendors);
 
         materialMap.set(key, {
           ...item,
           kits: assignment.kit?.name ? [assignment.kit.name] : [],
           programs: assignment.program?.name ? [assignment.program.name] : [],
           vendorPrice,
+          vendorName,
           inventoryId: invItem?._id,
         });
       }
@@ -287,6 +310,7 @@ export function aggregateMaterials(
             if (!processed.has(compKey)) queue.push(compKey);
           } else {
             const vendorPrice = getVendorPrice(compInvItem._id, vendors);
+            const vendorName = getVendorName(compInvItem._id, vendors);
 
             materialMap.set(compKey, {
               name: compInvItem.name,
@@ -300,6 +324,7 @@ export function aggregateMaterials(
               programs: [...item.programs],
               minStockLevel: compInvItem.minStockLevel || 0,
               vendorPrice,
+              vendorName,
               inventoryId: compInvItem._id,
             });
             queue.push(compKey);
