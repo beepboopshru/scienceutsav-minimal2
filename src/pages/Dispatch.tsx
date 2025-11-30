@@ -844,7 +844,7 @@ export default function Dispatch() {
         </div>
 
         {/* Assignments Table */}
-        <div className="border rounded-lg overflow-hidden">
+        <div className="border rounded-lg overflow-x-auto">
           {!filteredAssignments ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -877,8 +877,8 @@ export default function Dispatch() {
                   <th className="text-left p-4 font-semibold">Grade</th>
                   <th className="text-left p-4 font-semibold">Status</th>
                   <th className="text-left p-4 font-semibold">Dispatch Date</th>
-                  <th className="text-left p-4 font-semibold">Remarks</th>
-                  <th className="text-right p-4 font-semibold">Actions</th>
+                  <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>
+                  <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
