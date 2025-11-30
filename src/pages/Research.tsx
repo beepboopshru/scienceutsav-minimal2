@@ -937,6 +937,7 @@ export default function Research() {
                   <th className="px-4 py-3 text-left text-sm font-medium">Kit Name</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Category</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Subject</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Grade</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
@@ -973,6 +974,7 @@ export default function Research() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{kit.subject || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{kit.grade !== undefined ? kit.grade : "-"}</td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex space-x-1">
                             {canUploadImages && (
@@ -1066,7 +1068,7 @@ export default function Research() {
 
                       {isExpanded && (
                         <tr className="bg-muted/20">
-                          <td colSpan={6} className="px-4 py-4">
+                          <td colSpan={7} className="px-4 py-4">
                             <div className="space-y-4">
                               {kit.description && (
                                 <div>
