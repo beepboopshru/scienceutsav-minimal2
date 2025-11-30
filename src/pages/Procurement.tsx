@@ -61,6 +61,89 @@ export default function Procurement() {
     return new Map(inventory.map(i => [i._id, i]));
   }, [inventory, lastRefresh]);
 
+  // --- Data Generation Functions (moved before early returns) ---
+  
+  const kitWiseData = useMemo(() => {
+    if (!assignments) return [];
+    const kitMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+      const kitName = assignment.kit?.name || "Unknown";
+      if (!kitMap.has(kitName)) {
+        kitMap.set(kitName, {
+          name: kitName,
+          assignments: [],
+          totalQuantity: 0,
+        });
+      }
+      const entry = kitMap.get(kitName);
+      entry.assignments.push(assignment);
+      entry.totalQuantity += assignment.quantity;
+    });
+    
+    return Array.from(kitMap.values()).map(kit => ({
+      ...kit,
+      materials: aggregateMaterials(kit.assignments)
+    }));
+  }, [assignments, inventoryByName, inventoryById]);
+
+  const monthWiseData = useMemo(() => {
+    if (!assignments) return [];
+    const monthMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+      const monthKey = assignment.productionMonth || new Date(assignment._creationTime).toISOString().slice(0, 7);
+      
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          month: monthKey,
+          assignments: [],
+          totalAssignments: 0,
+        });
+      }
+      const entry = monthMap.get(monthKey);
+      entry.assignments.push(assignment);
+      entry.totalAssignments += 1;
+    });
+
+    return Array.from(monthMap.values())
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .map(month => ({
+        ...month,
+        materials: aggregateMaterials(month.assignments)
+      }));
+  }, [assignments, inventoryByName, inventoryById]);
+
+  const clientWiseData = useMemo(() => {
+    if (!assignments) return [];
+    const clientMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+      if (!assignment.client) {
+        return;
+      }
+      
+      const clientName = (assignment.client as any)?.organization || (assignment.client as any)?.name || (assignment.client as any)?.buyerName || "Unknown Client";
+      if (!clientMap.has(clientName)) {
+        clientMap.set(clientName, {
+          clientName: clientName,
+          assignments: [],
+          totalKits: 0,
+        });
+      }
+      const entry = clientMap.get(clientName);
+      entry.assignments.push(assignment);
+      entry.totalKits += assignment.quantity;
+    });
+
+    return Array.from(clientMap.values()).map(client => ({
+      ...client,
+      materials: aggregateMaterials(client.assignments)
+    }));
+  }, [assignments, inventoryByName, inventoryById]);
+
+  const materialSummary = useMemo(() => {
+    if (!assignments) return [];
+    return aggregateMaterials(assignments);
+  }, [assignments, inventoryByName, inventoryById]);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
@@ -329,87 +412,6 @@ export default function Procurement() {
     }
     return null;
   };
-
-  // --- Data Generation ---
-
-  // 1. Kit Wise Data
-  const generateKitWiseData = () => {
-    const kitMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      const kitName = assignment.kit?.name || "Unknown";
-      if (!kitMap.has(kitName)) {
-        kitMap.set(kitName, {
-          name: kitName,
-          assignments: [],
-          totalQuantity: 0,
-        });
-      }
-      const entry = kitMap.get(kitName);
-      entry.assignments.push(assignment);
-      entry.totalQuantity += assignment.quantity;
-    });
-    
-    return Array.from(kitMap.values()).map(kit => ({
-      ...kit,
-      materials: aggregateMaterials(kit.assignments)
-    }));
-  };
-
-  // 2. Month Wise Data
-  const generateMonthWiseData = () => {
-    const monthMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      // Use productionMonth if available, else creation time
-      const monthKey = assignment.productionMonth || new Date(assignment._creationTime).toISOString().slice(0, 7);
-      
-      if (!monthMap.has(monthKey)) {
-        monthMap.set(monthKey, {
-          month: monthKey,
-          assignments: [],
-          totalAssignments: 0,
-        });
-      }
-      const entry = monthMap.get(monthKey);
-      entry.assignments.push(assignment);
-      entry.totalAssignments += 1;
-    });
-
-    return Array.from(monthMap.values())
-      .sort((a, b) => b.month.localeCompare(a.month))
-      .map(month => ({
-        ...month,
-        materials: aggregateMaterials(month.assignments)
-      }));
-  };
-
-  // 3. Client Wise Data
-  const generateClientWiseData = () => {
-    const clientMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      const clientName = (assignment.client as any)?.name || "Unknown Client";
-      if (!clientMap.has(clientName)) {
-        clientMap.set(clientName, {
-          clientName: clientName,
-          assignments: [],
-          totalKits: 0,
-        });
-      }
-      const entry = clientMap.get(clientName);
-      entry.assignments.push(assignment);
-      entry.totalKits += assignment.quantity;
-    });
-
-    return Array.from(clientMap.values()).map(client => ({
-      ...client,
-      materials: aggregateMaterials(client.assignments)
-    }));
-  };
-
-  // 4. Material Summary (All)
-  const kitWiseData = useMemo(() => generateKitWiseData(), [assignments]);
-  const monthWiseData = useMemo(() => generateMonthWiseData(), [assignments]);
-  const clientWiseData = useMemo(() => generateClientWiseData(), [assignments]);
-  const materialSummary = useMemo(() => aggregateMaterials(assignments), [assignments, inventoryByName, inventoryById]);
 
   // --- Export Functions ---
 
