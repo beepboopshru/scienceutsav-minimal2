@@ -54,12 +54,12 @@ export default function Procurement() {
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
-  }, [inventory, lastRefresh]);
+  }, [inventory]);
 
   const inventoryById = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i._id, i]));
-  }, [inventory, lastRefresh]);
+  }, [inventory]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -386,7 +386,12 @@ export default function Procurement() {
   const generateClientWiseData = () => {
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      const clientName = (assignment.client as any)?.name || "Unknown Client";
+      // Handle both B2B (name/organization) and B2C (buyerName) clients
+      const client = assignment.client as any;
+      const clientName = client 
+        ? (client.organization || client.name || client.buyerName || "Unknown Client")
+        : "Unknown Client";
+      
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
           clientName: clientName,
