@@ -858,7 +858,7 @@ export default function Dispatch() {
               <thead className="bg-muted/50">
                 <tr className="border-b">
                   {canEdit && (
-                    <th className="text-left p-4 font-semibold w-10">
+                    <th className="text-left p-4 font-semibold w-12">
                       <Checkbox
                         checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
                         onCheckedChange={(checked) => {
@@ -1052,7 +1052,7 @@ export default function Dispatch() {
                             )}
                           </td>
                         )}
-                        <td colSpan={6} className="p-4">
+                        <td colSpan={canEdit ? 8 : 8} className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div>
