@@ -154,6 +154,9 @@ export default function KitBuilder() {
       return;
     }
 
+    // Clear unsaved changes flag before saving to prevent blocker
+    setHasUnsavedChanges(false);
+
     try {
       if (editKitId) {
         await updateKit({
@@ -180,9 +183,10 @@ export default function KitBuilder() {
         });
         toast.success("Kit created successfully");
       }
-      setHasUnsavedChanges(false);
       navigate("/research");
     } catch (error) {
+      // Restore unsaved changes flag if save fails
+      setHasUnsavedChanges(true);
       toast.error("Failed to save kit");
       console.error("Save error:", error);
     }
