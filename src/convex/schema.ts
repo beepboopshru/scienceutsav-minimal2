@@ -72,6 +72,7 @@ const schema = defineSchema(
       category: v.optional(v.string()),
       conceptName: v.optional(v.string()),
       subject: v.optional(v.string()),
+      grade: v.optional(v.number()),
       description: v.optional(v.string()),
       remarks: v.optional(v.string()),
       imageUrl: v.optional(v.string()),

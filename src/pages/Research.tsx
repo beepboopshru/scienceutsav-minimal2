@@ -169,8 +169,9 @@ export default function Research() {
     category?: string;
     conceptName?: string;
     subject?: string;
+    grade?: number;
     description: string;
-  }>({ name: "", serialNumber: "", category: undefined, conceptName: "", subject: "", description: "" });
+  }>({ name: "", serialNumber: "", category: undefined, conceptName: "", subject: "", grade: undefined, description: "" });
 
   // Clone kit dialog state
   const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
@@ -189,6 +190,7 @@ export default function Research() {
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [kitSearchQuery, setKitSearchQuery] = useState<string>("");
 
   // File manager
@@ -216,6 +218,17 @@ export default function Research() {
     return Array.from(subjects).sort();
   }, [kits, selectedProgramId]);
 
+  const uniqueGrades = useMemo(() => {
+    if (!kits || !selectedProgramId) return [];
+    const grades = new Set<number>();
+    kits.forEach((k) => {
+      if (k.programId === selectedProgramId && k.grade !== undefined) {
+        grades.add(k.grade);
+      }
+    });
+    return Array.from(grades).sort((a, b) => a - b);
+  }, [kits, selectedProgramId]);
+
   const programStats = useMemo(() => {
     const result: Record<string, number> = {};
     if (!programs || !kits) return result;
@@ -237,13 +250,16 @@ export default function Research() {
       let subjectOk = true;
       if (subjectFilter !== "all") subjectOk = k.subject === subjectFilter;
 
+      let gradeOk = true;
+      if (gradeFilter !== "all") gradeOk = k.grade?.toString() === gradeFilter;
+
       let searchOk = true;
       if (kitSearchQuery.trim()) {
         searchOk = k.name.toLowerCase().includes(kitSearchQuery.toLowerCase());
       }
-      return categoryOk && searchOk && subjectOk;
+      return categoryOk && searchOk && subjectOk && gradeOk;
     });
-  }, [kits, selectedProgramId, categoryFilter, subjectFilter, kitSearchQuery]);
+  }, [kits, selectedProgramId, categoryFilter, subjectFilter, gradeFilter, kitSearchQuery]);
 
   // Program handlers
   const handleCreateProgram = async (e: React.FormEvent) => {
@@ -343,6 +359,7 @@ export default function Research() {
           category: simpleKitFormData.category,
           conceptName: simpleKitFormData.conceptName || undefined,
           subject: simpleKitFormData.subject || undefined,
+          grade: simpleKitFormData.grade,
           description: simpleKitFormData.description || undefined,
         });
         toast("Kit updated successfully");
@@ -354,6 +371,7 @@ export default function Research() {
           category: simpleKitFormData.category,
           conceptName: simpleKitFormData.conceptName || undefined,
           subject: simpleKitFormData.subject || undefined,
+          grade: simpleKitFormData.grade,
           description: simpleKitFormData.description || undefined,
           stockCount: 0,
           lowStockThreshold: 5,
@@ -385,6 +403,7 @@ export default function Research() {
         category: kit.category,
         conceptName: kit.conceptName || "",
         subject: kit.subject || "",
+        grade: kit.grade,
         description: kit.description || "",
       });
       setIsCreateSimpleKitOpen(true);
