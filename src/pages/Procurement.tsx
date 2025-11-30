@@ -30,13 +30,26 @@ export default function Procurement() {
   const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
   const vendors = useQuery(api.vendors.list);
+  const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
   
   const removeJob = useMutation(api.procurementJobs.remove);
+  const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
   
   const [activeTab, setActiveTab] = useState("summary");
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [purchasingQuantities, setPurchasingQuantities] = useState<Map<string, number>>(new Map());
+
+  // Load saved purchasing quantities from database
+  useEffect(() => {
+    if (savedQuantities) {
+      const quantitiesMap = new Map<string, number>();
+      savedQuantities.forEach((item) => {
+        quantitiesMap.set(item.materialName.toLowerCase(), item.purchasingQty);
+      });
+      setPurchasingQuantities(quantitiesMap);
+    }
+  }, [savedQuantities]);
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
@@ -509,13 +522,23 @@ export default function Procurement() {
                   type="number"
                   min="0"
                   value={purchasingQty}
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const newQty = Number(e.target.value);
                     setPurchasingQuantities(prev => {
                       const updated = new Map(prev);
                       updated.set(materialKey, newQty);
                       return updated;
                     });
+                    
+                    // Save to database
+                    try {
+                      await upsertPurchasingQty({
+                        materialName: materialKey,
+                        purchasingQty: newQty,
+                      });
+                    } catch (err) {
+                      console.error("Failed to save purchasing quantity:", err);
+                    }
                   }}
                   className="w-24"
                   placeholder="0"
@@ -651,13 +674,23 @@ export default function Procurement() {
                                     type="number"
                                     min="0"
                                     value={purchasingQty}
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                       const newQty = Number(e.target.value);
                                       setPurchasingQuantities(prev => {
                                         const updated = new Map(prev);
                                         updated.set(materialKey, newQty);
                                         return updated;
                                       });
+                                      
+                                      // Save to database
+                                      try {
+                                        await upsertPurchasingQty({
+                                          materialName: materialKey,
+                                          purchasingQty: newQty,
+                                        });
+                                      } catch (err) {
+                                        console.error("Failed to save purchasing quantity:", err);
+                                      }
                                     }}
                                     className="w-24"
                                     placeholder="0"

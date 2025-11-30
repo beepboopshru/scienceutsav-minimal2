@@ -790,6 +790,13 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_status", ["status"]),
+
+    // Procurement purchasing quantities (persistent storage)
+    procurementPurchasingQuantities: defineTable({
+      materialName: v.string(),
+      purchasingQty: v.number(),
+      updatedBy: v.id("users"),
+    }).index("by_material_name", ["materialName"]),
   },
   {
     schemaValidation: false,
