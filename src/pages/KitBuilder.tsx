@@ -50,6 +50,7 @@ export default function KitBuilder() {
     conceptName: "",
     subject: "",
     category: "",
+    grade: undefined as number | undefined,
     description: "",
     isStructured: true,
     packingRequirements: "",
@@ -96,6 +97,7 @@ export default function KitBuilder() {
         conceptName: editingKit.conceptName || "",
         subject: editingKit.subject || "",
         category: editingKit.category || "",
+        grade: editingKit.grade,
         description: editingKit.description || "",
         isStructured: editingKit.isStructured ?? true,
         packingRequirements: editingKit.packingRequirements || "",
@@ -161,6 +163,7 @@ export default function KitBuilder() {
           conceptName: kitForm.conceptName || undefined,
           subject: kitForm.subject || undefined,
           category: kitForm.category || undefined,
+          grade: kitForm.grade,
           description: kitForm.description || undefined,
           isStructured: kitForm.isStructured,
           packingRequirements: kitForm.packingRequirements || undefined,
@@ -525,6 +528,17 @@ export default function KitBuilder() {
                     value={kitForm.subject}
                     onChange={(e) => setKitForm({ ...kitForm, subject: e.target.value })}
                     placeholder="e.g., Physics"
+                    disabled={!canEdit}
+                  />
+                </div>
+
+                <div>
+                  <Label>Grade</Label>
+                  <Input
+                    type="number"
+                    value={kitForm.grade ?? ""}
+                    onChange={(e) => setKitForm({ ...kitForm, grade: e.target.value ? parseFloat(e.target.value) : undefined })}
+                    placeholder="e.g., 5"
                     disabled={!canEdit}
                   />
                 </div>
