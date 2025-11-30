@@ -125,8 +125,18 @@ export const create = mutation({
     }
 
     return await ctx.db.insert("clients", {
-      ...args,
+      name: args.name,
       clientId,
+      email: args.email,
+      contact: args.contact,
+      organization: args.organization,
+      address: args.address,
+      type: args.type || "one_time",
+      notes: args.notes,
+      salesPerson: args.salesPerson,
+      pointsOfContact: args.pointsOfContact,
+      gradeAttendance: args.gradeAttendance,
+      gradePlanning: args.gradePlanning,
       createdBy: userId,
     });
   },
