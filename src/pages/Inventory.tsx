@@ -445,7 +445,7 @@ export default function Inventory() {
                         <SelectContent>
                           <SelectItem value="raw">Raw Material</SelectItem>
                           <SelectItem value="pre_processed">Pre-Processed</SelectItem>
-                          <SelectItem value="finished">Finished</SelectItem>
+                          <SelectItem value="finished">Ready Made</SelectItem>
                           <SelectItem value="sealed_packet">Sealed Packet</SelectItem>
                         </SelectContent>
                       </Select>
@@ -906,8 +906,8 @@ export default function Inventory() {
             <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
               <TabsTrigger value="raw">Raw Materials</TabsTrigger>
               <TabsTrigger value="pre_processed">Pre-Processed</TabsTrigger>
-              <TabsTrigger value="finished">Finished</TabsTrigger>
               <TabsTrigger value="sealed_packet">Sealed Packets</TabsTrigger>
+              <TabsTrigger value="finished">Ready Made</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab} className="space-y-4">
@@ -958,7 +958,7 @@ export default function Inventory() {
                   <CardTitle>
                     {activeTab === "raw" && "Raw Materials"}
                     {activeTab === "pre_processed" && "Pre-Processed Items"}
-                    {activeTab === "finished" && "Finished Goods"}
+                    {activeTab === "finished" && "Ready Made Goods"}
                     {activeTab === "sealed_packet" && "Sealed Packets"}
                     {" "}({filteredInventory.length})
                   </CardTitle>
@@ -999,8 +999,8 @@ export default function Inventory() {
                       <TableCell>
                         <Badge variant="outline">
                           {activeTab === "finished" 
-                            ? "Finished Kits"
-                            : item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : item.type === "finished" ? "Finished" : "Sealed Packet"}
+                            ? "Ready Made Kits"
+                            : item.type === "raw" ? "Raw" : item.type === "pre_processed" ? "Pre-Processed" : item.type === "finished" ? "Ready Made" : "Sealed Packet"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -1149,7 +1149,7 @@ export default function Inventory() {
                       <SelectContent>
                         <SelectItem value="raw">Raw Material</SelectItem>
                         <SelectItem value="pre_processed">Pre-Processed</SelectItem>
-                        <SelectItem value="finished">Finished</SelectItem>
+                        <SelectItem value="finished">Ready Made</SelectItem>
                         <SelectItem value="sealed_packet">Sealed Packet</SelectItem>
                       </SelectContent>
                     </Select>
