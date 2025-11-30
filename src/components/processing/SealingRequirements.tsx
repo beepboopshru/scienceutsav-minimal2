@@ -127,16 +127,14 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         } else {
           // Fallback to Kit Definition for missing items (so user knows what to expect/create)
           components = packet.materials.map((mat: any) => {
-            // Try to find material with normalized name, preferring raw materials
+            // Try to find material with exact normalized name match only
             const matName = mat.name.trim();
             const items = inventoryNormalized.get(normalize(matName));
             let matInv = null;
             
             if (items && items.length > 0) {
-              // Prefer raw materials, then pre_processed
-              matInv = items.find((item: any) => item.type === "raw") || 
-                       items.find((item: any) => item.type === "pre_processed") ||
-                       items[0]; // Fallback to first item if no raw/pre_processed found
+              // Use the first exact match by name, no type prioritization
+              matInv = items[0];
             }
             
             return {
