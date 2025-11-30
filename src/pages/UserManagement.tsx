@@ -71,7 +71,7 @@ export default function UserManagement() {
         b2cClients: { view: false, create: false, edit: false, delete: false },
         batches: { view: false, create: false, edit: false, delete: false },
         assignments: { view: false, create: false, edit: false, delete: false, updateStatus: false },
-        inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false },
+        inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false, editBOM: false },
         vendors: { view: false, create: false, edit: false, delete: false },
         services: { view: false, create: false, edit: false, delete: false },
         processingJobs: { view: false, create: false, edit: false, complete: false, delete: false, editBOM: false },
