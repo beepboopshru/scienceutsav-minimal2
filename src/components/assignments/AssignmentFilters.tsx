@@ -101,7 +101,7 @@ export function AssignmentFilters({
     )
   ).sort().reverse();
 
-  const statuses = ["assigned", "packed", "dispatched"];
+  const statuses = ["transferred_to_dispatch", "ready_for_dispatch", "dispatched"];
 
   const activeFilterCount = 
     selectedPrograms.length +
@@ -389,7 +389,7 @@ export function AssignmentFilters({
                               checked={selectedStatuses.includes(status)}
                               className="mr-2"
                             />
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                           </CommandItem>
                         ))}
                       </CommandGroup>
