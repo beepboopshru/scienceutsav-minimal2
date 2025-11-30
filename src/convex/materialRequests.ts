@@ -34,6 +34,7 @@ export const list = query({
         return {
           ...req,
           requesterName: requester?.name || "Unknown User",
+          requesterEmail: requester?.email || "No Email",
           reviewerName: reviewer?.name,
         };
       })

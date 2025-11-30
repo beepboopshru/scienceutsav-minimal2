@@ -639,7 +639,7 @@ export default function OperationsInventoryRelations() {
                             </TableCell>
                           )}
                           <TableCell className="font-medium">{job.jobId}</TableCell>
-                          <TableCell>{job.creatorName}</TableCell>
+                          <TableCell>{job.creatorEmail}</TableCell>
                           <TableCell>
                             {new Date(job._creationTime).toLocaleDateString()}
                           </TableCell>
@@ -749,7 +749,7 @@ export default function OperationsInventoryRelations() {
           <SheetHeader>
             <SheetTitle>Packing Request Details</SheetTitle>
             <SheetDescription>
-              {selectedJob?.jobId} - Created by {selectedJob?.creatorName}
+              {selectedJob?.jobId} - Created by {selectedJob?.creatorEmail}
             </SheetDescription>
           </SheetHeader>
           {selectedJob && (

@@ -260,7 +260,7 @@ export function MaterialRequestsTab() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-medium">{req.requesterName}</span>
+                      <span className="font-medium">{req.requesterEmail}</span>
                     </div>
                   </TableCell>
                   <TableCell>

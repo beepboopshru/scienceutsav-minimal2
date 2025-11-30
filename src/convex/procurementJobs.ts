@@ -15,10 +15,11 @@ export const list = query({
     // Fetch user details for each job
     const jobsWithDetails = await Promise.all(
       jobs.map(async (job) => {
-        const creator = await ctx.db.query("users").filter((q) => q.eq(q.field("_id"), job.createdBy)).first();
+        const creator = await ctx.db.get(job.createdBy);
         return {
           ...job,
           creatorName: creator?.name || "Unknown User",
+          creatorEmail: creator?.email || "No Email",
         };
       })
     );
