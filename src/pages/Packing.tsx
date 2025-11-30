@@ -696,9 +696,11 @@ export default function Packing() {
                         ? clients?.find((c) => c._id === assignment.clientId)
                         : b2cClients?.find((c) => c._id === assignment.clientId);
                       
-                      const clientName = assignment.clientType === "b2b"
-                        ? (assignmentClient as any)?.name || "Unknown Client"
-                        : (assignmentClient as any)?.buyerName || "Unknown Client";
+                      const clientName = assignmentClient
+                        ? (assignment.clientType === "b2b"
+                            ? (assignmentClient as any)?.name
+                            : (assignmentClient as any)?.buyerName)
+                        : "Unknown Client";
 
                       return (
                         <motion.tr
@@ -844,6 +846,12 @@ export default function Packing() {
                         const assignmentClient = assignment.clientType === "b2b"
                           ? clients?.find((c) => c._id === assignment.clientId)
                           : b2cClients?.find((c) => c._id === assignment.clientId);
+                        
+                        const clientName = assignmentClient
+                          ? (assignment.clientType === "b2b"
+                              ? (assignmentClient as any)?.name
+                              : (assignmentClient as any)?.buyerName)
+                          : "Unknown Client";
 
                         return (
                           <motion.tr
@@ -868,11 +876,7 @@ export default function Packing() {
                               </Badge>
                             </td>
                             <td className="px-4 py-3 text-sm">{batch?.batchId || "—"}</td>
-                            <td className="px-4 py-3 text-sm">
-                              {assignment.clientType === "b2b" 
-                                ? (assignmentClient as any)?.name || "Unknown"
-                                : (assignmentClient as any)?.buyerName || "Unknown"}
-                            </td>
+                            <td className="px-4 py-3 text-sm">{clientName}</td>
                             <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
                             <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
                             <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
