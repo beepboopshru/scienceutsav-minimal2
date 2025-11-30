@@ -411,11 +411,11 @@ export default function Procurement() {
   };
 
   // 4. Material Summary (All)
-  const materialSummary = aggregateMaterials(assignments);
+  const materialSummary = useMemo(() => aggregateMaterials(assignments), [assignments, inventoryByName, inventoryById]);
 
-  const kitWiseData = generateKitWiseData();
-  const monthWiseData = generateMonthWiseData();
-  const clientWiseData = generateClientWiseData();
+  const kitWiseData = useMemo(() => generateKitWiseData(), [assignments, inventoryByName, inventoryById]);
+  const monthWiseData = useMemo(() => generateMonthWiseData(), [assignments, inventoryByName, inventoryById]);
+  const clientWiseData = useMemo(() => generateClientWiseData(), [assignments, inventoryByName, inventoryById]);
 
   // --- Export Functions ---
 
