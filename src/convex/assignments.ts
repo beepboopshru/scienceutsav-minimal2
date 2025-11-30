@@ -131,6 +131,43 @@ export const updateStatus = mutation({
         details: `Assignment ${args.id} status changed to ${args.status}`,
       });
     }
+
+    // If status is delivered, move to order history and delete assignment
+    if (args.status === "delivered") {
+      const user = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("_id"), userId))
+        .first();
+
+      if (user) {
+        // Create order history record
+        await ctx.db.insert("orderHistory", {
+          kitId: assignment.kitId,
+          clientId: assignment.clientId,
+          clientType: assignment.clientType,
+          quantity: assignment.quantity,
+          grade: assignment.grade,
+          productionMonth: assignment.productionMonth,
+          batchId: assignment.batchId,
+          dispatchedAt: assignment.dispatchedAt || Date.now(),
+          dispatchedBy: user._id,
+          status: "delivered",
+          deliveredAt: updateData.deliveredAt || Date.now(),
+          notes: assignment.notes,
+          originalAssignmentId: args.id,
+        });
+
+        // Delete the assignment
+        await ctx.db.delete(args.id);
+
+        // Log the archival
+        await ctx.db.insert("activityLogs", {
+          userId: user._id,
+          actionType: "order_archived",
+          details: `Assignment ${args.id} moved to order history after delivery`,
+        });
+      }
+    }
   },
 });
 
