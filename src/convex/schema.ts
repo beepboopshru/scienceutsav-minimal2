@@ -294,12 +294,6 @@ const schema = defineSchema(
       dispatchedAt: v.optional(v.number()),
       deliveredAt: v.optional(v.number()),
       productionMonth: v.optional(v.string()),
-      eWayNumber: v.optional(v.string()),
-      eWayDocumentId: v.optional(v.id("_storage")),
-      dispatchNumber: v.optional(v.string()),
-      dispatchDocumentId: v.optional(v.id("_storage")),
-      trackingLink: v.optional(v.string()),
-      proofPhotoId: v.optional(v.id("_storage")),
       createdBy: v.id("users"),
       batchId: v.optional(v.id("batches")),
     })

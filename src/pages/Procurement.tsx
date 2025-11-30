@@ -386,12 +386,7 @@ export default function Procurement() {
   const generateClientWiseData = () => {
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      // Add null check for client
-      if (!assignment.client) {
-        return; // Skip assignments without client data
-      }
-      
-      const clientName = (assignment.client as any)?.organization || (assignment.client as any)?.name || (assignment.client as any)?.buyerName || "Unknown Client";
+      const clientName = (assignment.client as any)?.name || "Unknown Client";
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
           clientName: clientName,
@@ -411,11 +406,11 @@ export default function Procurement() {
   };
 
   // 4. Material Summary (All)
-  const materialSummary = useMemo(() => aggregateMaterials(assignments), [assignments, inventoryByName, inventoryById]);
+  const materialSummary = aggregateMaterials(assignments);
 
-  const kitWiseData = useMemo(() => generateKitWiseData(), [assignments, inventoryByName, inventoryById]);
-  const monthWiseData = useMemo(() => generateMonthWiseData(), [assignments, inventoryByName, inventoryById]);
-  const clientWiseData = useMemo(() => generateClientWiseData(), [assignments, inventoryByName, inventoryById]);
+  const kitWiseData = generateKitWiseData();
+  const monthWiseData = generateMonthWiseData();
+  const clientWiseData = generateClientWiseData();
 
   // --- Export Functions ---
 
