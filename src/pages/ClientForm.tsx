@@ -83,7 +83,7 @@ export default function ClientForm() {
       pincode: "",
       country: "",
     },
-    type: "one_time" as "monthly" | "one_time",
+    type: "" as string,
     notes: "",
     salesPerson: "",
     pointsOfContact: [] as Array<{
@@ -105,10 +105,6 @@ export default function ClientForm() {
 
   useEffect(() => {
     if (client) {
-      const clientType = client.type === "monthly" || client.type === "one_time" 
-        ? client.type 
-        : "one_time";
-      
       setFormData({
         name: client.name,
         clientId: client.clientId || "",
@@ -123,7 +119,7 @@ export default function ClientForm() {
           pincode: client.address?.pincode || "",
           country: client.address?.country || "",
         },
-        type: clientType,
+        type: client.type || "",
         notes: client.notes || "",
         salesPerson: client.salesPerson || "",
         pointsOfContact: client.pointsOfContact || [],
@@ -149,7 +145,7 @@ export default function ClientForm() {
         contact: formData.contact,
         email: formData.email,
         address: formData.address,
-        type: formData.type,
+        type: formData.type || undefined,
         notes: formData.notes,
         salesPerson: formData.salesPerson,
         pointsOfContact: formData.pointsOfContact,
@@ -342,20 +338,21 @@ export default function ClientForm() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="type">Client Type</Label>
-                    <Select
+                    <RadioGroup
                       value={formData.type}
-                      onValueChange={(value: "monthly" | "one_time") =>
+                      onValueChange={(value: string) =>
                         setFormData({ ...formData, type: value })
                       }
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="one_time">One Time</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="monthly" id="monthly" />
+                        <Label htmlFor="monthly" className="font-normal cursor-pointer">Monthly</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="one_time" id="one_time" />
+                        <Label htmlFor="one_time" className="font-normal cursor-pointer">One Time</Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="salesPerson">Sales Person</Label>

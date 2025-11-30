@@ -66,7 +66,7 @@ export default function Clients() {
       pincode: "",
       country: "",
     },
-    type: "one_time" as "monthly" | "one_time",
+    type: "" as string,
     notes: "",
     salesPerson: "",
     pointsOfContact: [] as Array<{
