@@ -145,13 +145,24 @@ export default function Procurement() {
 
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
+      // Skip assignments without client data
       if (!assignment.client) return;
 
-      const clientName =
-        (assignment.client as any)?.organization ||
-        (assignment.client as any)?.name ||
-        (assignment.client as any)?.buyerName ||
-        "Unknown Client";
+      // Extract client name with better fallback logic
+      let clientName = "Unknown Client";
+      const client = assignment.client as any;
+      
+      if (typeof client === 'string') {
+        clientName = client;
+      } else if (typeof client === 'object') {
+        clientName = 
+          client.organization || 
+          client.name || 
+          client.buyerName || 
+          client.contactPerson ||
+          client.email ||
+          "Unknown Client";
+      }
 
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
