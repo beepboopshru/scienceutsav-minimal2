@@ -118,7 +118,7 @@ export default function ClientForm() {
           pincode: client.address?.pincode || "",
           country: client.address?.country || "",
         },
-        type: (client.type as "monthly" | "one_time") || "one_time",
+        type: client.type || "one_time",
         notes: client.notes || "",
         salesPerson: client.salesPerson || "",
         pointsOfContact: client.pointsOfContact || [],
