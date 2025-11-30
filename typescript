@@ -1,10 +1,1 @@
-// ...
-async function performDeletion(ctx: any, entityType: string, entityId: string) {
-  switch (entityType) {
-    case "inventory":
-      await ctx.db.delete(entityId as Id<"inventory">);
-      break;
-    // ...
-  }
-}
-// ...
+type: client.type || "one_time",
