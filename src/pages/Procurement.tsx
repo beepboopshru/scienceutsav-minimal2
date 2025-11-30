@@ -386,7 +386,12 @@ export default function Procurement() {
   const generateClientWiseData = () => {
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      const clientName = (assignment.client as any)?.name || "Unknown Client";
+      // Add null check for client
+      if (!assignment.client) {
+        return; // Skip assignments without client data
+      }
+      
+      const clientName = (assignment.client as any)?.organization || (assignment.client as any)?.name || (assignment.client as any)?.buyerName || "Unknown Client";
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
           clientName: clientName,
