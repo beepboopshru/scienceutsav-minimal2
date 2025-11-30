@@ -68,6 +68,10 @@ export default function Dispatch() {
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
   const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
+  
+  const ewayDocUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.ewayDocumentId ? { storageId: (selectedClientForView as any).ewayDocumentId } : "skip");
+  const dispatchDocUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.dispatchDocumentId ? { storageId: (selectedClientForView as any).dispatchDocumentId } : "skip");
+
   const [selectedAssignments, setSelectedAssignments] = useState<Set<Id<"assignments">>>(new Set());
 
   // Client Details Generator state
@@ -1007,15 +1011,7 @@ export default function Dispatch() {
             </DialogHeader>
             <div className="space-y-6">
               {/* Dispatch Information Section */}
-              {selectedClientForView && (() => {
-                const ewayDocUrl = (selectedClientForView as any).ewayDocumentId 
-                  ? useQuery(api.storage.getUrl, { storageId: (selectedClientForView as any).ewayDocumentId })
-                  : null;
-                const dispatchDocUrl = (selectedClientForView as any).dispatchDocumentId
-                  ? useQuery(api.storage.getUrl, { storageId: (selectedClientForView as any).dispatchDocumentId })
-                  : null;
-
-                return (
+              {selectedClientForView && (
                   <div className="border rounded-lg p-4 bg-muted/30">
                     <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                       <FileText className="h-5 w-5" />
@@ -1070,8 +1066,7 @@ export default function Dispatch() {
                       <p className="text-sm text-muted-foreground italic">No dispatch information available yet</p>
                     )}
                   </div>
-                );
-              })()}
+              )}
 
               {/* Client Information Section */}
               <div className="border rounded-lg p-4">
