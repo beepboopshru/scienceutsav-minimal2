@@ -61,119 +61,7 @@ export default function Procurement() {
     return new Map(inventory.map(i => [i._id, i]));
   }, [inventory, lastRefresh]);
 
-  // --- Data Generation Functions (moved before early returns) ---
-  
-  const kitWiseData = useMemo(() => {
-    if (!assignments) return [];
-    const kitMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      const kitName = assignment.kit?.name || "Unknown";
-      if (!kitMap.has(kitName)) {
-        kitMap.set(kitName, {
-          name: kitName,
-          assignments: [],
-          totalQuantity: 0,
-        });
-      }
-      const entry = kitMap.get(kitName);
-      entry.assignments.push(assignment);
-      entry.totalQuantity += assignment.quantity;
-    });
-    
-    return Array.from(kitMap.values()).map(kit => ({
-      ...kit,
-      materials: aggregateMaterials(kit.assignments)
-    }));
-  }, [assignments, inventoryByName, inventoryById]);
-
-  const monthWiseData = useMemo(() => {
-    if (!assignments) return [];
-    const monthMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      const monthKey = assignment.productionMonth || new Date(assignment._creationTime).toISOString().slice(0, 7);
-      
-      if (!monthMap.has(monthKey)) {
-        monthMap.set(monthKey, {
-          month: monthKey,
-          assignments: [],
-          totalAssignments: 0,
-        });
-      }
-      const entry = monthMap.get(monthKey);
-      entry.assignments.push(assignment);
-      entry.totalAssignments += 1;
-    });
-
-    return Array.from(monthMap.values())
-      .sort((a, b) => b.month.localeCompare(a.month))
-      .map(month => ({
-        ...month,
-        materials: aggregateMaterials(month.assignments)
-      }));
-  }, [assignments, inventoryByName, inventoryById]);
-
-  const clientWiseData = useMemo(() => {
-    if (!assignments) return [];
-    const clientMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      if (!assignment.client) {
-        return;
-      }
-      
-      const clientName = (assignment.client as any)?.organization || (assignment.client as any)?.name || (assignment.client as any)?.buyerName || "Unknown Client";
-      if (!clientMap.has(clientName)) {
-        clientMap.set(clientName, {
-          clientName: clientName,
-          assignments: [],
-          totalKits: 0,
-        });
-      }
-      const entry = clientMap.get(clientName);
-      entry.assignments.push(assignment);
-      entry.totalKits += assignment.quantity;
-    });
-
-    return Array.from(clientMap.values()).map(client => ({
-      ...client,
-      materials: aggregateMaterials(client.assignments)
-    }));
-  }, [assignments, inventoryByName, inventoryById]);
-
-  const materialSummary = useMemo(() => {
-    if (!assignments) return [];
-    return aggregateMaterials(assignments);
-  }, [assignments, inventoryByName, inventoryById]);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
-    }
-    if (!isLoading && isAuthenticated && user && !user.isApproved) {
-      navigate("/pending-approval");
-    }
-  }, [isLoading, isAuthenticated, user, navigate]);
-
-  if (!canView) {
-    return (
-      <Layout>
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <p className="text-muted-foreground">You do not have permission to view this page.</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isLoading || !assignments || !inventory || !vendors) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-full">
-          <Package className="h-8 w-8 animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  // --- Helper Functions ---
+  // --- Helper Functions (defined before useMemo hooks) ---
 
   const calculateShortages = (assignment: any) => {
     const kit = assignment.kit;
@@ -267,6 +155,20 @@ export default function Procurement() {
     kit.miscellaneous?.forEach((m: any) => processMaterial(m.name, m.quantity, m.unit, "Miscellaneous"));
 
     return { direct: shortages };
+  };
+
+  const getVendorPrice = (inventoryId?: string) => {
+    if (!inventoryId || !vendors) return null;
+    
+    for (const vendor of vendors) {
+      if (vendor.itemPrices) {
+        const priceEntry = vendor.itemPrices.find(p => p.itemId === inventoryId);
+        if (priceEntry) {
+          return priceEntry.averagePrice;
+        }
+      }
+    }
+    return null;
   };
 
   const aggregateMaterials = (assignmentList: any[]) => {
@@ -398,20 +300,117 @@ export default function Procurement() {
     }));
   };
 
-  // --- Helper: Get Vendor Price ---
-  const getVendorPrice = (inventoryId?: string) => {
-    if (!inventoryId || !vendors) return null;
-    
-    for (const vendor of vendors) {
-      if (vendor.itemPrices) {
-        const priceEntry = vendor.itemPrices.find(p => p.itemId === inventoryId);
-        if (priceEntry) {
-          return priceEntry.averagePrice;
-        }
+  // --- Data Generation Functions with useMemo ---
+  
+  const kitWiseData = useMemo(() => {
+    if (!assignments) return [];
+    const kitMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+      const kitName = assignment.kit?.name || "Unknown";
+      if (!kitMap.has(kitName)) {
+        kitMap.set(kitName, {
+          name: kitName,
+          assignments: [],
+          totalQuantity: 0,
+        });
       }
+      const entry = kitMap.get(kitName);
+      entry.assignments.push(assignment);
+      entry.totalQuantity += assignment.quantity;
+    });
+    
+    return Array.from(kitMap.values()).map(kit => ({
+      ...kit,
+      materials: aggregateMaterials(kit.assignments)
+    }));
+  }, [assignments, inventoryByName, inventoryById]);
+
+  const monthWiseData = useMemo(() => {
+    if (!assignments) return [];
+    const monthMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+      const monthKey = assignment.productionMonth || new Date(assignment._creationTime).toISOString().slice(0, 7);
+      
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          month: monthKey,
+          assignments: [],
+          totalAssignments: 0,
+        });
+      }
+      const entry = monthMap.get(monthKey);
+      entry.assignments.push(assignment);
+      entry.totalAssignments += 1;
+    });
+
+    return Array.from(monthMap.values())
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .map(month => ({
+        ...month,
+        materials: aggregateMaterials(month.assignments)
+      }));
+  }, [assignments, inventoryByName, inventoryById]);
+
+  const clientWiseData = useMemo(() => {
+    if (!assignments) return [];
+    const clientMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+      if (!assignment.client) {
+        return;
+      }
+      
+      const clientName = (assignment.client as any)?.organization || (assignment.client as any)?.name || (assignment.client as any)?.buyerName || "Unknown Client";
+      if (!clientMap.has(clientName)) {
+        clientMap.set(clientName, {
+          clientName: clientName,
+          assignments: [],
+          totalKits: 0,
+        });
+      }
+      const entry = clientMap.get(clientName);
+      entry.assignments.push(assignment);
+      entry.totalKits += assignment.quantity;
+    });
+
+    return Array.from(clientMap.values()).map(client => ({
+      ...client,
+      materials: aggregateMaterials(client.assignments)
+    }));
+  }, [assignments, inventoryByName, inventoryById]);
+
+  const materialSummary = useMemo(() => {
+    if (!assignments) return [];
+    return aggregateMaterials(assignments);
+  }, [assignments, inventoryByName, inventoryById]);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/auth");
     }
-    return null;
-  };
+    if (!isLoading && isAuthenticated && user && !user.isApproved) {
+      navigate("/pending-approval");
+    }
+  }, [isLoading, isAuthenticated, user, navigate]);
+
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">You do not have permission to view this page.</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isLoading || !assignments || !inventory || !vendors) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-full">
+          <Package className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
 
   // --- Export Functions ---
 
