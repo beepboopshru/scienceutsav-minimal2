@@ -665,7 +665,7 @@ export default function KitBuilder() {
                                         {getInventoryBySubcategory(material.subcategory || "").map((item) => (
                                           <CommandItem
                                             key={item._id}
-                                            value={item.name}
+                                            value={`${item._id}-${item.name}`}
                                             onSelect={() => {
                                               structure.pouches[pouchIdx].materials[matIdx].name = item.name;
                                               structure.pouches[pouchIdx].materials[matIdx].unit = item.unit;
@@ -679,7 +679,14 @@ export default function KitBuilder() {
                                               )}
                                             />
                                             <div className="flex flex-col items-start">
-                                              <span>{item.name}</span>
+                                              <div className="flex items-center gap-2">
+                                                <span>{item.name}</span>
+                                                {item.type && (
+                                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                                    {item.type}
+                                                  </span>
+                                                )}
+                                              </div>
                                               {item.description && (
                                                 <span className="text-xs text-muted-foreground">{item.description}</span>
                                               )}
@@ -824,7 +831,7 @@ export default function KitBuilder() {
                                         {getInventoryBySubcategory(material.subcategory || "").map((item) => (
                                           <CommandItem
                                             key={item._id}
-                                            value={item.name}
+                                            value={`${item._id}-${item.name}`}
                                             onSelect={() => {
                                               structure.packets[packetIdx].materials[matIdx].name = item.name;
                                               structure.packets[packetIdx].materials[matIdx].unit = item.unit;
@@ -838,7 +845,14 @@ export default function KitBuilder() {
                                               )}
                                             />
                                             <div className="flex flex-col items-start">
-                                              <span>{item.name}</span>
+                                              <div className="flex items-center gap-2">
+                                                <span>{item.name}</span>
+                                                {item.type && (
+                                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                                    {item.type}
+                                                  </span>
+                                                )}
+                                              </div>
                                               {item.description && (
                                                 <span className="text-xs text-muted-foreground">{item.description}</span>
                                               )}
@@ -961,33 +975,40 @@ export default function KitBuilder() {
                                       </Button>
                                     </div>
                                   </CommandEmpty>
-                                  <CommandGroup>
-                                    {getInventoryBySubcategory(spare.subcategory || "").map((item) => (
-                                      <CommandItem
-                                        key={item._id}
-                                        value={item.name}
-                                        onSelect={() => {
-                                          const updated = [...kitForm.spareKits];
-                                          updated[idx].name = item.name;
-                                          updated[idx].unit = item.unit;
-                                          setKitForm({ ...kitForm, spareKits: updated });
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            spare.name === item.name ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <div className="flex flex-col items-start">
-                                          <span>{item.name}</span>
-                                          {item.description && (
-                                            <span className="text-xs text-muted-foreground">{item.description}</span>
-                                          )}
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
+                                      <CommandGroup>
+                                        {getInventoryBySubcategory(spare.subcategory || "").map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={`${item._id}-${item.name}`}
+                                            onSelect={() => {
+                                              const updated = [...kitForm.spareKits];
+                                              updated[idx].name = item.name;
+                                              updated[idx].unit = item.unit;
+                                              setKitForm({ ...kitForm, spareKits: updated });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                spare.name === item.name ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col items-start">
+                                              <div className="flex items-center gap-2">
+                                                <span>{item.name}</span>
+                                                {item.type && (
+                                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                                    {item.type}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {item.description && (
+                                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                                              )}
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
                                 </CommandList>
                               </Command>
                             </PopoverContent>
@@ -1087,33 +1108,40 @@ export default function KitBuilder() {
                                       </Button>
                                     </div>
                                   </CommandEmpty>
-                                  <CommandGroup>
-                                    {getInventoryBySubcategory(bulk.subcategory || "").map((item) => (
-                                      <CommandItem
-                                        key={item._id}
-                                        value={item.name}
-                                        onSelect={() => {
-                                          const updated = [...kitForm.bulkMaterials];
-                                          updated[idx].name = item.name;
-                                          updated[idx].unit = item.unit;
-                                          setKitForm({ ...kitForm, bulkMaterials: updated });
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            bulk.name === item.name ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <div className="flex flex-col items-start">
-                                          <span>{item.name}</span>
-                                          {item.description && (
-                                            <span className="text-xs text-muted-foreground">{item.description}</span>
-                                          )}
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
+                                      <CommandGroup>
+                                        {getInventoryBySubcategory(bulk.subcategory || "").map((item) => (
+                                          <CommandItem
+                                            key={item._id}
+                                            value={`${item._id}-${item.name}`}
+                                            onSelect={() => {
+                                              const updated = [...kitForm.bulkMaterials];
+                                              updated[idx].name = item.name;
+                                              updated[idx].unit = item.unit;
+                                              setKitForm({ ...kitForm, bulkMaterials: updated });
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                bulk.name === item.name ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <div className="flex flex-col items-start">
+                                              <div className="flex items-center gap-2">
+                                                <span>{item.name}</span>
+                                                {item.type && (
+                                                  <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                                    {item.type}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              {item.description && (
+                                                <span className="text-xs text-muted-foreground">{item.description}</span>
+                                              )}
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
                                 </CommandList>
                               </Command>
                             </PopoverContent>
