@@ -66,6 +66,7 @@ export const update = mutation({
         editStock: v.boolean(),
         createCategories: v.boolean(),
         importData: v.boolean(),
+        editBOM: v.optional(v.boolean()),
       })),
       vendors: v.optional(v.object({
         view: v.boolean(),
