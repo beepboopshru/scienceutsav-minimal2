@@ -27,7 +27,17 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
 
   const inventoryNormalized = useMemo(() => {
     if (!inventory) return new Map();
-    return new Map(inventory.map(i => [normalize(i.name), i]));
+    // Create a map that includes type information in the key for disambiguation
+    const map = new Map();
+    inventory.forEach(i => {
+      const key = normalize(i.name);
+      // Store by name, but we'll filter by type when retrieving
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key).push(i);
+    });
+    return map;
   }, [inventory, refreshTrigger]);
 
   const inventoryById = useMemo(() => {
@@ -66,25 +76,33 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         const packetName = packet.name.trim();
         
         // Find the sealed packet in inventory (Target)
+        // Helper function to find item by name and type
+        const findItemByNameAndType = (name: string, type: string) => {
+          const items = inventoryNormalized.get(normalize(name));
+          if (!items) return null;
+          // Filter for the specific type (sealed_packet)
+          return items.find((item: any) => item.type === type) || null;
+        };
+
         // 1. Try exact match of packet name
-        let foundItem = inventoryNormalized.get(normalize(packetName));
+        let foundItem = findItemByNameAndType(packetName, "sealed_packet");
 
         // 2. Try "[Kit Name] [Packet Name]" (without brackets)
         if (!foundItem) {
           const prefixedName = `${kit.name} ${packetName}`;
-          foundItem = inventoryNormalized.get(normalize(prefixedName));
+          foundItem = findItemByNameAndType(prefixedName, "sealed_packet");
         }
 
         // 3. Try "[Kit Name] [Packet Name]" (with brackets)
         if (!foundItem) {
           const kitName = kit.name.trim();
           const bracketedName = `[${kitName}] ${packetName}`;
-          foundItem = inventoryNormalized.get(normalize(bracketedName));
+          foundItem = findItemByNameAndType(bracketedName, "sealed_packet");
           
           // 4. Try "[Kit Name]Packet Name" (no space after bracket)
           if (!foundItem) {
              const bracketedNameNoSpace = `[${kitName}]${packetName}`;
-             foundItem = inventoryNormalized.get(normalize(bracketedNameNoSpace));
+             foundItem = findItemByNameAndType(bracketedNameNoSpace, "sealed_packet");
           }
         }
 
@@ -109,9 +127,17 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         } else {
           // Fallback to Kit Definition for missing items (so user knows what to expect/create)
           components = packet.materials.map((mat: any) => {
-            // Also try to find material with normalized name
+            // Try to find material with normalized name, preferring raw materials
             const matName = mat.name.trim();
-            let matInv = inventoryNormalized.get(normalize(matName));
+            const items = inventoryNormalized.get(normalize(matName));
+            let matInv = null;
+            
+            if (items && items.length > 0) {
+              // Prefer raw materials, then pre_processed
+              matInv = items.find((item: any) => item.type === "raw") || 
+                       items.find((item: any) => item.type === "pre_processed") ||
+                       items[0]; // Fallback to first item if no raw/pre_processed found
+            }
             
             return {
               name: mat.name,
