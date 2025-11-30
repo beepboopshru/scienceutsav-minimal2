@@ -4,7 +4,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams, useBlocker } from "react-router";
 import { Loader2, Save, ArrowLeft, Plus, Trash2, X, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,7 @@ export default function KitBuilder() {
     miscellaneous: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
   });
   const [didInitFromEdit, setDidInitFromEdit] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // Quick add inventory dialog state
   const [quickAddInventoryOpen, setQuickAddInventoryOpen] = useState(false);
@@ -69,6 +70,13 @@ export default function KitBuilder() {
     defaultSubcategory?: string;
   } | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(true);
+
+  // Block navigation when there are unsaved changes
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -104,6 +112,13 @@ export default function KitBuilder() {
   useEffect(() => {
     setDidInitFromEdit(false);
   }, [editKitId]);
+
+  // Track form changes
+  useEffect(() => {
+    if (didInitFromEdit || kitForm.name) {
+      setHasUnsavedChanges(true);
+    }
+  }, [kitForm, didInitFromEdit]);
 
   if (isLoading || !user || !programs || !kits || !inventory || !categories) {
     return (
@@ -162,6 +177,7 @@ export default function KitBuilder() {
         });
         toast.success("Kit created successfully");
       }
+      setHasUnsavedChanges(false);
       navigate("/research");
     } catch (error) {
       toast.error("Failed to save kit");
@@ -1177,6 +1193,33 @@ export default function KitBuilder() {
           defaultSubcategory={quickAddContext?.defaultSubcategory}
           onSuccess={handleQuickAddSuccess}
         />
+
+        {/* Unsaved Changes Warning Dialog */}
+        <Dialog open={blocker.state === "blocked"} onOpenChange={(open) => {
+          if (!open && blocker.state === "blocked" && blocker.reset) {
+            blocker.reset();
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Unsaved Changes</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes in the kit builder. If you leave now, your changes will be lost. Would you like to proceed?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => blocker.reset?.()}>
+                Stay on Page
+              </Button>
+              <Button variant="destructive" onClick={() => {
+                setHasUnsavedChanges(false);
+                blocker.proceed?.();
+              }}>
+                Leave Without Saving
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
