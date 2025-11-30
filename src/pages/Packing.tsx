@@ -257,15 +257,16 @@ export default function Packing() {
       }
     });
 
+    // Return all materials with shortage calculation (but don't filter by shortage)
     return Array.from(materialMap.values()).map((item) => ({
       ...item,
       shortage: Math.max(0, item.required - item.currentStock),
       traceability: [...new Set(item.traceability)].join(", "),
-    })).filter((item) => item.shortage > 0);
+    }));
   };
 
-  const handleRequestProcurement = () => {
-    // Check if any selected assignments already have procurement jobs
+  const handleRequestInventory = () => {
+    // Check if any selected assignments already have inventory requests
     const selectedAssignmentIds = Array.from(selectedAssignments);
     const existingJobs = procurementJobs?.filter((job: any) => 
       job.status !== "completed" && 
@@ -274,8 +275,8 @@ export default function Packing() {
 
     if (existingJobs && existingJobs.length > 0) {
       const jobIds = existingJobs.map((j: any) => j.jobId).join(", ");
-      toast.error("Procurement request already exists", {
-        description: `Some selected assignments already have active procurement jobs: ${jobIds}`,
+      toast.error("Inventory request already exists", {
+        description: `Some selected assignments already have active inventory requests: ${jobIds}`,
       });
       return;
     }
@@ -324,36 +325,36 @@ export default function Packing() {
     }
   };
 
-  const handleProceedWithProcurement = () => {
+  const handleProceedWithInventoryRequest = () => {
     setKitStockWarningDialog({ open: false, kitBreakdown: [] });
     setProcurementDialog(true);
   };
 
-  const handleSubmitProcurement = async () => {
-    const shortages = calculateMaterialShortages();
+  const handleSubmitInventoryRequest = async () => {
+    const materials = calculateMaterialShortages();
     
-    if (shortages.length === 0) {
-      toast.error("No material shortages found for selected assignments");
+    if (materials.length === 0) {
+      toast.error("No materials found for selected assignments");
       return;
     }
 
     try {
       await createProcurementJob({
         assignmentIds: Array.from(selectedAssignments),
-        materialShortages: shortages,
+        materialShortages: materials,
         priority: procurementPriority,
         notes: procurementNotes || undefined,
         remarks: procurementRemarks || undefined,
       });
       
-      toast.success("Procurement request created successfully");
+      toast.success("Inventory request created successfully");
       setSelectedAssignments(new Set());
       setProcurementDialog(false);
       setProcurementNotes("");
       setProcurementRemarks("");
       setProcurementPriority("medium");
     } catch (error) {
-      toast.error("Failed to create procurement request", {
+      toast.error("Failed to create inventory request", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -609,8 +610,8 @@ export default function Packing() {
               <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
                 Clear Selection
               </Button>
-              <Button onClick={handleRequestProcurement}>
-                Request Procurement
+              <Button onClick={handleRequestInventory}>
+                Request Inventory
               </Button>
             </div>
           </motion.div>
@@ -1046,7 +1047,7 @@ export default function Packing() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Some kits are available in stock. Do you still want to request material procurement?
+              Some kits are available in stock. Do you still want to request inventory from the warehouse?
             </p>
             
             <div className="border rounded-lg overflow-hidden">
@@ -1086,8 +1087,8 @@ export default function Packing() {
               <Button variant="outline" onClick={() => setKitStockWarningDialog({ open: false, kitBreakdown: [] })}>
                 Cancel
               </Button>
-              <Button onClick={handleProceedWithProcurement}>
-                Yes, Request Material Procurement
+              <Button onClick={handleProceedWithInventoryRequest}>
+                Yes, Request Inventory
               </Button>
             </div>
           </div>
@@ -1097,11 +1098,11 @@ export default function Packing() {
       <Dialog open={procurementDialog} onOpenChange={setProcurementDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request Procurement</DialogTitle>
+            <DialogTitle>Request Inventory</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Material shortages for {selectedAssignments.size} selected assignment{selectedAssignments.size !== 1 ? "s" : ""}
+              Materials required for {selectedAssignments.size} selected assignment{selectedAssignments.size !== 1 ? "s" : ""}
             </p>
             
             <div className="border rounded-lg overflow-hidden">
@@ -1174,9 +1175,9 @@ export default function Packing() {
             </div>
 
             <div>
-              <Label>Remarks (Required if kits are in stock)</Label>
+              <Label>Remarks (Optional)</Label>
               <Input
-                placeholder="Reason for requesting material procurement despite kit availability..."
+                placeholder="Add any remarks about this inventory request..."
                 value={procurementRemarks}
                 onChange={(e) => setProcurementRemarks(e.target.value)}
               />
@@ -1186,8 +1187,8 @@ export default function Packing() {
               <Button variant="outline" onClick={() => setProcurementDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSubmitProcurement}>
-                Submit Procurement Request
+              <Button onClick={handleSubmitInventoryRequest}>
+                Submit Inventory Request
               </Button>
             </div>
           </div>
