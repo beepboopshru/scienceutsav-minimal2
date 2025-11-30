@@ -142,10 +142,10 @@ export default function Dispatch() {
     );
   }
 
-  // Filter assignments: show transferred_to_dispatch and ready_for_dispatch only
-  // Dispatched assignments are hidden until manually set to delivered
+  // Filter assignments: show transferred_to_dispatch, ready_for_dispatch, and dispatched
+  // Only delivered assignments are moved to order history
   let filteredAssignments = assignments?.filter(
-    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch"
+    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch" || a.status === "dispatched"
   ) || [];
 
   // Apply customer type filter
@@ -274,8 +274,8 @@ export default function Dispatch() {
   };
 
   const handleStatusChange = async (assignmentId: Id<"assignments">, newStatus: string) => {
-    if (newStatus === "dispatched" || newStatus === "ready_for_dispatch") {
-      // Open checklist dialog for both dispatched and ready_for_dispatch
+    if (newStatus === "ready_for_dispatch") {
+      // Open checklist dialog only for ready_for_dispatch
       setSelectedAssignmentForDispatch(assignmentId);
       setChecklistItems({
         kitCount: false,
@@ -284,8 +284,18 @@ export default function Dispatch() {
         spareKitsTools: false,
       });
       setChecklistDialogOpen(true);
+    } else if (newStatus === "delivered") {
+      // Show confirmation dialog for delivered status
+      if (window.confirm("Are you sure this order has been delivered? This will move it to order history.")) {
+        try {
+          await updateStatus({ id: assignmentId, status: "delivered" });
+          toast.success("Order marked as delivered and moved to order history");
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "Failed to update status");
+        }
+      }
     } else {
-      // Directly update status for other statuses
+      // Directly update status for other statuses (including dispatched)
       try {
         await updateStatus({ id: assignmentId, status: newStatus as any });
         toast.success(`Status updated to ${newStatus.replace(/_/g, " ")}`);
@@ -299,7 +309,7 @@ export default function Dispatch() {
     const allChecked = Object.values(checklistItems).every((checked) => checked);
     
     if (!allChecked) {
-      toast.error("Please verify all checklist items before dispatching");
+      toast.error("Please verify all checklist items before marking as ready for dispatch");
       return;
     }
 
@@ -355,15 +365,15 @@ export default function Dispatch() {
 
       const { storageId } = await uploadResponse.json();
 
-      // Update assignment with e-way number and document
+      // Update assignment with e-way number and document, status stays as ready_for_dispatch
       await updateStatus({ 
         id: selectedAssignmentForDispatch, 
-        status: "dispatched",
+        status: "ready_for_dispatch",
         ewayNumber: ewayNumber.trim(),
         dispatchDocumentId: storageId,
       });
 
-      toast.success("Status updated to Dispatched");
+      toast.success("Status updated to Ready for Dispatch");
       setChecklistDialogOpen(false);
       setSelectedAssignmentForDispatch(null);
       setEwayNumber("");
@@ -1020,9 +1030,9 @@ export default function Dispatch() {
         <Dialog open={checklistDialogOpen} onOpenChange={setChecklistDialogOpen}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Dispatch Checklist</DialogTitle>
+              <DialogTitle>Ready for Dispatch Checklist</DialogTitle>
               <DialogDescription>
-                Please verify all items before marking as dispatched
+                Please verify all items before marking as ready for dispatch
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -1125,7 +1135,7 @@ export default function Dispatch() {
                     Uploading...
                   </>
                 ) : (
-                  "Confirm Dispatch"
+                  "Confirm Ready for Dispatch"
                 )}
               </Button>
             </DialogFooter>

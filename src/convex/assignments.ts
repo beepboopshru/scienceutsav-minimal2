@@ -151,8 +151,8 @@ export const updateStatus = mutation({
 
     await ctx.db.patch(args.id, updates);
 
-    // If status is dispatched or delivered, move to order history
-    if (args.status === "dispatched" || args.status === "delivered") {
+    // Only move to order history when status is delivered
+    if (args.status === "delivered") {
       // Create order history record
       const orderHistoryData: any = {
         kitId: assignment.kitId,
