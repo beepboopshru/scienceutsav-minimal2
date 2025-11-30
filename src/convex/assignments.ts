@@ -140,8 +140,8 @@ export const updateStatus = mutation({
 
     const updates: any = { status: args.status };
 
-    // When dispatched, reduce the finished kit inventory
-    if (args.status === "dispatched" && previousStatus !== "dispatched") {
+    // When ready_for_dispatch, reduce the finished kit inventory
+    if (args.status === "ready_for_dispatch" && previousStatus !== "ready_for_dispatch") {
       const kit = await ctx.db.get(assignment.kitId);
       if (kit) {
         const inventoryItem = await ctx.db
@@ -161,7 +161,10 @@ export const updateStatus = mutation({
           });
         }
       }
-      
+    }
+
+    // Set dispatchedAt timestamp when dispatched
+    if (args.status === "dispatched" && previousStatus !== "dispatched") {
       updates.dispatchedAt = Date.now();
     }
 
