@@ -112,6 +112,7 @@ export const updateStatus = mutation({
     dispatchDocumentId: v.optional(v.id("_storage")),
     trackingLink: v.optional(v.string()),
     proofPhotoId: v.optional(v.id("_storage")),
+    remarks: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -167,6 +168,9 @@ export const updateStatus = mutation({
       if (args.proofPhotoId) {
         updates.proofPhotoId = args.proofPhotoId;
       }
+      if (args.remarks) {
+        updates.remarks = args.remarks;
+      }
 
     await ctx.db.patch(args.id, updates);
 
@@ -209,6 +213,14 @@ export const updateStatus = mutation({
         orderHistoryData.trackingLink = updates.trackingLink || (assignment as any).trackingLink;
       }
 
+      if (updates.proofPhotoId || (assignment as any).proofPhotoId) {
+        orderHistoryData.proofPhotoId = updates.proofPhotoId || (assignment as any).proofPhotoId;
+      }
+
+      if (updates.remarks || assignment.remarks) {
+        orderHistoryData.remarks = updates.remarks || assignment.remarks;
+      }
+
       await ctx.db.insert("orderHistory", orderHistoryData);
 
       // Delete the assignment
@@ -242,6 +254,21 @@ export const updateNotes = mutation({
 
     await ctx.db.patch(args.id, {
       notes: args.notes,
+    });
+  },
+});
+
+export const updateRemarks = mutation({
+  args: {
+    id: v.id("assignments"),
+    remarks: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    await ctx.db.patch(args.id, {
+      remarks: args.remarks,
     });
   },
 });

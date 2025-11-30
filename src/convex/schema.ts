@@ -289,6 +289,7 @@ const schema = defineSchema(
       v.literal("delivered")
     ),
       notes: v.optional(v.string()),
+      remarks: v.optional(v.string()),
       dispatchedAt: v.optional(v.number()),
       deliveredAt: v.optional(v.number()),
       productionMonth: v.optional(v.string()),
@@ -713,6 +714,7 @@ const schema = defineSchema(
       ),
       deliveredAt: v.optional(v.number()),
       notes: v.optional(v.string()),
+      remarks: v.optional(v.string()),
       originalAssignmentId: v.id("assignments"),
     })
       .index("by_client", ["clientId"])
