@@ -206,7 +206,57 @@ export default function Packing() {
         }
       }
 
-      // Removed: spare kits, bulk materials, and miscellaneous processing
+      // Process spare kits
+      if (kit.spareKits && Array.isArray(kit.spareKits)) {
+        kit.spareKits.forEach((spare: any) => {
+          const key = `${spare.name.toLowerCase()}_${kit._id}`;
+          const required = spare.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            existing.traceability.push("Spare Kit");
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === spare.name.toLowerCase());
+            materialMap.set(key, {
+              name: spare.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: spare.unit,
+              category: "Spare Kit",
+              inventoryType: invItem?.type || "unknown",
+              sourceKits: [kit.name],
+              traceability: ["Spare Kit"],
+            });
+          }
+        });
+      }
+
+      // Process bulk materials
+      if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+        kit.bulkMaterials.forEach((bulk: any) => {
+          const key = `${bulk.name.toLowerCase()}_${kit._id}`;
+          const required = bulk.quantity * requiredQty;
+          
+          if (materialMap.has(key)) {
+            const existing = materialMap.get(key);
+            existing.required += required;
+            existing.traceability.push("Bulk Material");
+          } else {
+            const invItem = inventory.find((i) => i.name.toLowerCase() === bulk.name.toLowerCase());
+            materialMap.set(key, {
+              name: bulk.name,
+              currentStock: invItem?.quantity || 0,
+              required,
+              unit: bulk.unit,
+              category: "Bulk Material",
+              inventoryType: invItem?.type || "unknown",
+              sourceKits: [kit.name],
+              traceability: ["Bulk Material"],
+            });
+          }
+        });
+      }
     });
 
     return Array.from(materialMap.values()).map((item) => ({
