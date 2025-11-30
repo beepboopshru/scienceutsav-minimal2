@@ -841,7 +841,7 @@ export default function Dispatch() {
                     {createDispatchData.clientType === "b2b"
                       ? clients?.map((client) => (
                           <SelectItem key={client._id} value={client._id}>
-                            {client.name}
+                            {client.organization || client.name}
                           </SelectItem>
                         ))
                       : b2cClients?.map((client) => (
