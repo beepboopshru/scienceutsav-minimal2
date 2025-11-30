@@ -58,8 +58,13 @@ export default function OrderRecords() {
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
   const [selectedBatch, setSelectedBatch] = useState<string>("all");
   const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
-  const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
+  const [selectedOrderForView, setSelectedOrderForView] = useState<any>(null);
   const [openBatches, setOpenBatches] = useState<Set<string>>(new Set());
+
+  // Storage URLs for the selected order
+  const ewayDocUrl = useQuery(api.storage.getUrl, selectedOrderForView?.ewayDocumentId ? { storageId: selectedOrderForView.ewayDocumentId } : "skip");
+  const dispatchDocUrl = useQuery(api.storage.getUrl, selectedOrderForView?.dispatchDocumentId ? { storageId: selectedOrderForView.dispatchDocumentId } : "skip");
+  const proofPhotoUrl = useQuery(api.storage.getUrl, selectedOrderForView?.proofPhotoId ? { storageId: selectedOrderForView.proofPhotoId } : "skip");
 
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -181,7 +186,7 @@ export default function OrderRecords() {
   };
 
   const handleViewClient = (order: any) => {
-    setSelectedClientForView(order.client);
+    setSelectedOrderForView(order);
     setViewClientDialogOpen(true);
   };
 
@@ -205,6 +210,16 @@ export default function OrderRecords() {
     setSelectedStatuses([]);
     setSelectedProductionMonths([]);
     setSelectedDispatchMonths([]);
+  };
+
+  const formatAddress = (address: any) => {
+    if (!address) return "-";
+    if (typeof address === "string") return address;
+    if (typeof address === "object") {
+      const { line1, line2, line3, city, state, pincode, country } = address;
+      return [line1, line2, line3, city, state, pincode, country].filter(Boolean).join(", ");
+    }
+    return "-";
   };
 
   const totalQuantity = filteredOrders.reduce((sum, o) => sum + o.quantity, 0);
@@ -472,56 +487,124 @@ export default function OrderRecords() {
         <Dialog open={viewClientDialogOpen} onOpenChange={setViewClientDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Client Details</DialogTitle>
+              <DialogTitle>Order Details</DialogTitle>
               <DialogDescription>
-                {selectedClientForView?.organization || selectedClientForView?.buyerName || selectedClientForView?.name}
+                {selectedOrderForView?.client?.organization || selectedOrderForView?.client?.buyerName || selectedOrderForView?.client?.name}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              {selectedClientForView?.organization && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Organization:</span>
-                  <span>{selectedClientForView.organization}</span>
+            
+            <div className="space-y-6">
+              {/* Dispatch Information Section */}
+              <div className="space-y-4 border-b pb-4">
+                <h3 className="text-lg font-semibold">Dispatch Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {selectedOrderForView?.ewayNumber && (
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium text-muted-foreground">E-Way Number</span>
+                      <p className="text-sm">{selectedOrderForView.ewayNumber}</p>
+                    </div>
+                  )}
+                  {selectedOrderForView?.dispatchNumber && (
+                    <div className="space-y-1">
+                      <span className="text-sm font-medium text-muted-foreground">Dispatch Number</span>
+                      <p className="text-sm">{selectedOrderForView.dispatchNumber}</p>
+                    </div>
+                  )}
+                  {selectedOrderForView?.trackingLink && (
+                    <div className="space-y-1 md:col-span-2">
+                      <span className="text-sm font-medium text-muted-foreground">Tracking Link</span>
+                      <div className="flex items-center gap-2">
+                        <a 
+                          href={selectedOrderForView.trackingLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline truncate max-w-[300px]"
+                        >
+                          {selectedOrderForView.trackingLink}
+                        </a>
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={selectedOrderForView.trackingLink} target="_blank" rel="noopener noreferrer">
+                            Track Shipment
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-              {selectedClientForView?.contact && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Phone:</span>
-                  <span>{selectedClientForView.contact}</span>
+
+                <div className="flex flex-wrap gap-4 mt-2">
+                  {ewayDocUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={ewayDocUrl} target="_blank" rel="noopener noreferrer">
+                        View E-Way Document
+                      </a>
+                    </Button>
+                  )}
+                  {dispatchDocUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={dispatchDocUrl} target="_blank" rel="noopener noreferrer">
+                        View Dispatch Document
+                      </a>
+                    </Button>
+                  )}
+                  {proofPhotoUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={proofPhotoUrl} target="_blank" rel="noopener noreferrer">
+                        View Proof Photo
+                      </a>
+                    </Button>
+                  )}
                 </div>
-              )}
-              {selectedClientForView?.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Phone:</span>
-                  <span>{selectedClientForView.phone}</span>
-                </div>
-              )}
-              {selectedClientForView?.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Email:</span>
-                  <span>{selectedClientForView.email}</span>
-                </div>
-              )}
-              {selectedClientForView?.address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <span className="font-medium">Address:</span>
-                    <p className="text-sm mt-1">{selectedClientForView.address}</p>
+              </div>
+
+              {/* Client Information Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Client Information</h3>
+                {selectedOrderForView?.client?.organization && (
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Organization:</span>
+                    <span>{selectedOrderForView.client.organization}</span>
                   </div>
-                </div>
-              )}
-              {selectedClientForView?.salesPerson && (
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Sales Person:</span>
-                  <span>{selectedClientForView.salesPerson}</span>
-                </div>
-              )}
+                )}
+                {selectedOrderForView?.client?.contact && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Contact:</span>
+                    <span>{selectedOrderForView.client.contact}</span>
+                  </div>
+                )}
+                {selectedOrderForView?.client?.phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Phone:</span>
+                    <span>{selectedOrderForView.client.phone}</span>
+                  </div>
+                )}
+                {selectedOrderForView?.client?.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Email:</span>
+                    <span>{selectedOrderForView.client.email}</span>
+                  </div>
+                )}
+                {selectedOrderForView?.client?.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <span className="font-medium">Address:</span>
+                      <p className="text-sm mt-1">{formatAddress(selectedOrderForView.client.address)}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedOrderForView?.client?.salesPerson && (
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Sales Person:</span>
+                    <span>{selectedOrderForView.client.salesPerson}</span>
+                  </div>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewClientDialogOpen(false)}>
