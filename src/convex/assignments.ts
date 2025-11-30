@@ -128,6 +128,8 @@ export const updateStatus = mutation({
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
+    const previousStatus = assignment.status;
+
     await ctx.db.insert("deletionRequests", {
       entityType: "assignment",
       entityId: args.id,
@@ -138,7 +140,28 @@ export const updateStatus = mutation({
 
     const updates: any = { status: args.status };
 
-    if (args.status === "dispatched" && !assignment.dispatchedAt) {
+    // When dispatched, reduce the finished kit inventory
+    if (args.status === "dispatched" && previousStatus !== "dispatched") {
+      const kit = await ctx.db.get(assignment.kitId);
+      if (kit) {
+        const inventoryItem = await ctx.db
+          .query("inventory")
+          .filter((q) => 
+            q.and(
+              q.eq(q.field("name"), kit.name),
+              q.eq(q.field("type"), "finished")
+            )
+          )
+          .first();
+
+        if (inventoryItem) {
+          const newQuantity = inventoryItem.quantity - assignment.quantity;
+          await ctx.db.patch(inventoryItem._id, {
+            quantity: Math.max(0, newQuantity),
+          });
+        }
+      }
+      
       updates.dispatchedAt = Date.now();
     }
 
@@ -361,10 +384,72 @@ export const updatePackingStatus = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) throw new Error("Assignment not found");
+
+    const previousStatus = assignment.status || "assigned";
+
     // Update the main status field instead of packingStatus
     await ctx.db.patch(args.assignmentId, {
       status: args.packingStatus,
     });
+
+    // If status changed to transferred_to_dispatch, increase kit inventory
+    if (args.packingStatus === "transferred_to_dispatch" && previousStatus !== "transferred_to_dispatch") {
+      const kit = await ctx.db.get(assignment.kitId);
+      if (kit) {
+        // Find or create inventory item for this finished kit
+        const inventoryItem = await ctx.db
+          .query("inventory")
+          .filter((q) => 
+            q.and(
+              q.eq(q.field("name"), kit.name),
+              q.eq(q.field("type"), "finished")
+            )
+          )
+          .first();
+
+        if (inventoryItem) {
+          // Update existing inventory
+          await ctx.db.patch(inventoryItem._id, {
+            quantity: inventoryItem.quantity + assignment.quantity,
+          });
+        } else {
+          // Create new inventory item for finished kit
+          await ctx.db.insert("inventory", {
+            name: kit.name,
+            description: `Finished kit: ${kit.name}`,
+            type: "finished",
+            quantity: assignment.quantity,
+            unit: "pcs",
+            minStockLevel: 0,
+          });
+        }
+      }
+    }
+
+    // If status changed from transferred_to_dispatch back to another status, decrease kit inventory
+    if (previousStatus === "transferred_to_dispatch" && args.packingStatus !== "transferred_to_dispatch") {
+      const kit = await ctx.db.get(assignment.kitId);
+      if (kit) {
+        const inventoryItem = await ctx.db
+          .query("inventory")
+          .filter((q) => 
+            q.and(
+              q.eq(q.field("name"), kit.name),
+              q.eq(q.field("type"), "finished")
+            )
+          )
+          .first();
+
+        if (inventoryItem) {
+          const newQuantity = inventoryItem.quantity - assignment.quantity;
+          await ctx.db.patch(inventoryItem._id, {
+            quantity: Math.max(0, newQuantity),
+          });
+        }
+      }
+    }
 
     return args.assignmentId;
   },
