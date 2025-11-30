@@ -104,6 +104,10 @@ export default function ClientForm() {
 
   useEffect(() => {
     if (client) {
+      const clientType = client.type === "monthly" || client.type === "one_time" 
+        ? client.type 
+        : "one_time";
+      
       setFormData({
         name: client.name,
         clientId: client.clientId || "",
@@ -118,7 +122,7 @@ export default function ClientForm() {
           pincode: client.address?.pincode || "",
           country: client.address?.country || "",
         },
-        type: client.type || "one_time",
+        type: clientType,
         notes: client.notes || "",
         salesPerson: client.salesPerson || "",
         pointsOfContact: client.pointsOfContact || [],
@@ -344,7 +348,7 @@ export default function ClientForm() {
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select client type" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="monthly">Monthly</SelectItem>
