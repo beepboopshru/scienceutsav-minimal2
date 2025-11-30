@@ -23,6 +23,7 @@ import type * as b2cClients from "../b2cClients.js";
 import type * as batches from "../batches.js";
 import type * as billTracking from "../billTracking.js";
 import type * as clients from "../clients.js";
+import type * as customDispatches from "../customDispatches.js";
 import type * as deletionRequests from "../deletionRequests.js";
 import type * as discrepancyTickets from "../discrepancyTickets.js";
 import type * as fixClientType from "../fixClientType.js";
@@ -66,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   batches: typeof batches;
   billTracking: typeof billTracking;
   clients: typeof clients;
+  customDispatches: typeof customDispatches;
   deletionRequests: typeof deletionRequests;
   discrepancyTickets: typeof discrepancyTickets;
   fixClientType: typeof fixClientType;

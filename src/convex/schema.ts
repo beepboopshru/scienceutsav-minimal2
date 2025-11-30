@@ -806,6 +806,16 @@ const schema = defineSchema(
       purchasingQty: v.number(),
       updatedBy: v.id("users"),
     }).index("by_material_name", ["materialName"]),
+
+    customDispatches: defineTable({
+      description: v.string(),
+      status: v.union(v.literal("pending"), v.literal("dispatched"), v.literal("delivered")),
+      trackingNumber: v.optional(v.string()),
+      recipientName: v.optional(v.string()),
+      remarks: v.optional(v.string()),
+      createdBy: v.id("users"),
+      createdByName: v.string(),
+    }),
   },
   {
     schemaValidation: false,

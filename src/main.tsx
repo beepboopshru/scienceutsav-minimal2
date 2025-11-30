@@ -36,6 +36,7 @@ import LMS from "./pages/LMS";
 import DiscrepancyTickets from "./pages/DiscrepancyTickets";
 import BillTracking from "@/pages/BillTracking.tsx";
 import OrderRecords from "./pages/OrderRecords.tsx";
+import DispatchHistory from "./pages/DispatchHistory.tsx";
 import Themes from "./pages/Themes";
 import ClientForm from "./pages/ClientForm";
 import SealingJobs from "./pages/SealingJobs";
@@ -112,6 +113,7 @@ const router = createBrowserRouter(
       <Route path="/discrepancy-tickets" element={<DiscrepancyTickets />} />
       <Route path="/bill-tracking" element={<BillTracking />} />
       <Route path="/order-records" element={<OrderRecords />} />
+      <Route path="/dispatch-history" element={<DispatchHistory />} />
       <Route path="/themes" element={<Themes />} />
       <Route path="*" element={<NotFound />} />
     </Route>

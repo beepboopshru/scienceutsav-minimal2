@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -60,6 +61,10 @@ export default function Dispatch() {
   const b2cClients = useQuery(api.b2cClients.list, {});
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list);
+  const customDispatches = useQuery(api.customDispatches.list, {});
+  const createCustomDispatch = useMutation(api.customDispatches.create);
+  const updateCustomDispatchStatus = useMutation(api.customDispatches.updateStatus);
+  const deleteCustomDispatch = useMutation(api.customDispatches.deleteCustomDispatch);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const updateRemarks = useMutation(api.assignments.updateRemarks);
@@ -131,6 +136,15 @@ export default function Dispatch() {
   // Remarks editing state
   const [editingRemarks, setEditingRemarks] = useState<Record<string, string>>({});
   const [originalRemarks, setOriginalRemarks] = useState<Record<string, string>>({});
+
+  // Custom Dispatches state
+  const [customDispatchDescription, setCustomDispatchDescription] = useState("");
+  const [customDispatchStatus, setCustomDispatchStatus] = useState<"pending" | "dispatched" | "delivered">("pending");
+  const [customDispatchTrackingNumber, setCustomDispatchTrackingNumber] = useState("");
+  const [customDispatchRecipientName, setCustomDispatchRecipientName] = useState("");
+  const [customDispatchRemarks, setCustomDispatchRemarks] = useState("");
+  const [customDispatchSearchQuery, setCustomDispatchSearchQuery] = useState("");
+  const [customDispatchStatusFilter, setCustomDispatchStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -755,318 +769,147 @@ export default function Dispatch() {
           </div>
         </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="p-4 border rounded-lg bg-card">
-            <div className="text-sm text-muted-foreground mb-1">Total Assignments</div>
-            <div className="text-2xl font-bold">{filteredAssignments.length}</div>
-          </div>
-          <div className="p-4 border rounded-lg bg-card">
-            <div className="text-sm text-muted-foreground mb-1">Total Quantity</div>
-            <div className="text-2xl font-bold">{totalQuantity}</div>
-          </div>
-          <div className="p-4 border rounded-lg bg-card">
-            <div className="text-sm text-muted-foreground mb-1">Selected</div>
-            <div className="text-2xl font-bold">{selectedAssignments.size}</div>
-          </div>
-        </div>
+        <Tabs defaultValue="assignments" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="assignments">Assignments</TabsTrigger>
+            <TabsTrigger value="custom">Custom Dispatches</TabsTrigger>
+          </TabsList>
 
-        {/* Filters */}
-        <div className="space-y-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by kit name or client name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+          <TabsContent value="assignments">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 border rounded-lg bg-card">
+                <div className="text-sm text-muted-foreground mb-1">Total Assignments</div>
+                <div className="text-2xl font-bold">{filteredAssignments.length}</div>
+              </div>
+              <div className="p-4 border rounded-lg bg-card">
+                <div className="text-sm text-muted-foreground mb-1">Total Quantity</div>
+                <div className="text-2xl font-bold">{totalQuantity}</div>
+              </div>
+              <div className="p-4 border rounded-lg bg-card">
+                <div className="text-sm text-muted-foreground mb-1">Selected</div>
+                <div className="text-2xl font-bold">{selectedAssignments.size}</div>
               </div>
             </div>
-            <Select value={customerTypeFilter} onValueChange={(v: any) => setCustomerTypeFilter(v)}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Customer Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="b2b">B2B</SelectItem>
-                <SelectItem value="b2c">B2C</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          <AssignmentFilters
-            programs={programs || []}
-            kits={kits || []}
-            clients={[...(clients || []), ...(b2cClients || [])]}
-            assignments={assignments || []}
-            selectedPrograms={selectedPrograms}
-            selectedCategories={selectedKitCategories}
-            selectedKits={selectedKits}
-            selectedClients={selectedClients}
-            selectedDispatchMonths={selectedDispatchMonths}
-            selectedStatuses={selectedStatuses}
-            selectedProductionMonths={selectedProductionMonths}
-            onProgramsChange={setSelectedPrograms}
-            onCategoriesChange={setSelectedKitCategories}
-            onKitsChange={setSelectedKits}
-            onClientsChange={setSelectedClients}
-            onDispatchMonthsChange={setSelectedDispatchMonths}
-            onStatusesChange={setSelectedStatuses}
-            onProductionMonthsChange={setSelectedProductionMonths}
-            onClearAll={handleClearAllFilters}
-          />
+            {/* Filters */}
+            <div className="space-y-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by kit name or client name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <Select value={customerTypeFilter} onValueChange={(v: any) => setCustomerTypeFilter(v)}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Customer Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="b2b">B2B</SelectItem>
+                    <SelectItem value="b2c">B2C</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <Button variant="outline" onClick={handleClearAllFilters}>
-            Clear All Filters
-          </Button>
+              <AssignmentFilters
+                programs={programs || []}
+                kits={kits || []}
+                clients={[...(clients || []), ...(b2cClients || [])]}
+                assignments={assignments || []}
+                selectedPrograms={selectedPrograms}
+                selectedCategories={selectedKitCategories}
+                selectedKits={selectedKits}
+                selectedClients={selectedClients}
+                selectedDispatchMonths={selectedDispatchMonths}
+                selectedStatuses={selectedStatuses}
+                selectedProductionMonths={selectedProductionMonths}
+                onProgramsChange={setSelectedPrograms}
+                onCategoriesChange={setSelectedKitCategories}
+                onKitsChange={setSelectedKits}
+                onClientsChange={setSelectedClients}
+                onDispatchMonthsChange={setSelectedDispatchMonths}
+                onStatusesChange={setSelectedStatuses}
+                onProductionMonthsChange={setSelectedProductionMonths}
+                onClearAll={handleClearAllFilters}
+              />
 
-          <div className="flex gap-2">
-            <Button 
-              variant="default" 
-              onClick={() => setClientDetailsDialogOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Client Details Generator
-            </Button>
-            <Button 
-              variant="default" 
-              onClick={() => setBoxContentDialogOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <FileText className="h-4 w-4" />
-              Box Content Generator
-            </Button>
-          </div>
-        </div>
+              <Button variant="outline" onClick={handleClearAllFilters}>
+                Clear All Filters
+              </Button>
 
-        {/* Assignments Table */}
-        <div className="border rounded-lg overflow-x-auto">
-          {!filteredAssignments ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <div className="flex gap-2">
+                <Button 
+                  variant="default" 
+                  onClick={() => setClientDetailsDialogOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Client Details Generator
+                </Button>
+                <Button 
+                  variant="default" 
+                  onClick={() => setBoxContentDialogOpen(true)}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Box Content Generator
+                </Button>
+              </div>
             </div>
-          ) : filteredAssignments.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              No assignments ready for dispatch.
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr className="border-b">
-                  {canEdit && (
-                    <th className="text-left p-4 font-semibold w-12">
-                      <Checkbox
-                        checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
-                          } else {
-                            setSelectedAssignments(new Set());
-                          }
-                        }}
-                      />
-                    </th>
-                  )}
-                  <th className="text-left p-4 font-semibold">Customer</th>
-                  <th className="text-left p-4 font-semibold">Kit</th>
-                  <th className="text-left p-4 font-semibold">Quantity</th>
-                  <th className="text-left p-4 font-semibold">Grade</th>
-                  <th className="text-left p-4 font-semibold">Status</th>
-                  <th className="text-left p-4 font-semibold">Dispatch Date</th>
-                  <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>
-                  <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
-                  const isExpanded = expandedBatches.has(batchKey);
-                  const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
-                  const totalQty = batchAssignments.reduce((sum, a) => sum + a.quantity, 0);
 
-                  if (batchKey === "standalone") {
-                    return batchAssignments.map((assignment) => (
-                      <tr key={assignment._id} className="border-b hover:bg-muted/30">
-                        {canEdit && (
-                          <td className="p-4">
-                            <Checkbox
-                              checked={selectedAssignments.has(assignment._id)}
-                              onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                            />
-                          </td>
-                        )}
-                        <td className="p-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {assignment.clientType === "b2b"
-                                ? (assignment.client as any)?.organization || (assignment.client as any)?.name
-                                : (assignment.client as any)?.buyerName}
-                            </span>
-                            <Badge variant="outline" className="w-fit mt-1">
-                              {assignment.clientType?.toUpperCase() || "N/A"}
-                            </Badge>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex flex-col">
-                            <span className="font-medium">{assignment.kit?.name}</span>
-                            {assignment.kit?.category && (
-                              <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">{assignment.quantity}</td>
-                        <td className="p-4">
-                          {assignment.grade ? (
-                            <Badge variant="outline">Grade {assignment.grade}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <Badge variant={
-                            assignment.status === "dispatched" ? "default" : 
-                            assignment.status === "delivered" ? "default" : 
-                            "secondary"
-                          }>
-                            {assignment.status}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          {assignment.dispatchedAt
-                            ? new Date(assignment.dispatchedAt).toLocaleDateString()
-                            : "-"}
-                        </td>
-                        <td className="p-4">
-                          {editingRemarks[assignment._id] !== undefined ? (
-                            <div className="space-y-2">
-                              <textarea
-                                className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                                rows={2}
-                                value={editingRemarks[assignment._id]}
-                                onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
-                                placeholder="Add remarks..."
-                              />
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => handleSaveRemarks(assignment._id)}
-                                >
-                                  Save
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleCancelEditingRemarks(assignment._id)}
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start gap-2">
-                              <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
-                                {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
-                              </div>
-                              {canEdit && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
-                                >
-                                  Edit
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewClient(assignment)}
-                              title="View Client Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {canEdit && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    Change Status
-                                    <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                    disabled={assignment.status === "transferred_to_dispatch"}
-                                  >
-                                    Transferred to Dispatch
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
-                                    disabled={assignment.status === "ready_for_dispatch"}
-                                  >
-                                    Ready for Dispatch
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                    disabled={assignment.status === "dispatched"}
-                                  >
-                                    Dispatched
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                    disabled={assignment.status === "delivered"}
-                                  >
-                                    Delivered
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ));
-                  }
+            {/* Assignments Table */}
+            <div className="border rounded-lg overflow-x-auto">
+              {!filteredAssignments ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredAssignments.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No assignments ready for dispatch.
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr className="border-b">
+                      {canEdit && (
+                        <th className="text-left p-4 font-semibold w-12">
+                          <Checkbox
+                            checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
+                              } else {
+                                setSelectedAssignments(new Set());
+                              }
+                            }}
+                          />
+                        </th>
+                      )}
+                      <th className="text-left p-4 font-semibold">Customer</th>
+                      <th className="text-left p-4 font-semibold">Kit</th>
+                      <th className="text-left p-4 font-semibold">Quantity</th>
+                      <th className="text-left p-4 font-semibold">Grade</th>
+                      <th className="text-left p-4 font-semibold">Status</th>
+                      <th className="text-left p-4 font-semibold">Dispatch Date</th>
+                      <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>
+                      <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
+                      const isExpanded = expandedBatches.has(batchKey);
+                      const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
+                      const totalQty = batchAssignments.reduce((sum, a) => sum + a.quantity, 0);
 
-                  return (
-                    <>
-                      <tr
-                        key={`batch-${batchKey}`}
-                        className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
-                        onClick={() => toggleBatch(batchKey)}
-                      >
-                        {canEdit && (
-                          <td className="p-4">
-                            {isExpanded ? (
-                              <ChevronDown className="h-5 w-5" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5" />
-                            )}
-                          </td>
-                        )}
-                        <td colSpan={canEdit ? 8 : 9} className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <span className="font-semibold">Batch: {batch?.batchId || batchKey}</span>
-                                <span className="text-sm text-muted-foreground ml-4">
-                                  {batchAssignments.length} assignments • {totalQty} total quantity
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                      {isExpanded &&
-                        batchAssignments.map((assignment) => (
+                      if (batchKey === "standalone") {
+                        return batchAssignments.map((assignment) => (
                           <tr key={assignment._id} className="border-b hover:bg-muted/30">
                             {canEdit && (
                               <td className="p-4">
@@ -1076,7 +919,7 @@ export default function Dispatch() {
                                 />
                               </td>
                             )}
-                            <td className="p-4 pl-12">
+                            <td className="p-4">
                               <div className="flex flex-col">
                                 <span className="font-medium">
                                   {assignment.clientType === "b2b"
@@ -1211,14 +1054,372 @@ export default function Dispatch() {
                               </div>
                             </td>
                           </tr>
-                        ))}
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+                        ));
+                      }
+
+                      return (
+                        <>
+                          <tr
+                            key={`batch-${batchKey}`}
+                            className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
+                            onClick={() => toggleBatch(batchKey)}
+                          >
+                            {canEdit && (
+                              <td className="p-4">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5" />
+                                )}
+                              </td>
+                            )}
+                            <td colSpan={canEdit ? 8 : 9} className="p-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div>
+                                    <span className="font-semibold">Batch: {batch?.batchId || batchKey}</span>
+                                    <span className="text-sm text-muted-foreground ml-4">
+                                      {batchAssignments.length} assignments • {totalQty} total quantity
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                          {isExpanded &&
+                            batchAssignments.map((assignment) => (
+                              <tr key={assignment._id} className="border-b hover:bg-muted/30">
+                                {canEdit && (
+                                  <td className="p-4">
+                                    <Checkbox
+                                      checked={selectedAssignments.has(assignment._id)}
+                                      onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                    />
+                                  </td>
+                                )}
+                                <td className="p-4 pl-12">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {assignment.clientType === "b2b"
+                                        ? (assignment.client as any)?.organization || (assignment.client as any)?.name
+                                        : (assignment.client as any)?.buyerName}
+                                    </span>
+                                    <Badge variant="outline" className="w-fit mt-1">
+                                      {assignment.clientType?.toUpperCase() || "N/A"}
+                                    </Badge>
+                                  </div>
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{assignment.kit?.name}</span>
+                                    {assignment.kit?.category && (
+                                      <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-4">{assignment.quantity}</td>
+                                <td className="p-4">
+                                  {assignment.grade ? (
+                                    <Badge variant="outline">Grade {assignment.grade}</Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">-</span>
+                                  )}
+                                </td>
+                                <td className="p-4">
+                                  <Badge variant={
+                                    assignment.status === "dispatched" ? "default" : 
+                                    assignment.status === "delivered" ? "default" : 
+                                    "secondary"
+                                  }>
+                                    {assignment.status}
+                                  </Badge>
+                                </td>
+                                <td className="p-4">
+                                  {assignment.dispatchedAt
+                                    ? new Date(assignment.dispatchedAt).toLocaleDateString()
+                                    : "-"}
+                                </td>
+                                <td className="p-4">
+                                  {editingRemarks[assignment._id] !== undefined ? (
+                                    <div className="space-y-2">
+                                      <textarea
+                                        className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                                        rows={2}
+                                        value={editingRemarks[assignment._id]}
+                                        onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
+                                        placeholder="Add remarks..."
+                                      />
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          onClick={() => handleSaveRemarks(assignment._id)}
+                                        >
+                                          Save
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => handleCancelEditingRemarks(assignment._id)}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-start gap-2">
+                                      <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
+                                        {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
+                                      </div>
+                                      {canEdit && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
+                                        >
+                                          Edit
+                                        </Button>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="p-4">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleViewClient(assignment)}
+                                      title="View Client Details"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    {canEdit && (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="outline" size="sm">
+                                            Change Status
+                                            <ChevronDown className="ml-2 h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem
+                                            onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                            disabled={assignment.status === "transferred_to_dispatch"}
+                                          >
+                                            Transferred to Dispatch
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
+                                            disabled={assignment.status === "ready_for_dispatch"}
+                                          >
+                                            Ready for Dispatch
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                            disabled={assignment.status === "dispatched"}
+                                          >
+                                            Dispatched
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                            disabled={assignment.status === "delivered"}
+                                          >
+                                            Delivered
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                        </>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="custom">
+            {/* Create Custom Dispatch Form */}
+            <div className="border rounded-lg p-6 mb-6 bg-card">
+              <h2 className="text-xl font-semibold mb-4">Create Custom Dispatch</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="custom-description">Description *</Label>
+                  <Input
+                    id="custom-description"
+                    placeholder="Enter dispatch description..."
+                    value={customDispatchDescription}
+                    onChange={(e) => setCustomDispatchDescription(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-recipient">Recipient Name</Label>
+                  <Input
+                    id="custom-recipient"
+                    placeholder="Enter recipient name..."
+                    value={customDispatchRecipientName}
+                    onChange={(e) => setCustomDispatchRecipientName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-tracking">Tracking Number</Label>
+                  <Input
+                    id="custom-tracking"
+                    placeholder="Enter tracking number..."
+                    value={customDispatchTrackingNumber}
+                    onChange={(e) => setCustomDispatchTrackingNumber(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-status">Status</Label>
+                  <Select value={customDispatchStatus} onValueChange={(v: any) => setCustomDispatchStatus(v)}>
+                    <SelectTrigger id="custom-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="dispatched">Dispatched</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="custom-remarks">Remarks</Label>
+                  <Input
+                    id="custom-remarks"
+                    placeholder="Enter remarks..."
+                    value={customDispatchRemarks}
+                    onChange={(e) => setCustomDispatchRemarks(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button onClick={() => createCustomDispatch({
+                description: customDispatchDescription,
+                status: customDispatchStatus,
+                recipientName: customDispatchRecipientName || undefined,
+                trackingNumber: customDispatchTrackingNumber || undefined,
+                remarks: customDispatchRemarks || undefined,
+              })} className="mt-4" disabled={!canEdit}>
+                Create Custom Dispatch
+              </Button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by description, recipient, or tracking number..."
+                    value={customDispatchSearchQuery}
+                    onChange={(e) => setCustomDispatchSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <Select value={customDispatchStatusFilter} onValueChange={setCustomDispatchStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="dispatched">Dispatched</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Dispatches Table */}
+            <div className="border rounded-lg overflow-x-auto">
+              {!customDispatches ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : customDispatches.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No custom dispatches found.
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-semibold">Date</th>
+                      <th className="text-left p-4 font-semibold">Description</th>
+                      <th className="text-left p-4 font-semibold">Recipient</th>
+                      <th className="text-left p-4 font-semibold">Tracking Number</th>
+                      <th className="text-left p-4 font-semibold">Status</th>
+                      <th className="text-left p-4 font-semibold">Created By</th>
+                      <th className="text-left p-4 font-semibold">Remarks</th>
+                      {canEdit && <th className="text-right p-4 font-semibold">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customDispatches.map((dispatch: any) => (
+                      <tr key={dispatch._id} className="border-b hover:bg-muted/30">
+                        <td className="p-4">
+                          {new Date(dispatch._creationTime).toLocaleDateString()}
+                        </td>
+                        <td className="p-4">{dispatch.description}</td>
+                        <td className="p-4">{dispatch.recipientName || "-"}</td>
+                        <td className="p-4">{dispatch.trackingNumber || "-"}</td>
+                        <td className="p-4">
+                          {canEdit ? (
+                            <Select
+                              value={dispatch.status}
+                              onValueChange={(v: any) => updateCustomDispatchStatus({
+                                id: dispatch._id,
+                                status: v as "pending" | "dispatched" | "delivered"
+                              })}
+                            >
+                              <SelectTrigger className="w-[140px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="dispatched">Dispatched</SelectItem>
+                                <SelectItem value="delivered">Delivered</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge
+                              variant={
+                                dispatch.status === "delivered"
+                                  ? "default"
+                                  : dispatch.status === "dispatched"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              {dispatch.status}
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-4">{dispatch.createdByName}</td>
+                        <td className="p-4">{dispatch.remarks || "-"}</td>
+                        {canEdit && (
+                          <td className="p-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteCustomDispatch(dispatch._id)}
+                            >
+                              Delete
+                            </Button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* View Client Dialog */}
         <Dialog open={viewClientDialogOpen} onOpenChange={setViewClientDialogOpen}>
