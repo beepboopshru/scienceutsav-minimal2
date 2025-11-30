@@ -770,6 +770,25 @@ export default function Research() {
                   </div>
                 )}
 
+                {uniqueGrades.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Grade</Label>
+                    <Select value={gradeFilter} onValueChange={(v: string) => setGradeFilter(v)}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="All grades" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Grades</SelectItem>
+                        {uniqueGrades.map((grade) => (
+                          <SelectItem key={grade} value={grade.toString()}>
+                            Grade {grade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div>
                   <Label className="text-xs">Search Kits</Label>
                   <Input
@@ -873,6 +892,16 @@ export default function Research() {
                             placeholder="Optional"
                           />
                         </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="grade">Grade</Label>
+                        <Input
+                          id="grade"
+                          type="number"
+                          value={simpleKitFormData.grade ?? ""}
+                          onChange={(e) => setSimpleKitFormData({ ...simpleKitFormData, grade: e.target.value ? Number(e.target.value) : undefined })}
+                          placeholder="Enter grade (e.g., 5, 6, 7)"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="description">Description</Label>
