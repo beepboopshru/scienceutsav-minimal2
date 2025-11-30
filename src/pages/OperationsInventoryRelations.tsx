@@ -94,14 +94,20 @@ export default function OperationsInventoryRelations() {
     const inventoryByName = new Map(inventory.map(item => [item.name, item]));
     const requirementsMap = new Map<string, any>();
 
-    const processShortage = (itemName: string, qtyNeeded: number) => {
+    const processShortage = (itemName: string, qtyNeeded: number, processed = new Set<string>()) => {
+      // Prevent infinite recursion by tracking processed items
+      if (processed.has(itemName.toLowerCase())) {
+        return;
+      }
+      processed.add(itemName.toLowerCase());
+
       const item = inventoryByName.get(itemName);
       
       if (item && item.components && item.components.length > 0) {
         item.components.forEach(comp => {
           const rawItem = inventoryMap.get(comp.rawMaterialId);
           if (rawItem) {
-            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired);
+            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired, processed);
           }
         });
       } else {
@@ -295,7 +301,14 @@ export default function OperationsInventoryRelations() {
     }>();
 
     // Recursive function to process shortages and explode BOMs
-    const processShortage = (itemName: string, qtyNeeded: number, jobId: string) => {
+    const processShortage = (itemName: string, qtyNeeded: number, jobId: string, processed = new Set<string>()) => {
+      // Prevent infinite recursion by tracking processed items
+      const key = itemName.toLowerCase();
+      if (processed.has(key)) {
+        return;
+      }
+      processed.add(key);
+
       const item = inventoryByName.get(itemName);
       
       // If item has components (BOM) and is pre-processed/finished, explode it
@@ -303,12 +316,11 @@ export default function OperationsInventoryRelations() {
         item.components.forEach(comp => {
           const rawItem = inventoryMap.get(comp.rawMaterialId);
           if (rawItem) {
-            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired, jobId);
+            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired, jobId, new Set(processed));
           }
         });
       } else {
         // Base material or item without BOM
-        const key = itemName;
         if (!requirementsMap.has(key)) {
           requirementsMap.set(key, {
             name: itemName,
