@@ -344,7 +344,7 @@ export default function ClientForm() {
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select client type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="monthly">Monthly</SelectItem>
