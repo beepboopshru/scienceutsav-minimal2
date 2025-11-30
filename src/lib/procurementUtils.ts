@@ -334,9 +334,14 @@ export function aggregateMaterials(
     }
   }
 
-  // Filter out exploded items and return
+  // Filter out exploded items and return only raw materials
   return Array.from(materialMap.values()).filter((item) => {
     const invItem = inventoryByName.get(item.name.toLowerCase());
-    return !(invItem?.components && invItem.components.length > 0 && item.shortage > 0);
+    // Exclude items that have been exploded (have components and shortage)
+    if (invItem?.components && invItem.components.length > 0 && item.shortage > 0) {
+      return false;
+    }
+    // Only include raw materials in procurement
+    return invItem?.type === "raw";
   });
 }
