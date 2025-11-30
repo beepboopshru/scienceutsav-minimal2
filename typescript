@@ -1,1 +1,1 @@
-type: client.type || "one_time",
+const clientName = (assignment.client as any)?.name || "Unknown Client";
