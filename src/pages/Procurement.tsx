@@ -87,7 +87,7 @@ export default function Procurement() {
       const required = qtyPerKit * requiredQty;
       const invItem = inventoryByName.get(name.toLowerCase());
       const available = invItem?.quantity || 0;
-      const shortage = Math.max(0, required - available);
+      const minStockLevel = invItem?.minStockLevel || 0;
       const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
       
       // Check if this is a sealed packet - if so, explode its BOM
@@ -99,7 +99,17 @@ export default function Procurement() {
           if (compItem && compItem.type === "raw") {
             const compRequired = comp.quantityRequired * qtyPerKit * requiredQty;
             const compAvailable = compItem.quantity || 0;
-            const compShortage = Math.max(0, compRequired - compAvailable);
+            const compMinStockLevel = compItem.minStockLevel || 0;
+            
+            // MSL-based shortage calculation for raw materials
+            let compShortage = 0;
+            if (compAvailable < compMinStockLevel) {
+              // Need to fulfill order + restore MSL
+              compShortage = compRequired + (compMinStockLevel - compAvailable);
+            } else {
+              // Just need to fulfill order if it exceeds available stock
+              compShortage = Math.max(0, compRequired - compAvailable);
+            }
             
             if (compShortage > 0 || compRequired > 0) {
               shortages.push({
@@ -110,12 +120,28 @@ export default function Procurement() {
                 unit: comp.unit,
                 category: `${category} (from Sealed Packet: ${name})`,
                 subcategory: compItem.subcategory || "Uncategorized",
+                minStockLevel: compMinStockLevel,
               });
             }
           }
         });
       } else {
         // Regular material (not a sealed packet)
+        // Apply MSL logic only to raw materials
+        let shortage = 0;
+        if (invItem && invItem.type === "raw") {
+          if (available < minStockLevel) {
+            // Need to fulfill order + restore MSL
+            shortage = required + (minStockLevel - available);
+          } else {
+            // Just need to fulfill order if it exceeds available stock
+            shortage = Math.max(0, required - available);
+          }
+        } else {
+          // For non-raw materials, use simple shortage calculation
+          shortage = Math.max(0, required - available);
+        }
+        
         if (shortage > 0 || required > 0) {
           shortages.push({
             name,
@@ -125,6 +151,7 @@ export default function Procurement() {
             unit,
             category,
             subcategory: finalSubcategory,
+            minStockLevel,
           });
         }
       }
@@ -181,9 +208,26 @@ export default function Procurement() {
       const item = materialMap.get(key);
       if (!item) continue;
 
-      // Calculate current shortage
-      const currentShortage = Math.max(0, item.required - item.available);
+      // Calculate current shortage with MSL logic for raw materials
+      const invItem = inventoryByName.get(key);
+      let currentShortage = 0;
+      
+      if (invItem && invItem.type === "raw") {
+        const minStockLevel = invItem.minStockLevel || 0;
+        if (item.available < minStockLevel) {
+          // Need to fulfill order + restore MSL
+          currentShortage = item.required + (minStockLevel - item.available);
+        } else {
+          // Just need to fulfill order if it exceeds available stock
+          currentShortage = Math.max(0, item.required - item.available);
+        }
+      } else {
+        // For non-raw materials, use simple shortage calculation
+        currentShortage = Math.max(0, item.required - item.available);
+      }
+      
       item.shortage = currentShortage;
+      item.minStockLevel = invItem?.minStockLevel || 0;
 
       if (currentShortage > 0) {
         const processedShortage = item.processedShortage || 0;
@@ -191,15 +235,15 @@ export default function Procurement() {
 
         if (newShortage > 0) {
           // Find inventory item to get BOM
-          const invItem = inventoryByName.get(key);
+          const bomInvItem = inventoryByName.get(key);
           
-          if (invItem && invItem.components && invItem.components.length > 0) {
+          if (bomInvItem && bomInvItem.components && bomInvItem.components.length > 0) {
             // Mark as processed to avoid re-processing the same shortage amount
             item.processedShortage = currentShortage;
             // Mark as exploded to exclude from procurement list (since we are making it)
             item.isExploded = true;
 
-            invItem.components.forEach((comp: any) => {
+            bomInvItem.components.forEach((comp: any) => {
               const compInvItem = inventoryById.get(comp.rawMaterialId);
               if (compInvItem) {
                 const compKey = compInvItem.name.toLowerCase();
@@ -225,7 +269,8 @@ export default function Procurement() {
                     subcategory: compInvItem.subcategory || "Uncategorized",
                     kits: new Set(item.kits),
                     programs: new Set(item.programs),
-                    processedShortage: 0
+                    processedShortage: 0,
+                    minStockLevel: compInvItem.minStockLevel || 0,
                   });
                   queue.push(compKey);
                 }
@@ -240,7 +285,6 @@ export default function Procurement() {
       .filter((item: any) => !item.isExploded)
       .map((item) => ({
       ...item,
-      shortage: Math.max(0, item.required - item.available),
       kits: Array.from(item.kits),
       programs: Array.from(item.programs),
     }));
@@ -385,9 +429,10 @@ export default function Procurement() {
         <TableRow>
           <TableHead>Material</TableHead>
           <TableHead>Category</TableHead>
-          <TableHead>Required</TableHead>
+          <TableHead>Order Req.</TableHead>
           <TableHead>Available</TableHead>
-          <TableHead>Shortage</TableHead>
+          <TableHead>Min. Stock</TableHead>
+          <TableHead>Shortage (Procurement)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -397,6 +442,7 @@ export default function Procurement() {
             <TableCell><Badge variant="outline" className="text-xs">{mat.category}</Badge></TableCell>
             <TableCell>{mat.required} {mat.unit}</TableCell>
             <TableCell>{mat.available} {mat.unit}</TableCell>
+            <TableCell>{mat.minStockLevel || 0} {mat.unit}</TableCell>
             <TableCell>
               {mat.shortage > 0 ? (
                 <Badge variant="destructive" className="text-xs">{mat.shortage} {mat.unit}</Badge>
@@ -588,9 +634,10 @@ export default function Procurement() {
                           <TableRow>
                             <TableHead>Material</TableHead>
                             <TableHead>Category</TableHead>
-                            <TableHead>Required</TableHead>
+                            <TableHead>Order Req.</TableHead>
                             <TableHead>Available</TableHead>
-                            <TableHead>Shortage</TableHead>
+                            <TableHead>Min. Stock</TableHead>
+                            <TableHead>Shortage (Procurement)</TableHead>
                             <TableHead>Used In (Kits)</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -601,6 +648,7 @@ export default function Procurement() {
                               <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
                               <TableCell>{item.required} {item.unit}</TableCell>
                               <TableCell>{item.available} {item.unit}</TableCell>
+                              <TableCell>{item.minStockLevel || 0} {item.unit}</TableCell>
                               <TableCell>
                                 {item.shortage > 0 ? (
                                   <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
