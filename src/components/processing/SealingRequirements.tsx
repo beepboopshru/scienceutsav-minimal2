@@ -312,7 +312,25 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
   const clientWiseData = useMemo(() => {
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      const clientName = assignment.client?.name || assignment.client?.buyerName || "Unknown Client";
+      // Skip assignments without client data
+      if (!assignment.client) return;
+
+      // Extract client name with better fallback logic
+      let clientName = "Unknown Client";
+      const client = assignment.client as any;
+      
+      if (typeof client === 'string') {
+        clientName = client;
+      } else if (typeof client === 'object') {
+        clientName = 
+          client.organization || 
+          client.name || 
+          client.buyerName || 
+          client.contactPerson ||
+          client.email ||
+          "Unknown Client";
+      }
+
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
           clientName: clientName,
