@@ -20,6 +20,15 @@ export const create = mutation({
       .first();
 
     if (!user) throw new Error("User not found");
+    
+    // Check permission
+    const userPerms = await ctx.db
+      .query("userPermissions")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    
+    const canCreate = user.role === "admin" || user.role === "manager" || userPerms?.permissions?.deletionRequests?.create;
+    if (!canCreate) throw new Error("Not authorized to create deletion requests");
 
     const requestId = await ctx.db.insert("deletionRequests", {
       entityType: args.entityType,
@@ -41,7 +50,23 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+    if (!identity) throw new Error("Not authenticated");
+    
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", identity.email))
+      .first();
+    
+    if (!user) throw new Error("User not found");
+    
+    // Check permission
+    const userPerms = await ctx.db
+      .query("userPermissions")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    
+    const canView = user.role === "admin" || user.role === "manager" || userPerms?.permissions?.deletionRequests?.view;
+    if (!canView) throw new Error("Not authorized to view deletion requests");
 
     let requests;
 
@@ -87,8 +112,17 @@ export const approve = mutation({
       .withIndex("email", (q) => q.eq("email", identity.email))
       .first();
 
-    if (!user || user.role !== "admin") {
-      throw new Error("Only admins can approve deletion requests");
+    if (!user) throw new Error("User not found");
+    
+    // Check permission
+    const userPerms = await ctx.db
+      .query("userPermissions")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    
+    const canApprove = user.role === "admin" || userPerms?.permissions?.deletionRequests?.approve;
+    if (!canApprove) {
+      throw new Error("Not authorized to approve deletion requests");
     }
 
     const request = await ctx.db.get(args.requestId);
@@ -127,8 +161,17 @@ export const reject = mutation({
       .withIndex("email", (q) => q.eq("email", identity.email))
       .first();
 
-    if (!user || user.role !== "admin") {
-      throw new Error("Only admins can reject deletion requests");
+    if (!user) throw new Error("User not found");
+    
+    // Check permission
+    const userPerms = await ctx.db
+      .query("userPermissions")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
+    
+    const canReject = user.role === "admin" || userPerms?.permissions?.deletionRequests?.reject;
+    if (!canReject) {
+      throw new Error("Not authorized to reject deletion requests");
     }
 
     const request = await ctx.db.get(args.requestId);

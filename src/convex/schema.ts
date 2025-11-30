@@ -643,6 +643,12 @@ const schema = defineSchema(
           view: v.boolean(),
           edit: v.boolean(),
         })),
+        deletionRequests: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          approve: v.boolean(),
+          reject: v.boolean(),
+        })),
       }),
     }).index("by_user", ["userId"]),
 

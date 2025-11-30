@@ -89,6 +89,7 @@ export default function UserManagement() {
         kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
         lms: { view: false, edit: false },
         materialRequests: { view: true, create: true, approve: false, reject: false },
+        deletionRequests: { view: false, create: false, approve: false, reject: false },
       };
 
       if (existingPermissions?.permissions) {
