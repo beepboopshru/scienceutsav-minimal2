@@ -5,8 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { motion } from "framer-motion";
-import { Download, Package, Calendar, Users, Layers, AlertCircle, RefreshCw } from "lucide-react";
+import { Download, Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,32 +14,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 import { exportProcurementPDF } from "@/lib/procurementExport";
-import { Id } from "@/convex/_generated/dataModel";
+import { aggregateMaterials, type MaterialShortage } from "@/lib/procurementUtils";
 
 export default function Procurement() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  
+
   const canView = hasPermission("procurementJobs", "view");
   const canEdit = hasPermission("procurementJobs", "edit");
-  
+
+  // Data queries
   const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
   const vendors = useQuery(api.vendors.list);
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
-  
-  const removeJob = useMutation(api.procurementJobs.remove);
+
+  // Mutations
   const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
-  
+
+  // Local state
   const [activeTab, setActiveTab] = useState("summary");
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [purchasingQuantities, setPurchasingQuantities] = useState<Map<string, number>>(new Map());
 
-  // Load saved purchasing quantities from database
+  // Load saved purchasing quantities
   useEffect(() => {
     if (savedQuantities) {
       const quantitiesMap = new Map<string, number>();
@@ -51,237 +51,26 @@ export default function Procurement() {
     }
   }, [savedQuantities]);
 
+  // Create inventory lookup maps
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
-    return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
-  }, [inventory, lastRefresh]);
+    return new Map(inventory.map((i) => [i.name.toLowerCase(), i]));
+  }, [inventory]);
 
   const inventoryById = useMemo(() => {
     if (!inventory) return new Map();
-    return new Map(inventory.map(i => [i._id, i]));
-  }, [inventory, lastRefresh]);
+    return new Map(inventory.map((i) => [i._id, i]));
+  }, [inventory]);
 
-  // --- Helper Functions (MUST be defined before useMemo hooks) ---
+  // Generate aggregated data views
+  const materialSummary = useMemo(() => {
+    if (!assignments || !inventory || !vendors) return [];
+    return aggregateMaterials(assignments, inventoryByName, inventoryById, vendors);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
 
-  const calculateShortages = (assignment: any) => {
-    const kit = assignment.kit;
-    if (!kit || !inventory) return { direct: [] };
-
-    const shortages: any[] = [];
-    const requiredQty = assignment.quantity;
-
-    const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string, subcategory?: string) => {
-      const required = qtyPerKit * requiredQty;
-      const invItem = inventoryByName.get(name.toLowerCase());
-      const available = invItem?.quantity || 0;
-      const minStockLevel = invItem?.minStockLevel || 0;
-      const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
-      
-      if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
-        invItem.components.forEach((comp: any) => {
-          const compItem = inventoryById.get(comp.rawMaterialId);
-          if (compItem && compItem.type === "raw") {
-            const compRequired = comp.quantityRequired * qtyPerKit * requiredQty;
-            const compAvailable = compItem.quantity || 0;
-            const compMinStockLevel = compItem.minStockLevel || 0;
-            
-            let compShortage = 0;
-            if (compAvailable < compMinStockLevel) {
-              compShortage = compRequired + (compMinStockLevel - compAvailable);
-            } else {
-              compShortage = Math.max(0, compRequired - compAvailable);
-            }
-            
-            if (compShortage > 0 || compRequired > 0) {
-              shortages.push({
-                name: compItem.name,
-                required: compRequired,
-                available: compAvailable,
-                shortage: compShortage,
-                unit: comp.unit,
-                category: `${category} (from Sealed Packet: ${name})`,
-                subcategory: compItem.subcategory || "Uncategorized",
-                minStockLevel: compMinStockLevel,
-              });
-            }
-          }
-        });
-      } else {
-        let shortage = 0;
-        if (invItem && invItem.type === "raw") {
-          if (available < minStockLevel) {
-            shortage = required + (minStockLevel - available);
-          } else {
-            shortage = Math.max(0, required - available);
-          }
-        } else {
-          shortage = Math.max(0, required - available);
-        }
-        
-        if (shortage > 0 || required > 0) {
-          shortages.push({
-            name,
-            required,
-            available,
-            shortage,
-            unit,
-            category,
-            subcategory: finalSubcategory,
-            minStockLevel,
-          });
-        }
-      }
-    };
-
-    if (kit.isStructured && kit.packingRequirements) {
-      const structure = parsePackingRequirements(kit.packingRequirements);
-      const totalMaterials = calculateTotalMaterials(structure);
-      totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
-    }
-
-    kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit", s.subcategory));
-    kit.bulkMaterials?.forEach((b: any) => processMaterial(b.name, b.quantity, b.unit, "Bulk Material", b.subcategory));
-    kit.miscellaneous?.forEach((m: any) => processMaterial(m.name, m.quantity, m.unit, "Miscellaneous"));
-
-    return { direct: shortages };
-  };
-
-  const getVendorPrice = (inventoryId?: string) => {
-    if (!inventoryId || !vendors) return null;
-    
-    for (const vendor of vendors) {
-      if (vendor.itemPrices) {
-        const priceEntry = vendor.itemPrices.find(p => p.itemId === inventoryId);
-        if (priceEntry) {
-          return priceEntry.averagePrice;
-        }
-      }
-    }
-    return null;
-  };
-
-  const aggregateMaterials = (assignmentList: any[]) => {
-    const materialMap = new Map<string, any>();
-
-    assignmentList.forEach((assignment) => {
-      const shortages = calculateShortages(assignment);
-      shortages.direct.forEach((item: any) => {
-        const key = item.name.toLowerCase();
-        if (materialMap.has(key)) {
-          const existing = materialMap.get(key);
-          existing.required += item.required;
-          existing.kits.add(assignment.kit?.name || "Unknown");
-          existing.programs.add(assignment.program?.name || "Unknown");
-        } else {
-          const invItem = inventoryByName.get(item.name.toLowerCase());
-          const vendorPrice = getVendorPrice(invItem?._id);
-          
-          materialMap.set(key, {
-            name: item.name,
-            required: item.required,
-            available: item.available,
-            shortage: 0,
-            unit: item.unit,
-            category: item.category,
-            subcategory: item.subcategory,
-            kits: new Set([assignment.kit?.name || "Unknown"]),
-            programs: new Set([assignment.program?.name || "Unknown"]),
-            processedShortage: 0,
-            vendorPrice: vendorPrice,
-            inventoryId: invItem?._id,
-          });
-        }
-      });
-    });
-
-    const queue = Array.from(materialMap.keys());
-    
-    while (queue.length > 0) {
-      const key = queue.shift()!;
-      const item = materialMap.get(key);
-      if (!item) continue;
-
-      const invItem = inventoryByName.get(key);
-      let currentShortage = 0;
-      
-      if (invItem && invItem.type === "raw") {
-        const minStockLevel = invItem.minStockLevel || 0;
-        if (item.available < minStockLevel) {
-          currentShortage = item.required + (minStockLevel - item.available);
-        } else {
-          currentShortage = Math.max(0, item.required - item.available);
-        }
-      } else {
-        currentShortage = Math.max(0, item.required - item.available);
-      }
-      
-      item.shortage = currentShortage;
-      item.minStockLevel = invItem?.minStockLevel || 0;
-
-      if (currentShortage > 0) {
-        const processedShortage = item.processedShortage || 0;
-        const newShortage = currentShortage - processedShortage;
-
-        if (newShortage > 0) {
-          const bomInvItem = inventoryByName.get(key);
-          
-          if (bomInvItem && bomInvItem.components && bomInvItem.components.length > 0) {
-            item.processedShortage = currentShortage;
-            item.isExploded = true;
-
-            bomInvItem.components.forEach((comp: any) => {
-              const compInvItem = inventoryById.get(comp.rawMaterialId);
-              if (compInvItem) {
-                const compKey = compInvItem.name.toLowerCase();
-                const qtyNeeded = newShortage * comp.quantityRequired;
-
-                if (materialMap.has(compKey)) {
-                  const existing = materialMap.get(compKey);
-                  existing.required += qtyNeeded;
-                  item.kits.forEach((k: string) => existing.kits.add(k));
-                  item.programs.forEach((p: string) => existing.programs.add(p));
-                  
-                  if (!queue.includes(compKey)) queue.push(compKey);
-                } else {
-                  const vendorPrice = getVendorPrice(compInvItem._id);
-                  
-                  materialMap.set(compKey, {
-                    name: compInvItem.name,
-                    required: qtyNeeded,
-                    available: compInvItem.quantity,
-                    shortage: 0,
-                    unit: compInvItem.unit,
-                    category: "Raw Material (BOM)",
-                    subcategory: compInvItem.subcategory || "Uncategorized",
-                    kits: new Set(item.kits),
-                    programs: new Set(item.programs),
-                    processedShortage: 0,
-                    minStockLevel: compInvItem.minStockLevel || 0,
-                    vendorPrice: vendorPrice,
-                    inventoryId: compInvItem._id,
-                  });
-                  queue.push(compKey);
-                }
-              }
-            });
-          }
-        }
-      }
-    }
-
-    return Array.from(materialMap.values())
-      .filter((item: any) => !item.isExploded)
-      .map((item) => ({
-      ...item,
-      kits: Array.from(item.kits),
-      programs: Array.from(item.programs),
-    }));
-  };
-
-  // --- Data Generation with useMemo (MUST come after helper functions) ---
-  
   const kitWiseData = useMemo(() => {
-    if (!assignments) return [];
+    if (!assignments || !inventory || !vendors) return [];
+
     const kitMap = new Map<string, any>();
     assignments.forEach((assignment) => {
       const kitName = assignment.kit?.name || "Unknown";
@@ -296,19 +85,22 @@ export default function Procurement() {
       entry.assignments.push(assignment);
       entry.totalQuantity += assignment.quantity;
     });
-    
-    return Array.from(kitMap.values()).map(kit => ({
+
+    return Array.from(kitMap.values()).map((kit) => ({
       ...kit,
-      materials: aggregateMaterials(kit.assignments)
+      materials: aggregateMaterials(kit.assignments, inventoryByName, inventoryById, vendors),
     }));
-  }, [assignments, inventoryByName, inventoryById]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
 
   const monthWiseData = useMemo(() => {
-    if (!assignments) return [];
+    if (!assignments || !inventory || !vendors) return [];
+
     const monthMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      const monthKey = assignment.productionMonth || new Date(assignment._creationTime).toISOString().slice(0, 7);
-      
+      const monthKey =
+        assignment.productionMonth ||
+        new Date(assignment._creationTime).toISOString().slice(0, 7);
+
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, {
           month: monthKey,
@@ -323,21 +115,25 @@ export default function Procurement() {
 
     return Array.from(monthMap.values())
       .sort((a, b) => b.month.localeCompare(a.month))
-      .map(month => ({
+      .map((month) => ({
         ...month,
-        materials: aggregateMaterials(month.assignments)
+        materials: aggregateMaterials(month.assignments, inventoryByName, inventoryById, vendors),
       }));
-  }, [assignments, inventoryByName, inventoryById]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
 
   const clientWiseData = useMemo(() => {
-    if (!assignments) return [];
+    if (!assignments || !inventory || !vendors) return [];
+
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      if (!assignment.client) {
-        return;
-      }
-      
-      const clientName = (assignment.client as any)?.organization || (assignment.client as any)?.name || (assignment.client as any)?.buyerName || "Unknown Client";
+      if (!assignment.client) return;
+
+      const clientName =
+        (assignment.client as any)?.organization ||
+        (assignment.client as any)?.name ||
+        (assignment.client as any)?.buyerName ||
+        "Unknown Client";
+
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
           clientName: clientName,
@@ -350,17 +146,13 @@ export default function Procurement() {
       entry.totalKits += assignment.quantity;
     });
 
-    return Array.from(clientMap.values()).map(client => ({
+    return Array.from(clientMap.values()).map((client) => ({
       ...client,
-      materials: aggregateMaterials(client.assignments)
+      materials: aggregateMaterials(client.assignments, inventoryByName, inventoryById, vendors),
     }));
-  }, [assignments, inventoryByName, inventoryById]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
 
-  const materialSummary = useMemo(() => {
-    if (!assignments) return [];
-    return aggregateMaterials(assignments);
-  }, [assignments, inventoryByName, inventoryById]);
-
+  // Auth redirect
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
@@ -370,73 +162,7 @@ export default function Procurement() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (!canView) {
-    return (
-      <Layout>
-        <div className="min-h-[60vh] flex items-center justify-center">
-          <p className="text-muted-foreground">You do not have permission to view this page.</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isLoading || !assignments || !inventory || !vendors) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-full">
-          <Package className="h-8 w-8 animate-spin" />
-        </div>
-      </Layout>
-    );
-  }
-
-  // --- Export Functions ---
-
-  const handleExport = () => {
-    const attachPurchasingQty = (materials: any[]) => {
-      return materials.map(mat => ({
-        ...mat,
-        purchasingQty: purchasingQuantities.get(mat.name.toLowerCase()) || mat.shortage
-      }));
-    };
-
-    if (activeTab === "summary") {
-      exportProcurementPDF("summary", attachPurchasingQty(materialSummary), "material-procurement-summary.pdf");
-    } else if (activeTab === "kit-wise") {
-      const dataWithQty = kitWiseData.map(kit => ({
-        ...kit,
-        materials: attachPurchasingQty(kit.materials)
-      }));
-      exportProcurementPDF("kit", dataWithQty, "kit-wise-procurement.pdf");
-    } else if (activeTab === "month-wise") {
-      const dataWithQty = monthWiseData.map(month => ({
-        ...month,
-        materials: attachPurchasingQty(month.materials)
-      }));
-      exportProcurementPDF("month", dataWithQty, "month-wise-procurement.pdf");
-    } else if (activeTab === "client-wise") {
-      const dataWithQty = clientWiseData.map(client => ({
-        ...client,
-        materials: attachPurchasingQty(client.materials)
-      }));
-      exportProcurementPDF("client", dataWithQty, "client-wise-procurement.pdf");
-    }
-  };
-
-  const handleDelete = async (id: Id<"procurementJobs">) => {
-    if (!confirm("Are you sure you want to delete this job?")) return;
-    try {
-      const result = await removeJob({ id });
-      if (result && 'requestCreated' in result && result.requestCreated) {
-        toast.success("Deletion request submitted for admin approval");
-      } else {
-        toast.success("Job deleted");
-      }
-    } catch (err) {
-      toast.error("Failed to delete job");
-    }
-  };
-
+  // Handlers
   const handleRefresh = () => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefresh;
@@ -450,16 +176,93 @@ export default function Procurement() {
 
     setIsRefreshing(true);
     setLastRefresh(now);
-    
+
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success("Requirements recalculated");
     }, 500);
   };
 
-  // --- Render Components ---
+  const handleExport = () => {
+    const attachPurchasingQty = (materials: MaterialShortage[]) => {
+      return materials.map((mat) => ({
+        ...mat,
+        purchasingQty: purchasingQuantities.get(mat.name.toLowerCase()) || mat.shortage,
+      }));
+    };
 
-  const MaterialTable = ({ materials }: { materials: any[] }) => (
+    if (activeTab === "summary") {
+      exportProcurementPDF(
+        "summary",
+        attachPurchasingQty(materialSummary),
+        "material-procurement-summary.pdf"
+      );
+    } else if (activeTab === "kit-wise") {
+      const dataWithQty = kitWiseData.map((kit) => ({
+        ...kit,
+        materials: attachPurchasingQty(kit.materials),
+      }));
+      exportProcurementPDF("kit", dataWithQty, "kit-wise-procurement.pdf");
+    } else if (activeTab === "month-wise") {
+      const dataWithQty = monthWiseData.map((month) => ({
+        ...month,
+        materials: attachPurchasingQty(month.materials),
+      }));
+      exportProcurementPDF("month", dataWithQty, "month-wise-procurement.pdf");
+    } else if (activeTab === "client-wise") {
+      const dataWithQty = clientWiseData.map((client) => ({
+        ...client,
+        materials: attachPurchasingQty(client.materials),
+      }));
+      exportProcurementPDF("client", dataWithQty, "client-wise-procurement.pdf");
+    }
+  };
+
+  const handlePurchasingQtyChange = async (materialName: string, newQty: number) => {
+    const materialKey = materialName.toLowerCase();
+    setPurchasingQuantities((prev) => {
+      const updated = new Map(prev);
+      updated.set(materialKey, newQty);
+      return updated;
+    });
+
+    try {
+      await upsertPurchasingQty({
+        materialName: materialKey,
+        purchasingQty: newQty,
+      });
+    } catch (err) {
+      console.error("Failed to save purchasing quantity:", err);
+      toast.error("Failed to save purchasing quantity");
+    }
+  };
+
+  // Permission check
+  if (!canView) {
+    return (
+      <Layout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-muted-foreground">
+            You do not have permission to view this page.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Loading state
+  if (isLoading || !assignments || !inventory || !vendors) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-full">
+          <Package className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Render components
+  const MaterialTable = ({ materials }: { materials: MaterialShortage[] }) => (
     <Table>
       <TableHeader>
         <TableRow>
@@ -474,23 +277,39 @@ export default function Procurement() {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {materials.map((mat: any, idx: number) => {
+        {materials.map((mat, idx) => {
           const materialKey = mat.name.toLowerCase();
           const purchasingQty = purchasingQuantities.get(materialKey) ?? mat.shortage;
-          const estimatedCost = mat.vendorPrice ? (purchasingQty * mat.vendorPrice).toFixed(2) : null;
-          
+          const estimatedCost = mat.vendorPrice
+            ? (purchasingQty * mat.vendorPrice).toFixed(2)
+            : null;
+
           return (
             <TableRow key={idx}>
               <TableCell className="font-medium">{mat.name}</TableCell>
-              <TableCell><Badge variant="outline" className="text-xs">{mat.category}</Badge></TableCell>
-              <TableCell>{mat.required} {mat.unit}</TableCell>
-              <TableCell>{mat.available} {mat.unit}</TableCell>
-              <TableCell>{mat.minStockLevel || 0} {mat.unit}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="text-xs">
+                  {mat.category}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {mat.required} {mat.unit}
+              </TableCell>
+              <TableCell>
+                {mat.available} {mat.unit}
+              </TableCell>
+              <TableCell>
+                {mat.minStockLevel || 0} {mat.unit}
+              </TableCell>
               <TableCell>
                 {mat.shortage > 0 ? (
-                  <Badge variant="destructive" className="text-xs">{mat.shortage} {mat.unit}</Badge>
+                  <Badge variant="destructive" className="text-xs">
+                    {mat.shortage} {mat.unit}
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary" className="text-xs">In Stock</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    In Stock
+                  </Badge>
                 )}
               </TableCell>
               <TableCell>
@@ -498,23 +317,7 @@ export default function Procurement() {
                   type="number"
                   min="0"
                   value={purchasingQty}
-                  onChange={async (e) => {
-                    const newQty = Number(e.target.value);
-                    setPurchasingQuantities(prev => {
-                      const updated = new Map(prev);
-                      updated.set(materialKey, newQty);
-                      return updated;
-                    });
-                    
-                    try {
-                      await upsertPurchasingQty({
-                        materialName: materialKey,
-                        purchasingQty: newQty,
-                      });
-                    } catch (err) {
-                      console.error("Failed to save purchasing quantity:", err);
-                    }
-                  }}
+                  onChange={(e) => handlePurchasingQtyChange(mat.name, Number(e.target.value))}
                   className="w-24"
                   placeholder="0"
                 />
@@ -552,13 +355,23 @@ export default function Procurement() {
         <TableBody>
           {assignments.map((a, i) => (
             <TableRow key={i}>
-              <TableCell className="font-medium text-xs">{a.batch?.batchId || a.batchId || "-"}</TableCell>
+              <TableCell className="font-medium text-xs">
+                {a.batch?.batchId || a.batchId || "-"}
+              </TableCell>
               <TableCell className="text-xs">{a.program?.name || "-"}</TableCell>
               <TableCell className="text-xs">{a.kit?.name || "-"}</TableCell>
-              <TableCell><Badge variant="outline" className="text-[10px]">{a.kit?.category || "-"}</Badge></TableCell>
-              <TableCell className="text-xs">{a.client?.name || a.client?.buyerName || "-"}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className="text-[10px]">
+                  {a.kit?.category || "-"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-xs">
+                {a.client?.name || a.client?.buyerName || "-"}
+              </TableCell>
               <TableCell className="text-right text-xs">{a.quantity}</TableCell>
-              <TableCell className="text-xs">{a.dispatchedAt ? new Date(a.dispatchedAt).toLocaleDateString() : "-"}</TableCell>
+              <TableCell className="text-xs">
+                {a.dispatchedAt ? new Date(a.dispatchedAt).toLocaleDateString() : "-"}
+              </TableCell>
               <TableCell className="text-xs">{a.productionMonth || "-"}</TableCell>
             </TableRow>
           ))}
@@ -579,7 +392,7 @@ export default function Procurement() {
           </div>
           <div className="flex gap-2">
             <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             {canEdit && (
@@ -627,19 +440,32 @@ export default function Procurement() {
                         <TableBody>
                           {materialSummary.map((item, idx) => {
                             const materialKey = item.name.toLowerCase();
-                            const purchasingQty = purchasingQuantities.get(materialKey) ?? item.shortage;
-                            const estimatedCost = item.vendorPrice ? (purchasingQty * item.vendorPrice).toFixed(2) : null;
-                            
+                            const purchasingQty =
+                              purchasingQuantities.get(materialKey) ?? item.shortage;
+                            const estimatedCost = item.vendorPrice
+                              ? (purchasingQty * item.vendorPrice).toFixed(2)
+                              : null;
+
                             return (
                               <TableRow key={idx}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
-                                <TableCell>{item.required} {item.unit}</TableCell>
-                                <TableCell>{item.available} {item.unit}</TableCell>
-                                <TableCell>{item.minStockLevel || 0} {item.unit}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{item.category}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {item.required} {item.unit}
+                                </TableCell>
+                                <TableCell>
+                                  {item.available} {item.unit}
+                                </TableCell>
+                                <TableCell>
+                                  {item.minStockLevel || 0} {item.unit}
+                                </TableCell>
                                 <TableCell>
                                   {item.shortage > 0 ? (
-                                    <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
+                                    <Badge variant="destructive">
+                                      {item.shortage} {item.unit}
+                                    </Badge>
                                   ) : (
                                     <Badge variant="secondary">In Stock</Badge>
                                   )}
@@ -649,23 +475,9 @@ export default function Procurement() {
                                     type="number"
                                     min="0"
                                     value={purchasingQty}
-                                    onChange={async (e) => {
-                                      const newQty = Number(e.target.value);
-                                      setPurchasingQuantities(prev => {
-                                        const updated = new Map(prev);
-                                        updated.set(materialKey, newQty);
-                                        return updated;
-                                      });
-                                      
-                                      try {
-                                        await upsertPurchasingQty({
-                                          materialName: materialKey,
-                                          purchasingQty: newQty,
-                                        });
-                                      } catch (err) {
-                                        console.error("Failed to save purchasing quantity:", err);
-                                      }
-                                    }}
+                                    onChange={(e) =>
+                                      handlePurchasingQtyChange(item.name, Number(e.target.value))
+                                    }
                                     className="w-24"
                                     placeholder="0"
                                   />
@@ -702,17 +514,23 @@ export default function Procurement() {
                           <div>
                             <CardTitle className="text-lg">{kit.name}</CardTitle>
                             <div className="flex flex-wrap gap-2 mt-2 mb-1">
-                              <Badge variant="secondary" className="font-normal">
-                                Program: {kit.assignments[0]?.program?.name || "Unknown"}
-                              </Badge>
-                              <Badge variant="outline" className="font-normal">
-                                Category: {kit.assignments[0]?.kit?.category || "Unknown"}
-                              </Badge>
+                            <Badge variant="secondary" className="font-normal">
+                              Program: {kit.assignments[0]?.program?.name || "Unknown"}
+                            </Badge>
+                            <Badge variant="outline" className="font-normal">
+                              Category: {kit.assignments[0]?.kit?.category || "Unknown"}
+                            </Badge>
                             </div>
                             <CardDescription>Total Assigned: {kit.totalQuantity} units</CardDescription>
                           </div>
-                          <Badge variant={kit.materials.some((m: any) => m.shortage > 0) ? "destructive" : "secondary"}>
-                            {kit.materials.filter((m: any) => m.shortage > 0).length} Shortages
+                          <Badge
+                            variant={
+                              kit.materials.some((m: MaterialShortage) => m.shortage > 0)
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {kit.materials.filter((m: MaterialShortage) => m.shortage > 0).length} Shortages
                           </Badge>
                         </div>
                       </CardHeader>
@@ -739,8 +557,14 @@ export default function Procurement() {
                             </CardTitle>
                             <CardDescription>{month.totalAssignments} Assignments</CardDescription>
                           </div>
-                          <Badge variant={month.materials.some((m: any) => m.shortage > 0) ? "destructive" : "secondary"}>
-                            {month.materials.filter((m: any) => m.shortage > 0).length} Shortages
+                          <Badge
+                            variant={
+                              month.materials.some((m: MaterialShortage) => m.shortage > 0)
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {month.materials.filter((m: MaterialShortage) => m.shortage > 0).length} Shortages
                           </Badge>
                         </div>
                       </CardHeader>
@@ -769,8 +593,14 @@ export default function Procurement() {
                             <CardTitle className="text-lg">{client.clientName}</CardTitle>
                             <CardDescription>Total Kits Ordered: {client.totalKits}</CardDescription>
                           </div>
-                          <Badge variant={client.materials.some((m: any) => m.shortage > 0) ? "destructive" : "secondary"}>
-                            {client.materials.filter((m: any) => m.shortage > 0).length} Shortages
+                          <Badge
+                            variant={
+                              client.materials.some((m: MaterialShortage) => m.shortage > 0)
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {client.materials.filter((m: MaterialShortage) => m.shortage > 0).length} Shortages
                           </Badge>
                         </div>
                       </CardHeader>

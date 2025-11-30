@@ -1,0 +1,317 @@
+import { parsePackingRequirements, calculateTotalMaterials } from "./kitPacking";
+
+export interface MaterialShortage {
+  name: string;
+  required: number;
+  available: number;
+  shortage: number;
+  unit: string;
+  category: string;
+  subcategory: string;
+  minStockLevel: number;
+  kits: string[];
+  programs: string[];
+  vendorPrice: number | null;
+  inventoryId?: string;
+}
+
+export interface Assignment {
+  _id: string;
+  quantity: number;
+  kit?: any;
+  program?: any;
+  client?: any;
+  productionMonth?: string;
+  _creationTime: number;
+  clientType: "b2b" | "b2c";
+}
+
+export interface InventoryItem {
+  _id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  type: "raw" | "pre_processed" | "finished" | "sealed_packet";
+  minStockLevel?: number;
+  subcategory?: string;
+  components?: Array<{
+    rawMaterialId: string;
+    quantityRequired: number;
+    unit: string;
+  }>;
+}
+
+export interface Vendor {
+  _id: string;
+  name: string;
+  itemPrices?: Array<{
+    itemId: string;
+    averagePrice: number;
+  }>;
+}
+
+/**
+ * Get vendor price for an inventory item
+ */
+export function getVendorPrice(
+  inventoryId: string | undefined,
+  vendors: Vendor[]
+): number | null {
+  if (!inventoryId || !vendors) return null;
+
+  for (const vendor of vendors) {
+    if (vendor.itemPrices) {
+      const priceEntry = vendor.itemPrices.find((p) => p.itemId === inventoryId);
+      if (priceEntry) {
+        return priceEntry.averagePrice;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Calculate material shortages for a single assignment
+ */
+export function calculateAssignmentShortages(
+  assignment: Assignment,
+  inventoryByName: Map<string, InventoryItem>,
+  inventoryById: Map<string, InventoryItem>
+): MaterialShortage[] {
+  const kit = assignment.kit;
+  if (!kit) return [];
+
+  const shortages: MaterialShortage[] = [];
+  const requiredQty = assignment.quantity;
+
+  const processMaterial = (
+    name: string,
+    qtyPerKit: number,
+    unit: string,
+    category: string,
+    subcategory?: string
+  ) => {
+    const required = qtyPerKit * requiredQty;
+    const invItem = inventoryByName.get(name.toLowerCase());
+    const available = invItem?.quantity || 0;
+    const minStockLevel = invItem?.minStockLevel || 0;
+    const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
+
+    // Handle sealed packets with BOM explosion
+    if (
+      invItem &&
+      invItem.type === "sealed_packet" &&
+      invItem.components &&
+      invItem.components.length > 0
+    ) {
+      invItem.components.forEach((comp) => {
+        const compItem = inventoryById.get(comp.rawMaterialId);
+        if (compItem && compItem.type === "raw") {
+          const compRequired = comp.quantityRequired * qtyPerKit * requiredQty;
+          const compAvailable = compItem.quantity || 0;
+          const compMinStockLevel = compItem.minStockLevel || 0;
+
+          let compShortage = 0;
+          if (compAvailable < compMinStockLevel) {
+            compShortage = compRequired + (compMinStockLevel - compAvailable);
+          } else {
+            compShortage = Math.max(0, compRequired - compAvailable);
+          }
+
+          if (compShortage > 0 || compRequired > 0) {
+            shortages.push({
+              name: compItem.name,
+              required: compRequired,
+              available: compAvailable,
+              shortage: compShortage,
+              unit: comp.unit,
+              category: `${category} (from Sealed Packet: ${name})`,
+              subcategory: compItem.subcategory || "Uncategorized",
+              minStockLevel: compMinStockLevel,
+              kits: [],
+              programs: [],
+              vendorPrice: null,
+              inventoryId: compItem._id,
+            });
+          }
+        }
+      });
+    } else {
+      // Regular material
+      let shortage = 0;
+      if (invItem && invItem.type === "raw") {
+        if (available < minStockLevel) {
+          shortage = required + (minStockLevel - available);
+        } else {
+          shortage = Math.max(0, required - available);
+        }
+      } else {
+        shortage = Math.max(0, required - available);
+      }
+
+      if (shortage > 0 || required > 0) {
+        shortages.push({
+          name,
+          required,
+          available,
+          shortage,
+          unit,
+          category,
+          subcategory: finalSubcategory,
+          minStockLevel,
+          kits: [],
+          programs: [],
+          vendorPrice: null,
+          inventoryId: invItem?._id,
+        });
+      }
+    }
+  };
+
+  // Process structured kits
+  if (kit.isStructured && kit.packingRequirements) {
+    const structure = parsePackingRequirements(kit.packingRequirements);
+    const totalMaterials = calculateTotalMaterials(structure);
+    totalMaterials.forEach((m) =>
+      processMaterial(m.name, m.quantity, m.unit, "Main Component")
+    );
+  }
+
+  // Process spare kits
+  kit.spareKits?.forEach((s: any) =>
+    processMaterial(s.name, s.quantity, s.unit, "Spare Kit", s.subcategory)
+  );
+
+  // Process bulk materials
+  kit.bulkMaterials?.forEach((b: any) =>
+    processMaterial(b.name, b.quantity, b.unit, "Bulk Material", b.subcategory)
+  );
+
+  // Process miscellaneous
+  kit.miscellaneous?.forEach((m: any) =>
+    processMaterial(m.name, m.quantity, m.unit, "Miscellaneous")
+  );
+
+  return shortages;
+}
+
+/**
+ * Aggregate materials across multiple assignments with BOM explosion
+ */
+export function aggregateMaterials(
+  assignments: Assignment[],
+  inventoryByName: Map<string, InventoryItem>,
+  inventoryById: Map<string, InventoryItem>,
+  vendors: Vendor[]
+): MaterialShortage[] {
+  const materialMap = new Map<string, MaterialShortage>();
+
+  // First pass: collect all materials
+  assignments.forEach((assignment) => {
+    const shortages = calculateAssignmentShortages(
+      assignment,
+      inventoryByName,
+      inventoryById
+    );
+
+    shortages.forEach((item) => {
+      const key = item.name.toLowerCase();
+      if (materialMap.has(key)) {
+        const existing = materialMap.get(key)!;
+        existing.required += item.required;
+        if (assignment.kit?.name) existing.kits.push(assignment.kit.name);
+        if (assignment.program?.name) existing.programs.push(assignment.program.name);
+      } else {
+        const invItem = inventoryByName.get(item.name.toLowerCase());
+        const vendorPrice = getVendorPrice(invItem?._id, vendors);
+
+        materialMap.set(key, {
+          ...item,
+          kits: assignment.kit?.name ? [assignment.kit.name] : [],
+          programs: assignment.program?.name ? [assignment.program.name] : [],
+          vendorPrice,
+          inventoryId: invItem?._id,
+        });
+      }
+    });
+  });
+
+  // Second pass: BOM explosion for items with shortages
+  const queue = Array.from(materialMap.keys());
+  const processed = new Set<string>();
+
+  while (queue.length > 0) {
+    const key = queue.shift()!;
+    if (processed.has(key)) continue;
+    processed.add(key);
+
+    const item = materialMap.get(key);
+    if (!item) continue;
+
+    const invItem = inventoryByName.get(key);
+
+    // Recalculate shortage considering min stock
+    let currentShortage = 0;
+    if (invItem && invItem.type === "raw") {
+      const minStockLevel = invItem.minStockLevel || 0;
+      if (item.available < minStockLevel) {
+        currentShortage = item.required + (minStockLevel - item.available);
+      } else {
+        currentShortage = Math.max(0, item.required - item.available);
+      }
+    } else {
+      currentShortage = Math.max(0, item.required - item.available);
+    }
+
+    item.shortage = currentShortage;
+    item.minStockLevel = invItem?.minStockLevel || 0;
+
+    // BOM explosion if shortage exists
+    if (currentShortage > 0 && invItem?.components && invItem.components.length > 0) {
+      invItem.components.forEach((comp) => {
+        const compInvItem = inventoryById.get(comp.rawMaterialId);
+        if (compInvItem) {
+          const compKey = compInvItem.name.toLowerCase();
+          const qtyNeeded = currentShortage * comp.quantityRequired;
+
+          if (materialMap.has(compKey)) {
+            const existing = materialMap.get(compKey)!;
+            existing.required += qtyNeeded;
+            item.kits.forEach((k) => {
+              if (!existing.kits.includes(k)) existing.kits.push(k);
+            });
+            item.programs.forEach((p) => {
+              if (!existing.programs.includes(p)) existing.programs.push(p);
+            });
+
+            if (!processed.has(compKey)) queue.push(compKey);
+          } else {
+            const vendorPrice = getVendorPrice(compInvItem._id, vendors);
+
+            materialMap.set(compKey, {
+              name: compInvItem.name,
+              required: qtyNeeded,
+              available: compInvItem.quantity,
+              shortage: 0,
+              unit: compInvItem.unit,
+              category: "Raw Material (BOM)",
+              subcategory: compInvItem.subcategory || "Uncategorized",
+              kits: [...item.kits],
+              programs: [...item.programs],
+              minStockLevel: compInvItem.minStockLevel || 0,
+              vendorPrice,
+              inventoryId: compInvItem._id,
+            });
+            queue.push(compKey);
+          }
+        }
+      });
+    }
+  }
+
+  // Filter out exploded items and return
+  return Array.from(materialMap.values()).filter((item) => {
+    const invItem = inventoryByName.get(item.name.toLowerCase());
+    return !(invItem?.components && invItem.components.length > 0 && item.shortage > 0);
+  });
+}
