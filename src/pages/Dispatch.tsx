@@ -1404,9 +1404,10 @@ export default function Dispatch() {
                         {canEdit && (
                           <td className="p-4 text-right">
                             <Button
-                              variant="ghost"
+                              variant="destructive"
                               size="sm"
-                              onClick={() => deleteCustomDispatch(dispatch._id)}
+                              onClick={() => deleteCustomDispatch({ id: dispatch._id })}
+                              disabled={!canEdit}
                             >
                               Delete
                             </Button>
