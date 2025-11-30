@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
 import { exportProcurementPDF } from "@/lib/procurementExport";
@@ -31,9 +32,10 @@ export default function Procurement() {
   
   const removeJob = useMutation(api.procurementJobs.remove);
   
-  const [activeTab, setActiveTab] = useState("kit-wise");
+  const [activeTab, setActiveTab] = useState("summary");
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [purchasingQuantities, setPurchasingQuantities] = useState<Map<string, number>>(new Map());
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
@@ -375,14 +377,34 @@ export default function Procurement() {
   // --- Export Functions ---
 
   const handleExport = () => {
-    if (activeTab === "kit-wise") {
-      exportProcurementPDF("kit", kitWiseData, "kit-wise-procurement.pdf");
+    // Attach purchasing quantities to materials before export
+    const attachPurchasingQty = (materials: any[]) => {
+      return materials.map(mat => ({
+        ...mat,
+        purchasingQty: purchasingQuantities.get(mat.name.toLowerCase()) || mat.shortage
+      }));
+    };
+
+    if (activeTab === "summary") {
+      exportProcurementPDF("summary", attachPurchasingQty(materialSummary), "material-procurement-summary.pdf");
+    } else if (activeTab === "kit-wise") {
+      const dataWithQty = kitWiseData.map(kit => ({
+        ...kit,
+        materials: attachPurchasingQty(kit.materials)
+      }));
+      exportProcurementPDF("kit", dataWithQty, "kit-wise-procurement.pdf");
     } else if (activeTab === "month-wise") {
-      exportProcurementPDF("month", monthWiseData, "month-wise-procurement.pdf");
+      const dataWithQty = monthWiseData.map(month => ({
+        ...month,
+        materials: attachPurchasingQty(month.materials)
+      }));
+      exportProcurementPDF("month", dataWithQty, "month-wise-procurement.pdf");
     } else if (activeTab === "client-wise") {
-      exportProcurementPDF("client", clientWiseData, "client-wise-procurement.pdf");
-    } else {
-      exportProcurementPDF("summary", materialSummary, "material-procurement-summary.pdf");
+      const dataWithQty = clientWiseData.map(client => ({
+        ...client,
+        materials: attachPurchasingQty(client.materials)
+      }));
+      exportProcurementPDF("client", dataWithQty, "client-wise-procurement.pdf");
     }
   };
 
@@ -433,25 +455,48 @@ export default function Procurement() {
           <TableHead>Available</TableHead>
           <TableHead>Min. Stock</TableHead>
           <TableHead>Shortage (Procurement)</TableHead>
+          <TableHead>Purchasing Qty</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {materials.map((mat: any, idx: number) => (
-          <TableRow key={idx}>
-            <TableCell className="font-medium">{mat.name}</TableCell>
-            <TableCell><Badge variant="outline" className="text-xs">{mat.category}</Badge></TableCell>
-            <TableCell>{mat.required} {mat.unit}</TableCell>
-            <TableCell>{mat.available} {mat.unit}</TableCell>
-            <TableCell>{mat.minStockLevel || 0} {mat.unit}</TableCell>
-            <TableCell>
-              {mat.shortage > 0 ? (
-                <Badge variant="destructive" className="text-xs">{mat.shortage} {mat.unit}</Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">In Stock</Badge>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
+        {materials.map((mat: any, idx: number) => {
+          const materialKey = mat.name.toLowerCase();
+          const purchasingQty = purchasingQuantities.get(materialKey) ?? mat.shortage;
+          
+          return (
+            <TableRow key={idx}>
+              <TableCell className="font-medium">{mat.name}</TableCell>
+              <TableCell><Badge variant="outline" className="text-xs">{mat.category}</Badge></TableCell>
+              <TableCell>{mat.required} {mat.unit}</TableCell>
+              <TableCell>{mat.available} {mat.unit}</TableCell>
+              <TableCell>{mat.minStockLevel || 0} {mat.unit}</TableCell>
+              <TableCell>
+                {mat.shortage > 0 ? (
+                  <Badge variant="destructive" className="text-xs">{mat.shortage} {mat.unit}</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">In Stock</Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  min="0"
+                  value={purchasingQty}
+                  onChange={(e) => {
+                    const newQty = Number(e.target.value);
+                    setPurchasingQuantities(prev => {
+                      const updated = new Map(prev);
+                      updated.set(materialKey, newQty);
+                      return updated;
+                    });
+                  }}
+                  className="w-24"
+                  placeholder="0"
+                />
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );
@@ -516,13 +561,86 @@ export default function Procurement() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+            <TabsTrigger value="summary">Material Summary</TabsTrigger>
             <TabsTrigger value="kit-wise">Kit Wise</TabsTrigger>
             <TabsTrigger value="month-wise">Month Wise</TabsTrigger>
             <TabsTrigger value="client-wise">Client Wise</TabsTrigger>
-            <TabsTrigger value="summary">Material Summary</TabsTrigger>
           </TabsList>
 
           <div className="mt-6 flex-1">
+            {/* Material Summary Tab */}
+            <TabsContent value="summary" className="h-full">
+              <Card className="h-full flex flex-col">
+                <CardHeader>
+                  <CardTitle>Total Material Requirements</CardTitle>
+                  <CardDescription>Aggregated list of all materials needed across all assignments</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-hidden p-0">
+                  <ScrollArea className="h-[calc(100vh-350px)]">
+                    <div className="p-6 pt-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Material</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Order Req.</TableHead>
+                            <TableHead>Available</TableHead>
+                            <TableHead>Min. Stock</TableHead>
+                            <TableHead>Shortage (Procurement)</TableHead>
+                            <TableHead>Purchasing Qty</TableHead>
+                            <TableHead>Used In (Kits)</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {materialSummary.map((item, idx) => {
+                            const materialKey = item.name.toLowerCase();
+                            const purchasingQty = purchasingQuantities.get(materialKey) ?? item.shortage;
+                            
+                            return (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
+                                <TableCell>{item.required} {item.unit}</TableCell>
+                                <TableCell>{item.available} {item.unit}</TableCell>
+                                <TableCell>{item.minStockLevel || 0} {item.unit}</TableCell>
+                                <TableCell>
+                                  {item.shortage > 0 ? (
+                                    <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
+                                  ) : (
+                                    <Badge variant="secondary">In Stock</Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    value={purchasingQty}
+                                    onChange={(e) => {
+                                      const newQty = Number(e.target.value);
+                                      setPurchasingQuantities(prev => {
+                                        const updated = new Map(prev);
+                                        updated.set(materialKey, newQty);
+                                        return updated;
+                                      });
+                                    }}
+                                    className="w-24"
+                                    placeholder="0"
+                                  />
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                                  {item.kits.join(", ")}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Kit Wise Tab */}
             <TabsContent value="kit-wise" className="space-y-4">
               <ScrollArea className="h-[calc(100vh-250px)]">
@@ -617,56 +735,6 @@ export default function Procurement() {
                   ))}
                 </div>
               </ScrollArea>
-            </TabsContent>
-
-            {/* Material Summary Tab */}
-            <TabsContent value="summary" className="h-full">
-              <Card className="h-full flex flex-col">
-                <CardHeader>
-                  <CardTitle>Total Material Requirements</CardTitle>
-                  <CardDescription>Aggregated list of all materials needed across all assignments</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-hidden p-0">
-                  <ScrollArea className="h-[calc(100vh-350px)]">
-                    <div className="p-6 pt-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Order Req.</TableHead>
-                            <TableHead>Available</TableHead>
-                            <TableHead>Min. Stock</TableHead>
-                            <TableHead>Shortage (Procurement)</TableHead>
-                            <TableHead>Used In (Kits)</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {materialSummary.map((item, idx) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium">{item.name}</TableCell>
-                              <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
-                              <TableCell>{item.required} {item.unit}</TableCell>
-                              <TableCell>{item.available} {item.unit}</TableCell>
-                              <TableCell>{item.minStockLevel || 0} {item.unit}</TableCell>
-                              <TableCell>
-                                {item.shortage > 0 ? (
-                                  <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
-                                ) : (
-                                  <Badge variant="secondary">In Stock</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                {item.kits.join(", ")}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
             </TabsContent>
           </div>
         </Tabs>

@@ -13,6 +13,7 @@ interface Material {
   unit: string;
   kits?: string[];
   programs?: string[];
+  purchasingQty?: number;
 }
 
 interface GroupedData {
@@ -76,12 +77,13 @@ export const exportProcurementPDF = (
         `${item.required} ${item.unit}`,
         `${item.available} ${item.unit}`,
         item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
+        `${item.purchasingQty || item.shortage} ${item.unit}`,
         item.kits ? (item.kits.join(", ").substring(0, 30) + (item.kits.join(", ").length > 30 ? "..." : "")) : ""
       ]);
 
       autoTable(doc, {
         startY: finalY,
-        head: [["Material", "Category", "Required", "Available", "Shortage", "Used In"]],
+        head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Used In"]],
         body: tableData,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [71, 85, 105] },
@@ -134,18 +136,24 @@ export const exportProcurementPDF = (
             item.category,
             `${item.required} ${item.unit}`,
             `${item.available} ${item.unit}`,
-            item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock"
+            item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
+            `${item.purchasingQty || item.shortage} ${item.unit}`
           ]);
 
           autoTable(doc, {
             startY: finalY,
-            head: [["Material", "Category", "Required", "Available", "Shortage"]],
+            head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty"]],
             body: tableData,
             styles: { fontSize: 8 },
             headStyles: { fillColor: [71, 85, 105] },
             didParseCell: (data) => {
+              // Shortage column (index 4) - red and bold if not "In Stock"
               if (data.column.index === 4 && data.cell.text[0] !== "In Stock") {
                 data.cell.styles.textColor = [220, 38, 38];
+                data.cell.styles.fontStyle = "bold";
+              }
+              // Purchasing Qty column (index 5) - bold
+              if (data.column.index === 5) {
                 data.cell.styles.fontStyle = "bold";
               }
             },
