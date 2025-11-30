@@ -82,7 +82,7 @@ export default function ClientForm() {
       pincode: "",
       country: "",
     },
-    type: "",
+    type: "one_time" as "monthly" | "one_time",
     notes: "",
     salesPerson: "",
     pointsOfContact: [] as Array<{
@@ -105,6 +105,11 @@ export default function ClientForm() {
   useEffect(() => {
     if (client) {
       // Ensure we always have a valid type, never empty string
+      let clientType: "monthly" | "one_time" = "one_time";
+      if (client.type === "monthly" || client.type === "one_time") {
+        clientType = client.type;
+      }
+      
       setFormData({
         name: client.name,
         clientId: client.clientId || "",
@@ -119,7 +124,7 @@ export default function ClientForm() {
           pincode: client.address?.pincode || "",
           country: client.address?.country || "",
         },
-        type: client.type || "",
+        type: clientType,
         notes: client.notes || "",
         salesPerson: client.salesPerson || "",
         pointsOfContact: client.pointsOfContact || [],
@@ -138,6 +143,9 @@ export default function ClientForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Ensure type is never empty string
+      const validType = formData.type || "one_time";
+      
       const payload = {
         name: formData.name,
         clientId: formData.clientId,
@@ -145,7 +153,7 @@ export default function ClientForm() {
         contact: formData.contact,
         email: formData.email,
         address: formData.address,
-        type: formData.type,
+        type: validType as "monthly" | "one_time",
         notes: formData.notes,
         salesPerson: formData.salesPerson,
         pointsOfContact: formData.pointsOfContact,
@@ -338,12 +346,20 @@ export default function ClientForm() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="type">Client Type</Label>
-                    <Input
-                      id="type"
+                    <Select
                       value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      placeholder="e.g., Monthly, One Time, Annual"
-                    />
+                      onValueChange={(value: "monthly" | "one_time") =>
+                        setFormData({ ...formData, type: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="one_time">One Time</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="salesPerson">Sales Person</Label>

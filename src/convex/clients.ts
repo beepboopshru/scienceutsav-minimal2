@@ -31,7 +31,7 @@ export const create = mutation({
       pincode: v.string(),
       country: v.string(),
     })),
-    type: v.optional(v.string()),
+    type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
     notes: v.optional(v.string()),
     salesPerson: v.optional(v.string()),
     pointsOfContact: v.optional(v.array(v.object({
@@ -158,7 +158,7 @@ export const update = mutation({
       pincode: v.string(),
       country: v.string(),
     })),
-    type: v.optional(v.string()),
+    type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
     notes: v.optional(v.string()),
     salesPerson: v.optional(v.string()),
     pointsOfContact: v.optional(v.array(v.object({

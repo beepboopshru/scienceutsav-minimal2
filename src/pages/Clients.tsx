@@ -65,7 +65,7 @@ export default function Clients() {
       pincode: "",
       country: "",
     },
-    type: "",
+    type: "one_time" as "monthly" | "one_time",
     notes: "",
     salesPerson: "",
     pointsOfContact: [] as Array<{
@@ -213,11 +213,9 @@ export default function Clients() {
                             </AccordionTrigger>
                           </td>
                           <td className="p-4">
-                            {client.type ? (
-                              <Badge variant="secondary">{client.type}</Badge>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
+                            <Badge variant={client.type === "monthly" ? "default" : "secondary"}>
+                              {client.type === "monthly" ? "Monthly" : "One Time"}
+                            </Badge>
                           </td>
                           <td className="p-4">
                             <span className="text-sm">{client.salesPerson || "-"}</span>
@@ -587,15 +585,23 @@ export default function Clients() {
                   </div>
                 </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Client Type</Label>
-                    <Input
-                      id="type"
-                      value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                      placeholder="e.g., Monthly, One Time, Annual"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="type">Client Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: "monthly" | "one_time") =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue placeholder="Select client type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="one_time">One Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
