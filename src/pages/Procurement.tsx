@@ -31,8 +31,6 @@ export default function Procurement() {
   const inventory = useQuery(api.inventory.list);
   const vendors = useQuery(api.vendors.list);
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
-  const clients = useQuery(api.clients.list, {});
-  const b2cClients = useQuery(api.b2cClients.list, {});
   
   const removeJob = useMutation(api.procurementJobs.remove);
   const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
@@ -56,12 +54,12 @@ export default function Procurement() {
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
-  }, [inventory]);
+  }, [inventory, lastRefresh]);
 
   const inventoryById = useMemo(() => {
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i._id, i]));
-  }, [inventory]);
+  }, [inventory, lastRefresh]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -82,7 +80,7 @@ export default function Procurement() {
     );
   }
 
-  if (isLoading || !assignments || !inventory || !vendors || !clients || !b2cClients) {
+  if (isLoading || !assignments || !inventory || !vendors) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-full">
@@ -388,14 +386,7 @@ export default function Procurement() {
   const generateClientWiseData = () => {
     const clientMap = new Map<string, any>();
     assignments.forEach((assignment) => {
-      const client = assignment.clientType === "b2b"
-        ? clients?.find((c) => c._id === assignment.clientId)
-        : b2cClients?.find((c) => c._id === assignment.clientId);
-      
-      const clientName = assignment.clientType === "b2b"
-        ? ((client as any)?.organization || (client as any)?.name || "Unknown Client")
-        : ((client as any)?.buyerName || "Unknown Client");
-      
+      const clientName = (assignment.client as any)?.name || "Unknown Client";
       if (!clientMap.has(clientName)) {
         clientMap.set(clientName, {
           clientName: clientName,
@@ -584,28 +575,18 @@ export default function Procurement() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {assignments.map((a, i) => {
-            const client = a.clientType === "b2b"
-              ? clients?.find((c) => c._id === a.clientId)
-              : b2cClients?.find((c) => c._id === a.clientId);
-            
-            const clientName = a.clientType === "b2b"
-              ? ((client as any)?.organization || (client as any)?.name || "-")
-              : ((client as any)?.buyerName || "-");
-            
-            return (
-              <TableRow key={i}>
-                <TableCell className="font-medium text-xs">{a.batch?.batchId || a.batchId || "-"}</TableCell>
-                <TableCell className="text-xs">{a.program?.name || "-"}</TableCell>
-                <TableCell className="text-xs">{a.kit?.name || "-"}</TableCell>
-                <TableCell><Badge variant="outline" className="text-[10px]">{a.kit?.category || "-"}</Badge></TableCell>
-                <TableCell className="text-xs">{clientName}</TableCell>
-                <TableCell className="text-right text-xs">{a.quantity}</TableCell>
-                <TableCell className="text-xs">{a.dispatchedAt ? new Date(a.dispatchedAt).toLocaleDateString() : "-"}</TableCell>
-                <TableCell className="text-xs">{a.productionMonth || "-"}</TableCell>
-              </TableRow>
-            );
-          })}
+          {assignments.map((a, i) => (
+            <TableRow key={i}>
+              <TableCell className="font-medium text-xs">{a.batch?.batchId || a.batchId || "-"}</TableCell>
+              <TableCell className="text-xs">{a.program?.name || "-"}</TableCell>
+              <TableCell className="text-xs">{a.kit?.name || "-"}</TableCell>
+              <TableCell><Badge variant="outline" className="text-[10px]">{a.kit?.category || "-"}</Badge></TableCell>
+              <TableCell className="text-xs">{a.client?.name || a.client?.buyerName || "-"}</TableCell>
+              <TableCell className="text-right text-xs">{a.quantity}</TableCell>
+              <TableCell className="text-xs">{a.dispatchedAt ? new Date(a.dispatchedAt).toLocaleDateString() : "-"}</TableCell>
+              <TableCell className="text-xs">{a.productionMonth || "-"}</TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
