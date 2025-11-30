@@ -767,6 +767,29 @@ const schema = defineSchema(
       .index("by_status", ["status"])
       .index("by_requested_by", ["requestedBy"])
       .index("by_entity_type", ["entityType"]),
+
+    // Material requests by users
+    materialRequests: defineTable({
+      userId: v.id("users"),
+      items: v.array(
+        v.object({
+          inventoryId: v.id("inventory"),
+          name: v.string(),
+          quantity: v.number(),
+          unit: v.string(),
+        })
+      ),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("rejected")
+      ),
+      purpose: v.optional(v.string()),
+      reviewedBy: v.optional(v.id("users")),
+      reviewedAt: v.optional(v.number()),
+    })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"]),
   },
   {
     schemaValidation: false,

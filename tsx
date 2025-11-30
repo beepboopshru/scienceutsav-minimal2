@@ -1,3 +1,22 @@
-{!item.isKitPacket && item.type === "pre_processed" && item.components && item.components.length > 0 && (
-  <ListTree className="h-4 w-4 text-blue-500" />
-)}
+  return (
+    <Layout>
+      <div className="p-8 space-y-6">
+        <motion.div ...>
+          <div>...</div>
+
+          <Tabs ...>
+            <TabsList>...</TabsList>
+
+            <TabsContent value="procurement">
+               {/* ... existing content ... */}
+            </TabsContent>
+
+            <TabsContent value="requests">
+              <MaterialRequestsTab />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
+
+      <Dialog ...>
+      {/* ... */}

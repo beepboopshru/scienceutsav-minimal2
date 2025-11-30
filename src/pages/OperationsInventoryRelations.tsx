@@ -21,6 +21,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MaterialRequestsTab } from "@/components/inventory/MaterialRequestsTab";
 
 export default function OperationsInventoryRelations() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -469,9 +471,9 @@ export default function OperationsInventoryRelations() {
   };
 
   const stats = {
-    pending: procurementJobs.filter((j) => j.status === "pending").length,
-    inProgress: procurementJobs.filter((j) => j.status === "in_progress").length,
-    completed: procurementJobs.filter((j) => j.status === "completed").length,
+    pending: procurementJobs?.filter((j) => j.status === "pending").length || 0,
+    inProgress: procurementJobs?.filter((j) => j.status === "in_progress").length || 0,
+    completed: procurementJobs?.filter((j) => j.status === "completed").length || 0,
   };
 
   return (
@@ -488,236 +490,249 @@ export default function OperationsInventoryRelations() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pending}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.inProgress}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.completed}</div>
-              </CardContent>
-            </Card>
-          </div>
+          <Tabs defaultValue="procurement" className="mt-6">
+            <TabsList>
+              <TabsTrigger value="procurement">Procurement Jobs</TabsTrigger>
+              <TabsTrigger value="requests">Material Requests</TabsTrigger>
+            </TabsList>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div>
-              <Label className="text-xs">Status Filter</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <TabsContent value="procurement" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.pending}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.inProgress}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.completed}</div>
+                  </CardContent>
+                </Card>
+              </div>
 
-            <div>
-              <Label className="text-xs">Priority Filter</Label>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div>
+                  <Label className="text-xs">Status Filter</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div>
-              <Label className="text-xs">Search</Label>
-              <Input
-                placeholder="Search by Job ID or Creator..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9"
-              />
-            </div>
-          </div>
+                <div>
+                  <Label className="text-xs">Priority Filter</Label>
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {canEdit && (
-            <div className="flex gap-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => handleDownloadComponentsReport("all")}
-                disabled={filteredJobs.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download All Components Report
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleDownloadComponentsReport("selected")}
-                disabled={selectedJobs.size === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Selected Components Report ({selectedJobs.size})
-              </Button>
-            </div>
-          )}
+                <div>
+                  <Label className="text-xs">Search</Label>
+                  <Input
+                    placeholder="Search by Job ID or Creator..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              </div>
 
-          <Card className="mt-6">
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {canEdit && (
-                      <TableHead className="w-10">
-                        <Checkbox
-                          checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedJobs(new Set(filteredJobs.map((j) => j._id)));
-                            } else {
-                              setSelectedJobs(new Set());
-                            }
-                          }}
-                        />
-                      </TableHead>
-                    )}
-                    <TableHead>Job ID</TableHead>
-                    <TableHead>Created By</TableHead>
-                    <TableHead>Created On</TableHead>
-                    <TableHead>Assignments</TableHead>
-                    <TableHead>Materials</TableHead>
-                    {canEdit && <TableHead>Status</TableHead>}
-                    {canEdit && <TableHead>Priority</TableHead>}
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredJobs.map((job, idx) => (
-                    <motion.tr
-                      key={job._id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: idx * 0.02 }}
-                      className="border-b"
-                    >
-                      {canEdit && (
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedJobs.has(job._id)}
-                            onCheckedChange={() => toggleJobSelection(job._id)}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="font-medium">{job.jobId}</TableCell>
-                      <TableCell>{job.creatorName}</TableCell>
-                      <TableCell>
-                        {new Date(job._creationTime).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{job.assignmentIds.length}</TableCell>
-                      <TableCell>{job.materialShortages.length}</TableCell>
-                      {canEdit && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Select
-                            value={job.status}
-                            onValueChange={(value) => handleStatusChange(job._id, value)}
-                          >
-                            <SelectTrigger className="h-8 w-[140px]" onClick={(e) => e.stopPropagation()}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="in_progress">In Progress</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      )}
-                      {canEdit && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Select
-                            value={job.priority}
-                            onValueChange={(value) => handlePriorityChange(job._id, value)}
-                          >
-                            <SelectTrigger className="h-8 w-[120px]" onClick={(e) => e.stopPropagation()}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDetailsDialog(job)}
-                            title="View Details"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => exportJobToPDF(job)}
-                            title="Export PDF"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openNotesDialog(job)}
-                              title="Edit Notes"
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteJob(job._id)}
-                              title="Delete Job"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </motion.tr>
-                  ))}
-                </TableBody>
-              </Table>
-              {filteredJobs.length === 0 && (
-                <div className="text-center py-12">
-                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">No procurement jobs found</h3>
-                  <p className="text-muted-foreground">Try adjusting your filters</p>
+              {canEdit && (
+                <div className="flex gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownloadComponentsReport("all")}
+                    disabled={filteredJobs.length === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download All Components Report
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownloadComponentsReport("selected")}
+                    disabled={selectedJobs.size === 0}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Selected Components Report ({selectedJobs.size})
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+
+              <Card className="mt-6">
+                <CardContent className="pt-6">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {canEdit && (
+                          <TableHead className="w-10">
+                            <Checkbox
+                              checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedJobs(new Set(filteredJobs.map((j) => j._id)));
+                                } else {
+                                  setSelectedJobs(new Set());
+                                }
+                              }}
+                            />
+                          </TableHead>
+                        )}
+                        <TableHead>Job ID</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead>Created On</TableHead>
+                        <TableHead>Assignments</TableHead>
+                        <TableHead>Materials</TableHead>
+                        {canEdit && <TableHead>Status</TableHead>}
+                        {canEdit && <TableHead>Priority</TableHead>}
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredJobs.map((job, idx) => (
+                        <motion.tr
+                          key={job._id}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: idx * 0.02 }}
+                          className="border-b"
+                        >
+                          {canEdit && (
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedJobs.has(job._id)}
+                                onCheckedChange={() => toggleJobSelection(job._id)}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="font-medium">{job.jobId}</TableCell>
+                          <TableCell>{job.creatorName}</TableCell>
+                          <TableCell>
+                            {new Date(job._creationTime).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>{job.assignmentIds.length}</TableCell>
+                          <TableCell>{job.materialShortages.length}</TableCell>
+                          {canEdit && (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={job.status}
+                                onValueChange={(value) => handleStatusChange(job._id, value)}
+                              >
+                                <SelectTrigger className="h-8 w-[140px]" onClick={(e) => e.stopPropagation()}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="completed">Completed</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                          )}
+                          {canEdit && (
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Select
+                                value={job.priority}
+                                onValueChange={(value) => handlePriorityChange(job._id, value)}
+                              >
+                                <SelectTrigger className="h-8 w-[120px]" onClick={(e) => e.stopPropagation()}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Low</SelectItem>
+                                  <SelectItem value="medium">Medium</SelectItem>
+                                  <SelectItem value="high">High</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDetailsDialog(job)}
+                                title="View Details"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => exportJobToPDF(job)}
+                                title="Export PDF"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              {canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openNotesDialog(job)}
+                                  title="Edit Notes"
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteJob(job._id)}
+                                  title="Delete Job"
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {filteredJobs.length === 0 && (
+                    <div className="text-center py-12">
+                      <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-medium">No procurement jobs found</h3>
+                      <p className="text-muted-foreground">Try adjusting your filters</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="requests">
+              <MaterialRequestsTab />
+            </TabsContent>
+          </Tabs>
         </motion.div>
       </div>
 
