@@ -291,13 +291,20 @@ async function getUserPermissions(
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .first();
 
+  const role = user.role || "content";
+  const defaults = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.content;
+
   if (customPermissions) {
-    return customPermissions.permissions as any;
+    // Merge defaults with custom permissions to ensure new resources are available
+    // for users with existing custom permissions
+    return {
+      ...defaults,
+      ...customPermissions.permissions,
+    } as any;
   }
 
   // Fall back to role-based defaults
-  const role = user.role || "content";
-  return ROLE_DEFAULTS[role] || ROLE_DEFAULTS.content;
+  return defaults;
 }
 
 /**
