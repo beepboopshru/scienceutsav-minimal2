@@ -32,7 +32,6 @@ import { Badge } from "@/components/ui/badge";
 import { ClientMonthwiseView } from "@/components/ClientMonthwiseView";
 import { useQuery, useMutation } from "convex/react";
 import { Building2, Loader2, Mail, Phone, Plus, Pencil, Trash2, Search, Calendar } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -66,7 +65,7 @@ export default function Clients() {
       pincode: "",
       country: "",
     },
-    type: "" as string,
+    type: "one_time" as "monthly" | "one_time",
     notes: "",
     salesPerson: "",
     pointsOfContact: [] as Array<{

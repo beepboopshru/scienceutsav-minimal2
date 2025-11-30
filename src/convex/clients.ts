@@ -31,7 +31,7 @@ export const create = mutation({
       pincode: v.string(),
       country: v.string(),
     })),
-    type: v.optional(v.string()),
+    type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
     notes: v.optional(v.string()),
     salesPerson: v.optional(v.string()),
     pointsOfContact: v.optional(v.array(v.object({
@@ -124,27 +124,21 @@ export const create = mutation({
       clientId = `${baseClientId}.${nextSequence.toString().padStart(3, "0")}`;
     }
 
-    const insertData: any = {
+    return await ctx.db.insert("clients", {
       name: args.name,
       clientId,
       email: args.email,
       contact: args.contact,
       organization: args.organization,
       address: args.address,
+      type: args.type || "one_time",
       notes: args.notes,
       salesPerson: args.salesPerson,
       pointsOfContact: args.pointsOfContact,
       gradeAttendance: args.gradeAttendance,
       gradePlanning: args.gradePlanning,
       createdBy: userId,
-    };
-
-    // Only include type if it's provided and not empty
-    if (args.type && args.type.trim() !== "") {
-      insertData.type = args.type;
-    }
-
-    return await ctx.db.insert("clients", insertData);
+    });
   },
 });
 
@@ -164,7 +158,7 @@ export const update = mutation({
       pincode: v.string(),
       country: v.string(),
     })),
-    type: v.optional(v.string()),
+    type: v.optional(v.union(v.literal("monthly"), v.literal("one_time"))),
     notes: v.optional(v.string()),
     salesPerson: v.optional(v.string()),
     pointsOfContact: v.optional(v.array(v.object({
