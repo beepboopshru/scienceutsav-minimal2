@@ -62,6 +62,7 @@ export default function Dispatch() {
   const programs = useQuery(api.programs.list);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
+  const updateRemarks = useMutation(api.assignments.updateRemarks);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
@@ -332,6 +333,20 @@ export default function Dispatch() {
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to update status");
       }
+    }
+  };
+
+  const handleRemarksChange = async (assignmentId: Id<"assignments">, newRemarks: string) => {
+    if (!hasPermission("dispatch", "edit")) {
+      toast.error("You don't have permission to edit remarks");
+      return;
+    }
+    
+    try {
+      await updateRemarks({ id: assignmentId, remarks: newRemarks });
+      toast.success("Remarks updated successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update remarks");
     }
   };
 
