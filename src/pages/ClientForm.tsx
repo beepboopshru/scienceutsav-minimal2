@@ -42,7 +42,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Plus, Trash2, Check, ChevronsUpDown, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Trash2, Check, ChevronsUpDown, ArrowLeft, Edit2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -64,6 +64,9 @@ export default function ClientForm() {
   const kits = useQuery(api.kits.list);
   const createClient = useMutation(api.clients.create);
   const updateClient = useMutation(api.clients.update);
+
+  const [editingCell, setEditingCell] = useState<{ gradeIndex: number; month: string } | null>(null);
+  const [tempKitSelection, setTempKitSelection] = useState<Id<"kits"> | undefined>(undefined);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -157,6 +160,33 @@ export default function ClientForm() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save client");
     }
+  };
+
+  const handleEditCell = (gradeIndex: number, month: string) => {
+    setEditingCell({ gradeIndex, month });
+    setTempKitSelection(formData.gradePlanning[gradeIndex].schedule[month]);
+  };
+
+  const handleConfirmSelection = () => {
+    if (editingCell) {
+      const newPlanning = [...formData.gradePlanning];
+      newPlanning[editingCell.gradeIndex] = {
+        ...newPlanning[editingCell.gradeIndex],
+        schedule: {
+          ...newPlanning[editingCell.gradeIndex].schedule,
+          [editingCell.month]: tempKitSelection
+        }
+      };
+      setFormData({ ...formData, gradePlanning: newPlanning });
+      setEditingCell(null);
+      setTempKitSelection(undefined);
+      toast.success("Kit selection updated");
+    }
+  };
+
+  const handleCancelSelection = () => {
+    setEditingCell(null);
+    setTempKitSelection(undefined);
   };
 
   if (isLoading || (id && !client)) {
@@ -452,7 +482,7 @@ export default function ClientForm() {
                 </div>
 
                 {/* Scrollable Columns */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="h-12">
@@ -464,82 +494,113 @@ export default function ClientForm() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {formData.gradePlanning.map((plan, index) => (
+                      {formData.gradePlanning.map((plan, gradeIndex) => (
                         <TableRow key={plan.grade} className="h-16">
-                          {MONTHS.map(month => (
-                            <TableCell key={month} className="w-[250px] min-w-[250px]">
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    className={cn(
-                                      "w-full justify-between font-normal",
-                                      !plan.schedule[month] && "text-muted-foreground"
-                                    )}
-                                  >
-                                    {plan.schedule[month]
-                                      ? kits?.find((k) => k._id === plan.schedule[month])?.name
-                                      : "Select kit"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0">
-                                  <Command>
-                                    <CommandInput placeholder="Search kits..." />
-                                    <CommandList>
-                                      <CommandEmpty>No kit found.</CommandEmpty>
-                                      <CommandGroup>
-                                        <CommandItem
-                                          value="none"
-                                          onSelect={() => {
-                                            const newPlanning = [...formData.gradePlanning];
-                                            const newSchedule = { ...newPlanning[index].schedule };
-                                            delete newSchedule[month];
-                                            newPlanning[index] = { ...newPlanning[index], schedule: newSchedule };
-                                            setFormData({ ...formData, gradePlanning: newPlanning });
-                                          }}
+                          {MONTHS.map(month => {
+                            const isEditing = editingCell?.gradeIndex === gradeIndex && editingCell?.month === month;
+                            const currentKit = plan.schedule[month];
+                            
+                            return (
+                              <TableCell key={month} className="w-[250px] min-w-[250px]">
+                                {isEditing ? (
+                                  <div className="space-y-2">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          role="combobox"
+                                          className={cn(
+                                            "w-full justify-between font-normal",
+                                            !tempKitSelection && "text-muted-foreground"
+                                          )}
                                         >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              !plan.schedule[month] ? "opacity-100" : "opacity-0"
-                                            )}
-                                          />
-                                          None
-                                        </CommandItem>
-                                        {kits?.map((kit) => (
-                                          <CommandItem
-                                            key={kit._id}
-                                            value={kit.name}
-                                            onSelect={() => {
-                                              const newPlanning = [...formData.gradePlanning];
-                                              newPlanning[index] = {
-                                                ...newPlanning[index],
-                                                schedule: {
-                                                  ...newPlanning[index].schedule,
-                                                  [month]: kit._id
-                                                }
-                                              };
-                                              setFormData({ ...formData, gradePlanning: newPlanning });
-                                            }}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "mr-2 h-4 w-4",
-                                                plan.schedule[month] === kit._id ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            {kit.name}
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
-                            </TableCell>
-                          ))}
+                                          {tempKitSelection
+                                            ? kits?.find((k) => k._id === tempKitSelection)?.name
+                                            : "Select kit"}
+                                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-[300px] p-0">
+                                        <Command>
+                                          <CommandInput placeholder="Search kits..." />
+                                          <CommandList>
+                                            <CommandEmpty>No kit found.</CommandEmpty>
+                                            <CommandGroup>
+                                              <CommandItem
+                                                value="none"
+                                                onSelect={() => setTempKitSelection(undefined)}
+                                              >
+                                                <Check
+                                                  className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    !tempKitSelection ? "opacity-100" : "opacity-0"
+                                                  )}
+                                                />
+                                                None
+                                              </CommandItem>
+                                              {kits?.map((kit) => (
+                                                <CommandItem
+                                                  key={kit._id}
+                                                  value={kit.name}
+                                                  onSelect={() => setTempKitSelection(kit._id)}
+                                                >
+                                                  <Check
+                                                    className={cn(
+                                                      "mr-2 h-4 w-4",
+                                                      tempKitSelection === kit._id ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                  />
+                                                  {kit.name}
+                                                </CommandItem>
+                                              ))}
+                                            </CommandGroup>
+                                          </CommandList>
+                                        </Command>
+                                      </PopoverContent>
+                                    </Popover>
+                                    <div className="flex gap-2">
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        onClick={handleConfirmSelection}
+                                        className="flex-1"
+                                      >
+                                        <Check className="h-4 w-4 mr-1" />
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleCancelSelection}
+                                        className="flex-1"
+                                      >
+                                        <X className="h-4 w-4 mr-1" />
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 text-sm truncate">
+                                      {currentKit
+                                        ? kits?.find((k) => k._id === currentKit)?.name || "Unknown"
+                                        : "No kit"}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 shrink-0"
+                                      onClick={() => handleEditCell(gradeIndex, month)}
+                                    >
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))}
                     </TableBody>
