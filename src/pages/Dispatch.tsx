@@ -127,6 +127,10 @@ export default function Dispatch() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
   const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
+  
+  // Remarks editing state
+  const [editingRemarks, setEditingRemarks] = useState<Record<string, string>>({});
+  const [originalRemarks, setOriginalRemarks] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -336,18 +340,48 @@ export default function Dispatch() {
     }
   };
 
-  const handleRemarksChange = async (assignmentId: Id<"assignments">, newRemarks: string) => {
+  const handleStartEditingRemarks = (assignmentId: Id<"assignments">, currentRemarks: string) => {
+    setEditingRemarks(prev => ({ ...prev, [assignmentId]: currentRemarks || "" }));
+    setOriginalRemarks(prev => ({ ...prev, [assignmentId]: currentRemarks || "" }));
+  };
+
+  const handleCancelEditingRemarks = (assignmentId: Id<"assignments">) => {
+    const newEditingRemarks = { ...editingRemarks };
+    delete newEditingRemarks[assignmentId];
+    setEditingRemarks(newEditingRemarks);
+    
+    const newOriginalRemarks = { ...originalRemarks };
+    delete newOriginalRemarks[assignmentId];
+    setOriginalRemarks(newOriginalRemarks);
+  };
+
+  const handleSaveRemarks = async (assignmentId: Id<"assignments">) => {
     if (!hasPermission("dispatch", "edit")) {
       toast.error("You don't have permission to edit remarks");
       return;
     }
     
+    const newRemarks = editingRemarks[assignmentId] || "";
+    
     try {
       await updateRemarks({ id: assignmentId, remarks: newRemarks });
-      toast.success("Remarks updated successfully");
+      toast.success("Remarks saved successfully");
+      
+      // Clear editing state
+      const newEditingRemarks = { ...editingRemarks };
+      delete newEditingRemarks[assignmentId];
+      setEditingRemarks(newEditingRemarks);
+      
+      const newOriginalRemarks = { ...originalRemarks };
+      delete newOriginalRemarks[assignmentId];
+      setOriginalRemarks(newOriginalRemarks);
     } catch (error: any) {
-      toast.error(error.message || "Failed to update remarks");
+      toast.error(error.message || "Failed to save remarks");
     }
+  };
+
+  const handleRemarksInputChange = (assignmentId: Id<"assignments">, value: string) => {
+    setEditingRemarks(prev => ({ ...prev, [assignmentId]: value }));
   };
 
   const handleConfirmProofPhoto = async () => {
@@ -907,14 +941,48 @@ export default function Dispatch() {
                             : "-"}
                         </td>
                         <td className="p-4">
-                          <textarea
-                            className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                            rows={2}
-                            value={assignment.remarks || ""}
-                            onChange={(e) => handleRemarksChange(assignment._id, e.target.value)}
-                            disabled={!canEdit}
-                            placeholder={canEdit ? "Add remarks..." : "No remarks"}
-                          />
+                          {editingRemarks[assignment._id] !== undefined ? (
+                            <div className="space-y-2">
+                              <textarea
+                                className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                                rows={2}
+                                value={editingRemarks[assignment._id]}
+                                onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
+                                placeholder="Add remarks..."
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleSaveRemarks(assignment._id)}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCancelEditingRemarks(assignment._id)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
+                                {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
+                              </div>
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
+                                >
+                                  Edit
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="p-4">
                           <div className="flex items-center justify-end gap-2">
@@ -1051,14 +1119,48 @@ export default function Dispatch() {
                                 : "-"}
                             </td>
                             <td className="p-4">
-                              <textarea
-                                className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                                rows={2}
-                                value={assignment.remarks || ""}
-                                onChange={(e) => handleRemarksChange(assignment._id, e.target.value)}
-                                disabled={!canEdit}
-                                placeholder={canEdit ? "Add remarks..." : "No remarks"}
-                              />
+                              {editingRemarks[assignment._id] !== undefined ? (
+                                <div className="space-y-2">
+                                  <textarea
+                                    className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                                    rows={2}
+                                    value={editingRemarks[assignment._id]}
+                                    onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
+                                    placeholder="Add remarks..."
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => handleSaveRemarks(assignment._id)}
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleCancelEditingRemarks(assignment._id)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-start gap-2">
+                                  <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
+                                    {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
+                                  </div>
+                                  {canEdit && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
+                                    >
+                                      Edit
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
                             </td>
                             <td className="p-4">
                               <div className="flex items-center justify-end gap-2">
