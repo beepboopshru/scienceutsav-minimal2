@@ -285,11 +285,6 @@ export function MaterialRequestsTab() {
                       {req.status === "pending" && <Clock className="mr-1 h-3 w-3" />}
                       {req.status.toUpperCase()}
                     </Badge>
-                    {req.reviewedBy && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        by {req.reviewerName}
-                      </div>
-                    )}
                   </TableCell>
                   {(canApprove || canReject) && (
                     <TableCell>
