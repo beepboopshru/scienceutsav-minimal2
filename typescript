@@ -1,1 +1,3 @@
-const clientName = (assignment.client as any)?.name || "Unknown Client";
+if (args.packingStatus === "transferred_to_dispatch" && previousStatus !== "transferred_to_dispatch") {
+  // ... logic to increase kit inventory
+}
