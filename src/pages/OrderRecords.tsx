@@ -374,6 +374,7 @@ export default function OrderRecords() {
                             <th className="text-left p-4 font-semibold">Status</th>
                             <th className="text-left p-4 font-semibold">Dispatch Date</th>
                             <th className="text-left p-4 font-semibold">Delivery Date</th>
+                            <th className="text-left p-4 font-semibold">Remarks</th>
                             <th className="text-right p-4 font-semibold">Actions</th>
                           </tr>
                         </thead>
@@ -428,6 +429,11 @@ export default function OrderRecords() {
                                 {order.deliveredAt
                                   ? new Date(order.deliveredAt).toLocaleDateString()
                                   : "-"}
+                              </td>
+                              <td className="p-4">
+                                <div className="max-w-xs truncate text-sm text-muted-foreground">
+                                  {order.remarks || "-"}
+                                </div>
                               </td>
                               <td className="p-4">
                                 <div className="flex items-center justify-end gap-2">
