@@ -107,6 +107,8 @@ export const updateStatus = mutation({
       v.literal("delivered")
     ),
     ewayNumber: v.optional(v.string()),
+    ewayDocumentId: v.optional(v.id("_storage")),
+    dispatchNumber: v.optional(v.string()),
     dispatchDocumentId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
@@ -145,6 +147,14 @@ export const updateStatus = mutation({
       updates.ewayNumber = args.ewayNumber;
     }
 
+    if (args.ewayDocumentId) {
+      updates.ewayDocumentId = args.ewayDocumentId;
+    }
+
+    if (args.dispatchNumber) {
+      updates.dispatchNumber = args.dispatchNumber;
+    }
+
     if (args.dispatchDocumentId) {
       updates.dispatchDocumentId = args.dispatchDocumentId;
     }
@@ -172,6 +182,14 @@ export const updateStatus = mutation({
 
       if (updates.ewayNumber || (assignment as any).ewayNumber) {
         orderHistoryData.ewayNumber = updates.ewayNumber || (assignment as any).ewayNumber;
+      }
+
+      if (updates.ewayDocumentId || (assignment as any).ewayDocumentId) {
+        orderHistoryData.ewayDocumentId = updates.ewayDocumentId || (assignment as any).ewayDocumentId;
+      }
+
+      if (updates.dispatchNumber || (assignment as any).dispatchNumber) {
+        orderHistoryData.dispatchNumber = updates.dispatchNumber || (assignment as any).dispatchNumber;
       }
 
       if (updates.dispatchDocumentId || (assignment as any).dispatchDocumentId) {
