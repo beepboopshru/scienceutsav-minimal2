@@ -54,8 +54,8 @@ export default function KitBuilder() {
     description: "",
     isStructured: true,
     packingRequirements: "",
-    spareKits: [] as Array<{ name: string; quantity: number; unit: string; subcategory?: string; notes?: string }>,
-    bulkMaterials: [] as Array<{ name: string; quantity: number; unit: string; subcategory?: string; notes?: string }>,
+    spareKits: [] as Array<{ name: string; quantity: number; unit: string; subcategory?: string; notes?: string; inventoryItemId?: string }>,
+    bulkMaterials: [] as Array<{ name: string; quantity: number; unit: string; subcategory?: string; notes?: string; inventoryItemId?: string }>,
     miscellaneous: [] as Array<{ name: string; quantity: number; unit: string; notes?: string }>,
   });
   const [didInitFromEdit, setDidInitFromEdit] = useState(false);
@@ -231,7 +231,7 @@ export default function KitBuilder() {
   const addSpareKit = () => {
     setKitForm({
       ...kitForm,
-      spareKits: [...kitForm.spareKits, { name: "", quantity: 1, unit: "pcs", subcategory: "" }],
+      spareKits: [...kitForm.spareKits, { name: "", quantity: 1, unit: "pcs", subcategory: "", inventoryItemId: undefined }],
     });
   };
 
@@ -245,7 +245,7 @@ export default function KitBuilder() {
   const addBulkMaterial = () => {
     setKitForm({
       ...kitForm,
-      bulkMaterials: [...kitForm.bulkMaterials, { name: "", quantity: 1, unit: "pcs", subcategory: "" }],
+      bulkMaterials: [...kitForm.bulkMaterials, { name: "", quantity: 1, unit: "pcs", subcategory: "", inventoryItemId: undefined }],
     });
   };
 
@@ -669,13 +669,14 @@ export default function KitBuilder() {
                                             onSelect={() => {
                                               structure.pouches[pouchIdx].materials[matIdx].name = item.name;
                                               structure.pouches[pouchIdx].materials[matIdx].unit = item.unit;
+                                              structure.pouches[pouchIdx].materials[matIdx].inventoryItemId = item._id;
                                               setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                             }}
                                           >
                                             <Check
                                               className={cn(
                                                 "mr-2 h-4 w-4",
-                                                material.name === item.name ? "opacity-100" : "opacity-0"
+                                                material.inventoryItemId === item._id ? "opacity-100" : "opacity-0"
                                               )}
                                             />
                                             <div className="flex flex-col items-start">
@@ -835,13 +836,14 @@ export default function KitBuilder() {
                                             onSelect={() => {
                                               structure.packets[packetIdx].materials[matIdx].name = item.name;
                                               structure.packets[packetIdx].materials[matIdx].unit = item.unit;
+                                              structure.packets[packetIdx].materials[matIdx].inventoryItemId = item._id;
                                               setKitForm({ ...kitForm, packingRequirements: stringifyPackingRequirements(structure) });
                                             }}
                                           >
                                             <Check
                                               className={cn(
                                                 "mr-2 h-4 w-4",
-                                                material.name === item.name ? "opacity-100" : "opacity-0"
+                                                material.inventoryItemId === item._id ? "opacity-100" : "opacity-0"
                                               )}
                                             />
                                             <div className="flex flex-col items-start">
@@ -984,13 +986,14 @@ export default function KitBuilder() {
                                               const updated = [...kitForm.spareKits];
                                               updated[idx].name = item.name;
                                               updated[idx].unit = item.unit;
+                                              updated[idx].inventoryItemId = item._id;
                                               setKitForm({ ...kitForm, spareKits: updated });
                                             }}
                                           >
                                             <Check
                                               className={cn(
                                                 "mr-2 h-4 w-4",
-                                                spare.name === item.name ? "opacity-100" : "opacity-0"
+                                                spare.inventoryItemId === item._id ? "opacity-100" : "opacity-0"
                                               )}
                                             />
                                             <div className="flex flex-col items-start">
@@ -1117,13 +1120,14 @@ export default function KitBuilder() {
                                               const updated = [...kitForm.bulkMaterials];
                                               updated[idx].name = item.name;
                                               updated[idx].unit = item.unit;
+                                              updated[idx].inventoryItemId = item._id;
                                               setKitForm({ ...kitForm, bulkMaterials: updated });
                                             }}
                                           >
                                             <Check
                                               className={cn(
                                                 "mr-2 h-4 w-4",
-                                                bulk.name === item.name ? "opacity-100" : "opacity-0"
+                                                bulk.inventoryItemId === item._id ? "opacity-100" : "opacity-0"
                                               )}
                                             />
                                             <div className="flex flex-col items-start">

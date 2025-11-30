@@ -4,6 +4,7 @@ export interface Material {
   unit: string;
   subcategory?: string;
   notes?: string;
+  inventoryItemId?: string;
 }
 
 export interface Container {
