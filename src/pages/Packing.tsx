@@ -139,11 +139,12 @@ export default function Packing() {
 
       const requiredQty = assignment.quantity;
 
-      // Process ONLY structured packing requirements (BOM)
+      // Process structured packing requirements (BOM)
       if (kit.isStructured && kit.packingRequirements) {
         try {
           const packingData = JSON.parse(kit.packingRequirements);
           
+          // Process pouches - show individual materials
           if (packingData.pouches) {
             packingData.pouches.forEach((pouch: any, pouchIndex: number) => {
               if (pouch.materials) {
@@ -173,30 +174,27 @@ export default function Packing() {
             });
           }
 
+          // Process packets - show sealed packet itself, not materials inside
           if (packingData.packets) {
             packingData.packets.forEach((packet: any, packetIndex: number) => {
-              if (packet.materials) {
-                packet.materials.forEach((material: any) => {
-                  const key = `${material.name.toLowerCase()}_${kit._id}`;
-                  const required = material.quantity * requiredQty;
-                  
-                  if (materialMap.has(key)) {
-                    const existing = materialMap.get(key);
-                    existing.required += required;
-                    existing.traceability.push(`Packet ${packetIndex + 1}`);
-                  } else {
-                    const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
-                    materialMap.set(key, {
-                      name: material.name,
-                      currentStock: invItem?.quantity || 0,
-                      required,
-                      unit: material.unit,
-                      category: "Main Component",
-                      inventoryType: invItem?.type || "unknown",
-                      sourceKits: [kit.name],
-                      traceability: [`Packet ${packetIndex + 1}`],
-                    });
-                  }
+              const key = `${packet.name.toLowerCase()}_${kit._id}`;
+              const required = requiredQty; // 1 sealed packet per kit
+              
+              if (materialMap.has(key)) {
+                const existing = materialMap.get(key);
+                existing.required += required;
+                existing.traceability.push(`Sealed Packet ${packetIndex + 1}`);
+              } else {
+                const invItem = inventory.find((i) => i.name.toLowerCase() === packet.name.toLowerCase());
+                materialMap.set(key, {
+                  name: packet.name,
+                  currentStock: invItem?.quantity || 0,
+                  required,
+                  unit: "pcs",
+                  category: "Sealed Packet",
+                  inventoryType: invItem?.type || "sealed_packet",
+                  sourceKits: [kit.name],
+                  traceability: [`Sealed Packet ${packetIndex + 1}`],
                 });
               }
             });

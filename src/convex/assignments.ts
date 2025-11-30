@@ -339,7 +339,7 @@ export const updatePackingStatus = mutation({
           try {
             const packingData = JSON.parse(kit.packingRequirements);
             
-            // Process pouches
+            // Process pouches - reduce individual materials
             if (packingData.pouches && Array.isArray(packingData.pouches)) {
               packingData.pouches.forEach((pouch: any) => {
                 if (pouch.materials && Array.isArray(pouch.materials)) {
@@ -354,18 +354,14 @@ export const updatePackingStatus = mutation({
               });
             }
 
-            // Process packets
+            // Process packets - reduce sealed packet quantity, not materials inside
             if (packingData.packets && Array.isArray(packingData.packets)) {
               packingData.packets.forEach((packet: any) => {
-                if (packet.materials && Array.isArray(packet.materials)) {
-                  packet.materials.forEach((material: any) => {
-                    componentsToReduce.push({
-                      name: material.name,
-                      quantity: material.quantity * assignment.quantity,
-                      unit: material.unit,
-                    });
-                  });
-                }
+                componentsToReduce.push({
+                  name: packet.name,
+                  quantity: assignment.quantity, // 1 sealed packet per kit
+                  unit: "pcs",
+                });
               });
             }
           } catch (error) {
@@ -464,6 +460,7 @@ export const updatePackingStatus = mutation({
           try {
             const packingData = JSON.parse(kit.packingRequirements);
             
+            // Restore pouches - restore individual materials
             if (packingData.pouches && Array.isArray(packingData.pouches)) {
               packingData.pouches.forEach((pouch: any) => {
                 if (pouch.materials && Array.isArray(pouch.materials)) {
@@ -478,17 +475,14 @@ export const updatePackingStatus = mutation({
               });
             }
 
+            // Restore packets - restore sealed packet quantity
             if (packingData.packets && Array.isArray(packingData.packets)) {
               packingData.packets.forEach((packet: any) => {
-                if (packet.materials && Array.isArray(packet.materials)) {
-                  packet.materials.forEach((material: any) => {
-                    componentsToRestore.push({
-                      name: material.name,
-                      quantity: material.quantity * assignment.quantity,
-                      unit: material.unit,
-                    });
-                  });
-                }
+                componentsToRestore.push({
+                  name: packet.name,
+                  quantity: assignment.quantity,
+                  unit: "pcs",
+                });
               });
             }
           } catch (error) {
