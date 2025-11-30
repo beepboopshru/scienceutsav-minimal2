@@ -828,29 +828,81 @@ export default function Dispatch() {
 
               <div className="space-y-2">
                 <Label>Client *</Label>
-                <Select
-                  value={createDispatchData.clientId}
-                  onValueChange={(value) =>
-                    setCreateDispatchData({ ...createDispatchData, clientId: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {createDispatchData.clientType === "b2b"
-                      ? clients?.map((client) => (
-                          <SelectItem key={client._id} value={client._id}>
-                            {client.organization || client.name}
-                          </SelectItem>
-                        ))
-                      : b2cClients?.map((client) => (
-                          <SelectItem key={client._id} value={client._id}>
-                            {client.buyerName}
-                          </SelectItem>
-                        ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !createDispatchData.clientId && "text-muted-foreground"
+                      )}
+                    >
+                      {createDispatchData.clientId
+                        ? createDispatchData.clientType === "b2b"
+                          ? clients?.find((c) => c._id === createDispatchData.clientId)?.organization ||
+                            clients?.find((c) => c._id === createDispatchData.clientId)?.name
+                          : b2cClients?.find((c) => c._id === createDispatchData.clientId)?.buyerName
+                        : "Select a client"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search client..." />
+                      <CommandList>
+                        <CommandEmpty>No client found.</CommandEmpty>
+                        <CommandGroup>
+                          {createDispatchData.clientType === "b2b"
+                            ? clients?.map((client) => (
+                                <CommandItem
+                                  key={client._id}
+                                  value={client.organization || client.name}
+                                  onSelect={() => {
+                                    setCreateDispatchData({
+                                      ...createDispatchData,
+                                      clientId: client._id,
+                                    });
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      createDispatchData.clientId === client._id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {client.organization || client.name}
+                                </CommandItem>
+                              ))
+                            : b2cClients?.map((client) => (
+                                <CommandItem
+                                  key={client._id}
+                                  value={client.buyerName}
+                                  onSelect={() => {
+                                    setCreateDispatchData({
+                                      ...createDispatchData,
+                                      clientId: client._id,
+                                    });
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      createDispatchData.clientId === client._id
+                                        ? "opacity-100"
+                                        : "opacity-0"
+                                    )}
+                                  />
+                                  {client.buyerName}
+                                </CommandItem>
+                              ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
