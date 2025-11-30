@@ -344,7 +344,12 @@ export function Layout({ children }: LayoutProps) {
       title: "Inventory Requests",
       icon: TrendingUp,
       path: "/operations-inventory-relations",
-      roles: [hasPermission("procurementJobs", "view") ? "allowed" : ""],
+      roles: [
+        hasPermission("procurementJobs", "view") ||
+        hasPermission("materialRequests", "view")
+          ? "allowed"
+          : "",
+      ],
     },
     {
       title: "Vendor Contacts",
