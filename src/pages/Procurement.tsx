@@ -61,7 +61,7 @@ export default function Procurement() {
     return new Map(inventory.map(i => [i._id, i]));
   }, [inventory, lastRefresh]);
 
-  // --- Helper Functions (defined before useMemo hooks) ---
+  // --- Helper Functions (MUST be defined before useMemo hooks) ---
 
   const calculateShortages = (assignment: any) => {
     const kit = assignment.kit;
@@ -77,10 +77,7 @@ export default function Procurement() {
       const minStockLevel = invItem?.minStockLevel || 0;
       const finalSubcategory = subcategory || invItem?.subcategory || "Uncategorized";
       
-      // Check if this is a sealed packet - if so, explode its BOM
       if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
-        // Don't add the sealed packet itself to procurement
-        // Instead, add its raw material components
         invItem.components.forEach((comp: any) => {
           const compItem = inventoryById.get(comp.rawMaterialId);
           if (compItem && compItem.type === "raw") {
@@ -88,13 +85,10 @@ export default function Procurement() {
             const compAvailable = compItem.quantity || 0;
             const compMinStockLevel = compItem.minStockLevel || 0;
             
-            // MSL-based shortage calculation for raw materials
             let compShortage = 0;
             if (compAvailable < compMinStockLevel) {
-              // Need to fulfill order + restore MSL
               compShortage = compRequired + (compMinStockLevel - compAvailable);
             } else {
-              // Just need to fulfill order if it exceeds available stock
               compShortage = Math.max(0, compRequired - compAvailable);
             }
             
@@ -113,19 +107,14 @@ export default function Procurement() {
           }
         });
       } else {
-        // Regular material (not a sealed packet)
-        // Apply MSL logic only to raw materials
         let shortage = 0;
         if (invItem && invItem.type === "raw") {
           if (available < minStockLevel) {
-            // Need to fulfill order + restore MSL
             shortage = required + (minStockLevel - available);
           } else {
-            // Just need to fulfill order if it exceeds available stock
             shortage = Math.max(0, required - available);
           }
         } else {
-          // For non-raw materials, use simple shortage calculation
           shortage = Math.max(0, required - available);
         }
         
@@ -174,7 +163,6 @@ export default function Procurement() {
   const aggregateMaterials = (assignmentList: any[]) => {
     const materialMap = new Map<string, any>();
 
-    // 1. Collect direct requirements (already includes sealed packet BOM explosion from calculateShortages)
     assignmentList.forEach((assignment) => {
       const shortages = calculateShortages(assignment);
       shortages.direct.forEach((item: any) => {
@@ -192,13 +180,13 @@ export default function Procurement() {
             name: item.name,
             required: item.required,
             available: item.available,
-            shortage: 0, // Recalculated later
+            shortage: 0,
             unit: item.unit,
             category: item.category,
             subcategory: item.subcategory,
             kits: new Set([assignment.kit?.name || "Unknown"]),
             programs: new Set([assignment.program?.name || "Unknown"]),
-            processedShortage: 0, // Track processed shortage for BOM explosion
+            processedShortage: 0,
             vendorPrice: vendorPrice,
             inventoryId: invItem?._id,
           });
@@ -206,7 +194,6 @@ export default function Procurement() {
       });
     });
 
-    // 2. BOM Explosion for Shortages (for pre-processed items that have raw material BOMs)
     const queue = Array.from(materialMap.keys());
     
     while (queue.length > 0) {
@@ -214,21 +201,17 @@ export default function Procurement() {
       const item = materialMap.get(key);
       if (!item) continue;
 
-      // Calculate current shortage with MSL logic for raw materials
       const invItem = inventoryByName.get(key);
       let currentShortage = 0;
       
       if (invItem && invItem.type === "raw") {
         const minStockLevel = invItem.minStockLevel || 0;
         if (item.available < minStockLevel) {
-          // Need to fulfill order + restore MSL
           currentShortage = item.required + (minStockLevel - item.available);
         } else {
-          // Just need to fulfill order if it exceeds available stock
           currentShortage = Math.max(0, item.required - item.available);
         }
       } else {
-        // For non-raw materials, use simple shortage calculation
         currentShortage = Math.max(0, item.required - item.available);
       }
       
@@ -240,13 +223,10 @@ export default function Procurement() {
         const newShortage = currentShortage - processedShortage;
 
         if (newShortage > 0) {
-          // Find inventory item to get BOM
           const bomInvItem = inventoryByName.get(key);
           
           if (bomInvItem && bomInvItem.components && bomInvItem.components.length > 0) {
-            // Mark as processed to avoid re-processing the same shortage amount
             item.processedShortage = currentShortage;
-            // Mark as exploded to exclude from procurement list (since we are making it)
             item.isExploded = true;
 
             bomInvItem.components.forEach((comp: any) => {
@@ -258,11 +238,9 @@ export default function Procurement() {
                 if (materialMap.has(compKey)) {
                   const existing = materialMap.get(compKey);
                   existing.required += qtyNeeded;
-                  // Inherit kits/programs from parent
                   item.kits.forEach((k: string) => existing.kits.add(k));
                   item.programs.forEach((p: string) => existing.programs.add(p));
                   
-                  // Add to queue to re-evaluate this component's shortage
                   if (!queue.includes(compKey)) queue.push(compKey);
                 } else {
                   const vendorPrice = getVendorPrice(compInvItem._id);
@@ -300,7 +278,7 @@ export default function Procurement() {
     }));
   };
 
-  // --- Data Generation Functions with useMemo ---
+  // --- Data Generation with useMemo (MUST come after helper functions) ---
   
   const kitWiseData = useMemo(() => {
     if (!assignments) return [];
@@ -415,7 +393,6 @@ export default function Procurement() {
   // --- Export Functions ---
 
   const handleExport = () => {
-    // Attach purchasing quantities to materials before export
     const attachPurchasingQty = (materials: any[]) => {
       return materials.map(mat => ({
         ...mat,
@@ -474,7 +451,6 @@ export default function Procurement() {
     setIsRefreshing(true);
     setLastRefresh(now);
     
-    // Trigger a re-render by updating state
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success("Requirements recalculated");
@@ -530,7 +506,6 @@ export default function Procurement() {
                       return updated;
                     });
                     
-                    // Save to database
                     try {
                       await upsertPurchasingQty({
                         materialName: materialKey,
@@ -682,7 +657,6 @@ export default function Procurement() {
                                         return updated;
                                       });
                                       
-                                      // Save to database
                                       try {
                                         await upsertPurchasingQty({
                                           materialName: materialKey,
