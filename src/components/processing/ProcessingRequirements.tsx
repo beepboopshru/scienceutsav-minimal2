@@ -51,7 +51,24 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     const requiredQty = assignment.quantity;
 
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
-      const invItem = inventoryByName.get(name.toLowerCase());
+      // First, check if the kit's components array specifies which inventory item to use
+      let invItem = null;
+      
+      if (kit.components && kit.components.length > 0) {
+        const kitComponent = kit.components.find((kc: any) => {
+          const kcItem = inventory.find(i => i._id === kc.inventoryItemId);
+          return kcItem && kcItem.name.toLowerCase() === name.toLowerCase();
+        });
+        
+        if (kitComponent) {
+          invItem = inventory.find(i => i._id === kitComponent.inventoryItemId);
+        }
+      }
+      
+      // If not found in kit components, fall back to name lookup
+      if (!invItem) {
+        invItem = inventoryByName.get(name.toLowerCase());
+      }
       
       // Check if this is a sealed packet - if so, explode its BOM for pre-processed items
       if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
@@ -78,7 +95,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           }
         });
       } else if (invItem && invItem.type === "pre_processed") {
-        // Regular pre-processed item (not from sealed packet)
+        // Regular pre-processed item (not from sealed packet) - use the exact item from kit definition
         const required = qtyPerKit * requiredQty;
         const available = invItem.quantity || 0;
         const shortage = Math.max(0, required - available);

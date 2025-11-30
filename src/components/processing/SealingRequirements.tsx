@@ -110,31 +110,46 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         let components: any[] = [];
 
         if (foundItem) {
-          // Use Inventory BOM
+          // Use Inventory BOM - these are the exact items defined in the sealed packet
           if (foundItem.components) {
             components = foundItem.components.map((comp: any) => {
-              const rawMaterial = inventoryById.get(comp.rawMaterialId);
+              const material = inventoryById.get(comp.rawMaterialId);
               return {
-                name: rawMaterial ? rawMaterial.name : "Unknown Material",
+                name: material ? material.name : "Unknown Material",
                 quantityPerPacket: comp.quantityRequired,
                 totalRequired: comp.quantityRequired * requiredQty,
                 unit: comp.unit,
-                inventoryItem: rawMaterial,
+                inventoryItem: material,
                 inventoryId: comp.rawMaterialId
               };
             });
           }
         } else {
-          // Fallback to Kit Definition for missing items (so user knows what to expect/create)
+          // Fallback to Kit Definition - match materials based on what the kit specifies
           components = packet.materials.map((mat: any) => {
-            // Try to find material with exact normalized name match only
             const matName = mat.name.trim();
             const items = inventoryNormalized.get(normalize(matName));
             let matInv = null;
             
             if (items && items.length > 0) {
-              // Use the first exact match by name, no type prioritization
-              matInv = items[0];
+              // Check if the kit has a components array that specifies which inventory item to use
+              if (kit.components && kit.components.length > 0) {
+                // Find the component in the kit that matches this material name
+                const kitComponent = kit.components.find((kc: any) => {
+                  const kcItem = inventoryById.get(kc.inventoryItemId);
+                  return kcItem && normalize(kcItem.name) === normalize(matName);
+                });
+                
+                if (kitComponent) {
+                  // Use the exact inventory item specified in the kit's components
+                  matInv = inventoryById.get(kitComponent.inventoryItemId);
+                }
+              }
+              
+              // If not found in kit components, use the first match by name
+              if (!matInv) {
+                matInv = items[0];
+              }
             }
             
             return {
