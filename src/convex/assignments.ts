@@ -19,10 +19,19 @@ export const list = query({
     const assignmentsWithDetails = await Promise.all(
       assignments.map(async (assignment) => {
         const kit = await ctx.db.get(assignment.kitId);
+        
         // Fetch from correct client table based on clientType
-        const client = assignment.clientType === "b2c"
-          ? await ctx.db.get(assignment.clientId as any)
-          : await ctx.db.get(assignment.clientId as any);
+        let client = null;
+        if (assignment.clientType === "b2c") {
+          // For B2C clients, query the b2cClients table
+          const b2cClients = await ctx.db.query("b2cClients").collect();
+          client = b2cClients.find(c => c._id === assignment.clientId);
+        } else {
+          // For B2B clients, query the clients table
+          const b2bClients = await ctx.db.query("clients").collect();
+          client = b2bClients.find(c => c._id === assignment.clientId);
+        }
+        
         const program = kit ? await ctx.db.get(kit.programId) : null;
         
         return {
