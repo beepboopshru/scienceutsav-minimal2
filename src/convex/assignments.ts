@@ -47,7 +47,7 @@ export const get = query({
 
 export const create = mutation({
   args: {
-    clientId: v.string(), // Can be Id<"clients"> or Id<"b2cClients">
+    clientId: v.string(),
     clientType: v.union(v.literal("b2b"), v.literal("b2c")),
     kitId: v.id("kits"),
     quantity: v.number(),
@@ -63,30 +63,11 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Get the kit to update stock
-    const kit = await ctx.db.get(args.kitId);
-    if (!kit) throw new Error("Kit not found");
-
-    // Create assignment
+    // Create assignment without deducting kit inventory
     const assignmentId = await ctx.db.insert("assignments", {
       ...args,
       status: "assigned",
       createdBy: userId,
-    });
-
-    // Update kit stock
-    const newStockCount = kit.stockCount - args.quantity;
-    let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-    
-    if (newStockCount === 0) {
-      newStatus = "assigned";
-    } else if (newStockCount < 0) {
-      newStatus = "to_be_made";
-    }
-
-    await ctx.db.patch(args.kitId, {
-      stockCount: newStockCount,
-      status: newStatus,
     });
 
     return assignmentId;
@@ -142,13 +123,14 @@ export const updateStatus = mutation({
     await ctx.db.patch(args.id, updateData);
 
     // Log the status change
-    await ctx.db.insert("activityLogs", {
-      entityType: "assignment",
-      entityId: args.id,
-      action: "status_updated",
-      details: `Status changed to ${args.status}`,
-      timestamp: Date.now(),
-    });
+    const userId = await getAuthUserId(ctx);
+    if (userId) {
+      await ctx.db.insert("activityLogs", {
+        userId: userId,
+        actionType: "assignment_status_updated",
+        details: `Assignment ${args.id} status changed to ${args.status}`,
+      });
+    }
   },
 });
 

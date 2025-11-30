@@ -347,9 +347,9 @@ export default function Assignments() {
     try {
       await updateStatus({
         id: selectedAssignment._id,
-        status: "packed",
+        status: "ready_to_pack",
       });
-      toast.success("Marked as packed");
+      toast.success("Marked as ready to pack");
       setPackingDialogOpen(false);
     } catch (error) {
       toast.error("Failed to update status");
