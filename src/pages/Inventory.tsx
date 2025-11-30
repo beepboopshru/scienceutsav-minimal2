@@ -1105,7 +1105,7 @@ export default function Inventory() {
                                   <ListTree className="h-4 w-4" />
                                 </Button>
                               )}
-                              {canEdit && (
+                              {canEdit && activeTab !== "finished" && (
                                 <>
                                   <Button 
                                     size="icon" 
