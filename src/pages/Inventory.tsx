@@ -48,6 +48,7 @@ export default function Inventory() {
   
   const canView = hasPermission("inventory", "view");
   const canEdit = hasPermission("inventory", "edit");
+  const canEditBOM = hasPermission("inventory", "editBOM");
   
   const inventory = useQuery(api.inventory.list);
   const categories = useQuery(api.inventoryCategories.list, {});
@@ -562,7 +563,7 @@ export default function Inventory() {
                     />
                   </div>
                   
-                  {itemForm.type === "pre_processed" && (
+                  {itemForm.type === "pre_processed" && canEditBOM && (
                     <>
                       <Separator />
                       <div className="space-y-2">
@@ -577,6 +578,7 @@ export default function Inventory() {
                           <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
                             <Select
                               value={component.rawMaterialId}
+                              disabled={!canEditBOM}
                               onValueChange={(value: any) => {
                                 const newComponents = [...itemForm.components];
                                 newComponents[index].rawMaterialId = value;
@@ -598,6 +600,7 @@ export default function Inventory() {
                               type="number"
                               placeholder="Quantity"
                               value={component.quantityRequired}
+                              disabled={!canEditBOM}
                               onChange={(e) => {
                                 const newComponents = [...itemForm.components];
                                 newComponents[index].quantityRequired = Number(e.target.value);
@@ -607,6 +610,7 @@ export default function Inventory() {
                             <Input
                               placeholder="Unit"
                               value={component.unit}
+                              disabled={!canEditBOM}
                               onChange={(e) => {
                                 const newComponents = [...itemForm.components];
                                 newComponents[index].unit = e.target.value;
@@ -629,6 +633,7 @@ export default function Inventory() {
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={!canEditBOM}
                           onClick={() =>
                             setItemForm({
                               ...itemForm,
@@ -1291,7 +1296,7 @@ export default function Inventory() {
                     />
                   </div>
                   
-                  {itemForm.type === "pre_processed" && (
+                  {itemForm.type === "pre_processed" && canEditBOM && (
                     <>
                       <Separator />
                       <div className="space-y-2">
@@ -1306,6 +1311,7 @@ export default function Inventory() {
                           <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-start">
                             <Select
                               value={component.rawMaterialId}
+                              disabled={!canEditBOM}
                               onValueChange={(value: any) => {
                                 const newComponents = [...itemForm.components];
                                 newComponents[index].rawMaterialId = value;
@@ -1327,6 +1333,7 @@ export default function Inventory() {
                               type="number"
                               placeholder="Quantity"
                               value={component.quantityRequired}
+                              disabled={!canEditBOM}
                               onChange={(e) => {
                                 const newComponents = [...itemForm.components];
                                 newComponents[index].quantityRequired = Number(e.target.value);
@@ -1336,6 +1343,7 @@ export default function Inventory() {
                             <Input
                               placeholder="Unit"
                               value={component.unit}
+                              disabled={!canEditBOM}
                               onChange={(e) => {
                                 const newComponents = [...itemForm.components];
                                 newComponents[index].unit = e.target.value;
@@ -1358,6 +1366,7 @@ export default function Inventory() {
                         <Button
                           variant="outline"
                           size="sm"
+                          disabled={!canEditBOM}
                           onClick={() =>
                             setItemForm({
                               ...itemForm,
