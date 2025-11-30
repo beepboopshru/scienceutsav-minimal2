@@ -843,6 +843,7 @@ export default function Dispatch() {
                   <th className="text-left p-4 font-semibold">Grade</th>
                   <th className="text-left p-4 font-semibold">Status</th>
                   <th className="text-left p-4 font-semibold">Dispatch Date</th>
+                  <th className="text-left p-4 font-semibold">Remarks</th>
                   <th className="text-right p-4 font-semibold">Actions</th>
                 </tr>
               </thead>
@@ -904,6 +905,16 @@ export default function Dispatch() {
                           {assignment.dispatchedAt
                             ? new Date(assignment.dispatchedAt).toLocaleDateString()
                             : "-"}
+                        </td>
+                        <td className="p-4">
+                          <textarea
+                            className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                            rows={2}
+                            value={assignment.remarks || ""}
+                            onChange={(e) => handleRemarksChange(assignment._id, e.target.value)}
+                            disabled={!canEdit}
+                            placeholder={canEdit ? "Add remarks..." : "No remarks"}
+                          />
                         </td>
                         <td className="p-4">
                           <div className="flex items-center justify-end gap-2">
@@ -1038,6 +1049,16 @@ export default function Dispatch() {
                               {assignment.dispatchedAt
                                 ? new Date(assignment.dispatchedAt).toLocaleDateString()
                                 : "-"}
+                            </td>
+                            <td className="p-4">
+                              <textarea
+                                className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                                rows={2}
+                                value={assignment.remarks || ""}
+                                onChange={(e) => handleRemarksChange(assignment._id, e.target.value)}
+                                disabled={!canEdit}
+                                placeholder={canEdit ? "Add remarks..." : "No remarks"}
+                              />
                             </td>
                             <td className="p-4">
                               <div className="flex items-center justify-end gap-2">
