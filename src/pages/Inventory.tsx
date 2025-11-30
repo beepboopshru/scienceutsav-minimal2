@@ -440,7 +440,7 @@ export default function Inventory() {
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add Item
+                    Create Item
                   </Button>
                 </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -632,7 +632,7 @@ export default function Inventory() {
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancel</Button>
-                  <Button onClick={handleAddItem}>Add Item</Button>
+                  <Button onClick={handleAddItem}>Create Item</Button>
                 </DialogFooter>
               </DialogContent>
               </Dialog>
