@@ -34,6 +34,7 @@ export default function ProcessingJobs() {
   const canView = hasPermission("processingJobs", "view");
   const canEdit = hasPermission("processingJobs", "edit");
   const canEditBOM = hasPermission("processingJobs", "editBOM");
+  const canEditTargets = hasPermission("processingJobs", "editTargets");
   
   const jobs = useQuery(api.processingJobs.list);
   const inventory = useQuery(api.inventory.list);
@@ -698,7 +699,7 @@ export default function ProcessingJobs() {
                             }
                           >
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between">
+                              <Button variant="outline" className="w-full justify-between" disabled={!canEditTargets}>
                                 {target.targetItemId
                                   ? inventory?.find((i) => i._id === target.targetItemId)?.name
                                   : "Select material"}
@@ -731,6 +732,7 @@ export default function ProcessingJobs() {
                             type="number"
                             value={target.targetQuantity}
                             onChange={(e) => handleTargetQuantityChange(index, parseFloat(e.target.value) || 0)}
+                            disabled={!canEditTargets}
                           />
                         </div>
                         <Button
@@ -740,6 +742,7 @@ export default function ProcessingJobs() {
                             const newTargets = processingForm.targets.filter((_, i) => i !== index);
                             setProcessingForm({ ...processingForm, targets: newTargets });
                           }}
+                          disabled={!canEditTargets}
                         >
                           <XCircle className="h-4 w-4" />
                         </Button>
@@ -757,6 +760,7 @@ export default function ProcessingJobs() {
                           ],
                         })
                       }
+                      disabled={!canEditTargets}
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Target Material

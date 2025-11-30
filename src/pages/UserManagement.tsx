@@ -74,7 +74,7 @@ export default function UserManagement() {
         inventory: { view: false, create: false, edit: false, delete: false, editStock: false, createCategories: false, importData: false, editBOM: false },
         vendors: { view: false, create: false, edit: false, delete: false },
         services: { view: false, create: false, edit: false, delete: false },
-        processingJobs: { view: false, create: false, edit: false, complete: false, delete: false, editBOM: false },
+          processingJobs: { view: false, create: false, edit: false, complete: false, delete: false, editBOM: false, editTargets: false },
         procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
         packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
         dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
