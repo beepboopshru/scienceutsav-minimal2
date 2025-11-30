@@ -1,12 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { checkPermission } from "./permissions";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "view");
 
     const jobs = await ctx.db.query("procurementJobs").order("desc").collect();
     
@@ -30,6 +32,7 @@ export const get = query({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "view");
 
     return await ctx.db.get(args.id);
   },
@@ -47,7 +50,7 @@ export const create = mutation({
         unit: v.string(),
         category: v.optional(v.string()),
         inventoryType: v.optional(v.string()),
-        sourceKits: v.optional(v.array(v.string())),
+        sourceKits: v.optional(v.string()),
         traceability: v.optional(v.string()),
       })
     ),
@@ -62,6 +65,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "create");
 
     // Generate job ID
     const jobCount = await ctx.db.query("procurementJobs").collect();
@@ -94,6 +98,7 @@ export const updateStatus = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "edit");
 
     await ctx.db.patch(args.id, {
       status: args.status,
@@ -109,6 +114,7 @@ export const updateNotes = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "edit");
 
     await ctx.db.patch(args.id, {
       notes: args.notes,
@@ -128,6 +134,7 @@ export const updatePriority = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "edit");
 
     await ctx.db.patch(args.id, {
       priority: args.priority,
@@ -140,6 +147,7 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    await checkPermission(ctx, userId, "procurementJobs", "delete");
 
     const job = await ctx.db.get(args.id);
     if (!job) throw new Error("Procurement job not found");

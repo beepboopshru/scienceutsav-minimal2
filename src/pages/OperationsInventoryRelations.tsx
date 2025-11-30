@@ -30,14 +30,15 @@ export default function OperationsInventoryRelations() {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   
-  const canView = hasPermission("procurementJobs", "view");
-  const canEdit = hasPermission("procurementJobs", "edit");
+  const canViewPacking = hasPermission("procurementJobs", "view");
+  const canEditPacking = hasPermission("procurementJobs", "edit");
+  const canViewMaterialRequests = hasPermission("materialRequests", "view");
   
-  const procurementJobs = useQuery(api.procurementJobs.list);
-  const assignments = useQuery(api.assignments.listAll);
-  const kits = useQuery(api.kits.list);
-  const clients = useQuery(api.clients.list);
-  const b2cClients = useQuery(api.b2cClients.list);
+  const procurementJobs = useQuery(api.procurementJobs.list, canViewPacking ? undefined : "skip");
+  const assignments = useQuery(api.assignments.listAll, canViewPacking ? undefined : "skip");
+  const kits = useQuery(api.kits.list, canViewPacking ? undefined : "skip");
+  const clients = useQuery(api.clients.list, canViewPacking ? undefined : "skip");
+  const b2cClients = useQuery(api.b2cClients.list, canViewPacking ? undefined : "skip");
   
   const updateStatus = useMutation(api.procurementJobs.updateStatus);
   const updatePriority = useMutation(api.procurementJobs.updatePriority);
@@ -53,7 +54,7 @@ export default function OperationsInventoryRelations() {
   const [editingNotes, setEditingNotes] = useState("");
   const [selectedJobs, setSelectedJobs] = useState<Set<Id<"procurementJobs">>>(new Set());
 
-  const inventory = useQuery(api.inventory.list);
+  const inventory = useQuery(api.inventory.list, canViewPacking ? undefined : "skip");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -64,7 +65,7 @@ export default function OperationsInventoryRelations() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (!canView) {
+  if (!canViewPacking && !canViewMaterialRequests) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center">
@@ -74,7 +75,9 @@ export default function OperationsInventoryRelations() {
     );
   }
 
-  if (isLoading || !procurementJobs || !assignments || !kits || !inventory) {
+  const isPackingLoading = canViewPacking && (!procurementJobs || !assignments || !kits || !inventory);
+
+  if (isLoading || isPackingLoading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-full">
@@ -132,7 +135,7 @@ export default function OperationsInventoryRelations() {
     })).sort((a, b) => a.subcategory.localeCompare(b.subcategory) || a.name.localeCompare(b.name));
   };
 
-  const filteredJobs = procurementJobs.filter((job) => {
+  const filteredJobs = procurementJobs ? procurementJobs.filter((job) => {
     if (statusFilter !== "all" && job.status !== statusFilter) return false;
     if (priorityFilter !== "all" && job.priority !== priorityFilter) return false;
     if (searchQuery.trim()) {
@@ -142,7 +145,7 @@ export default function OperationsInventoryRelations() {
       if (!jobIdMatch && !creatorMatch) return false;
     }
     return true;
-  });
+  }) : [];
 
   const handleStatusChange = (jobId: Id<"procurementJobs">, newStatus: string) => {
     updateStatus({ id: jobId, status: newStatus as any })
@@ -491,12 +494,13 @@ export default function OperationsInventoryRelations() {
             </p>
           </div>
 
-          <Tabs defaultValue="packing" className="mt-6">
+          <Tabs defaultValue={canViewPacking ? "packing" : "requests"} className="mt-6">
             <TabsList>
-              <TabsTrigger value="packing">Packing Requests</TabsTrigger>
-              <TabsTrigger value="requests">Material Requests</TabsTrigger>
+              {canViewPacking && <TabsTrigger value="packing">Packing Requests</TabsTrigger>}
+              {canViewMaterialRequests && <TabsTrigger value="requests">Material Requests</TabsTrigger>}
             </TabsList>
 
+            {canViewPacking && (
             <TabsContent value="packing" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <Card>
@@ -567,7 +571,7 @@ export default function OperationsInventoryRelations() {
                 </div>
               </div>
 
-              {canEdit && (
+              {canEditPacking && (
                 <div className="flex gap-2 mt-6">
                   <Button
                     variant="outline"
@@ -593,7 +597,7 @@ export default function OperationsInventoryRelations() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {canEdit && (
+                        {canEditPacking && (
                           <TableHead className="w-10">
                             <Checkbox
                               checked={selectedJobs.size === filteredJobs.length && filteredJobs.length > 0}
@@ -612,8 +616,8 @@ export default function OperationsInventoryRelations() {
                         <TableHead>Created On</TableHead>
                         <TableHead>Assignments</TableHead>
                         <TableHead>Materials</TableHead>
-                        {canEdit && <TableHead>Status</TableHead>}
-                        {canEdit && <TableHead>Priority</TableHead>}
+                        {canEditPacking && <TableHead>Status</TableHead>}
+                        {canEditPacking && <TableHead>Priority</TableHead>}
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -626,7 +630,7 @@ export default function OperationsInventoryRelations() {
                           transition={{ delay: idx * 0.02 }}
                           className="border-b"
                         >
-                          {canEdit && (
+                          {canEditPacking && (
                             <TableCell>
                               <Checkbox
                                 checked={selectedJobs.has(job._id)}
@@ -641,7 +645,7 @@ export default function OperationsInventoryRelations() {
                           </TableCell>
                           <TableCell>{job.assignmentIds.length}</TableCell>
                           <TableCell>{job.materialShortages.length}</TableCell>
-                          {canEdit && (
+                          {canEditPacking && (
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Select
                                 value={job.status}
@@ -658,7 +662,7 @@ export default function OperationsInventoryRelations() {
                               </Select>
                             </TableCell>
                           )}
-                          {canEdit && (
+                          {canEditPacking && (
                             <TableCell onClick={(e) => e.stopPropagation()}>
                               <Select
                                 value={job.priority}
@@ -693,7 +697,7 @@ export default function OperationsInventoryRelations() {
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
-                              {canEdit && (
+                              {canEditPacking && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -703,7 +707,7 @@ export default function OperationsInventoryRelations() {
                                   <FileText className="h-4 w-4" />
                                 </Button>
                               )}
-                              {canEdit && (
+                              {canEditPacking && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -729,10 +733,13 @@ export default function OperationsInventoryRelations() {
                 </CardContent>
               </Card>
             </TabsContent>
+            )}
 
+            {canViewMaterialRequests && (
             <TabsContent value="requests">
               <MaterialRequestsTab />
             </TabsContent>
+            )}
           </Tabs>
         </motion.div>
       </div>
