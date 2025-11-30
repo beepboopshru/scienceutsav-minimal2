@@ -698,9 +698,9 @@ export default function Packing() {
                       
                       const clientName = assignmentClient
                         ? (assignment.clientType === "b2b"
-                            ? (assignmentClient as any)?.name
-                            : (assignmentClient as any)?.buyerName)
-                        : "Unknown Client";
+                            ? ((assignmentClient as any)?.name || (assignmentClient as any)?.organization || "Unknown")
+                            : ((assignmentClient as any)?.buyerName || "Unknown"))
+                        : "Unknown";
 
                       return (
                         <motion.tr
@@ -849,9 +849,9 @@ export default function Packing() {
                         
                         const clientName = assignmentClient
                           ? (assignment.clientType === "b2b"
-                              ? (assignmentClient as any)?.name
-                              : (assignmentClient as any)?.buyerName)
-                          : "Unknown Client";
+                              ? ((assignmentClient as any)?.name || (assignmentClient as any)?.organization || "Unknown")
+                              : ((assignmentClient as any)?.buyerName || "Unknown"))
+                          : "Unknown";
 
                         return (
                           <motion.tr
