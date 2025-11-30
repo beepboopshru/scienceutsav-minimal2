@@ -65,6 +65,8 @@ export default function Inventory() {
   const updateKit = useMutation(api.kits.update);
   const generateUploadUrl = useMutation(api.vendorImports.generateUploadUrl);
   const adjustStock = useMutation(api.inventory.adjustStock);
+  const adjustKitStock = useMutation(api.kits.adjustStock);
+  const updateKitStockCount = useMutation(api.kits.updateStockCount);
 
   const [activeTab, setActiveTab] = useState<"raw" | "pre_processed" | "finished" | "sealed_packet">("raw");
   const [searchTerm, setSearchTerm] = useState("");
@@ -254,13 +256,18 @@ export default function Inventory() {
 
   const handleQuantityEdit = (item: any) => {
     setEditingQuantity(item._id);
-    setTempQuantity(item.quantity);
+    setTempQuantity(activeTab === "finished" ? item.stockCount : item.quantity);
   };
 
   const handleQuantitySave = async (itemId: Id<"inventory"> | string, item: any) => {
     try {
-      // For real inventory items
-      await updateQuantity({ id: itemId as Id<"inventory">, quantity: tempQuantity });
+      if (activeTab === "finished") {
+        // For kits
+        await updateKitStockCount({ id: itemId as Id<"kits">, stockCount: tempQuantity });
+      } else {
+        // For inventory items
+        await updateQuantity({ id: itemId as Id<"inventory">, quantity: tempQuantity });
+      }
       toast.success("Quantity updated");
       setEditingQuantity(null);
     } catch (error: any) {
@@ -396,7 +403,13 @@ export default function Inventory() {
 
     try {
       const adjustment = adjustmentType === "add" ? adjustmentAmount : -adjustmentAmount;
-      await adjustStock({ id: selectedAdjustItem._id, adjustment });
+      if (activeTab === "finished") {
+        // For kits
+        await adjustKitStock({ id: selectedAdjustItem._id, adjustment });
+      } else {
+        // For inventory items
+        await adjustStock({ id: selectedAdjustItem._id, adjustment });
+      }
       toast.success(`Stock ${adjustmentType === "add" ? "added" : "subtracted"} successfully`);
       setAdjustStockOpen(false);
       setSelectedAdjustItem(null);
@@ -1059,20 +1072,31 @@ export default function Inventory() {
                             onClick={canEdit ? () => handleQuantityEdit(item) : undefined}
                             title={canEdit ? "Click to edit quantity" : ""}
                           >
-                            {item.quantity}
+                            {activeTab === "finished" ? item.stockCount : item.quantity}
                           </span>
                         )}
                       </TableCell>
                       <TableCell>{item.unit}</TableCell>
                       <TableCell>{item.location || "-"}</TableCell>
                       <TableCell>
-                        {item.minStockLevel && item.quantity <= item.minStockLevel ? (
-                          <Badge variant="destructive" className="flex items-center gap-1 w-fit">
-                            <AlertTriangle className="h-3 w-3" />
-                            Low Stock
-                          </Badge>
+                        {activeTab === "finished" ? (
+                          item.lowStockThreshold && item.stockCount <= item.lowStockThreshold ? (
+                            <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                              <AlertTriangle className="h-3 w-3" />
+                              Low Stock
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">In Stock</Badge>
+                          )
                         ) : (
-                          <Badge variant="secondary">In Stock</Badge>
+                          item.minStockLevel && item.quantity <= item.minStockLevel ? (
+                            <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                              <AlertTriangle className="h-3 w-3" />
+                              Low Stock
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">In Stock</Badge>
+                          )
                         )}
                       </TableCell>
                       <TableCell>
@@ -1105,7 +1129,7 @@ export default function Inventory() {
                                   <ListTree className="h-4 w-4" />
                                 </Button>
                               )}
-                              {canEdit && activeTab !== "finished" && (
+                              {canEdit && (
                                 <>
                                   <Button 
                                     size="icon" 
@@ -1123,31 +1147,35 @@ export default function Inventory() {
                                   >
                                     <MinusCircle className="h-4 w-4 text-red-600" />
                                   </Button>
-                                  <Button 
-                                    size="icon" 
-                                    variant="ghost" 
-                                    onClick={() => openEditDialog(item)}
-                                    title="Edit"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={async () => {
-                                      if (confirm("Delete this item?")) {
-                                        try {
-                                          await removeItem({ id: item._id });
-                                          toast.success("Item deleted");
-                                        } catch (error: any) {
-                                          toast.error(error.message);
-                                        }
-                                      }
-                                    }}
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                  {activeTab !== "finished" && (
+                                    <>
+                                      <Button 
+                                        size="icon" 
+                                        variant="ghost" 
+                                        onClick={() => openEditDialog(item)}
+                                        title="Edit"
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={async () => {
+                                          if (confirm("Delete this item?")) {
+                                            try {
+                                              await removeItem({ id: item._id });
+                                              toast.success("Item deleted");
+                                            } catch (error: any) {
+                                              toast.error(error.message);
+                                            }
+                                          }
+                                        }}
+                                        title="Delete"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </>
                               )}
                             </>
@@ -1464,7 +1492,7 @@ export default function Inventory() {
                 <div className="space-y-2">
                   <Label>Current Quantity</Label>
                   <div className="text-2xl font-bold">
-                    {selectedAdjustItem?.quantity} {selectedAdjustItem?.unit}
+                    {activeTab === "finished" ? selectedAdjustItem?.stockCount : selectedAdjustItem?.quantity} {selectedAdjustItem?.unit}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -1481,12 +1509,12 @@ export default function Inventory() {
                   <Label>New Quantity</Label>
                   <div className="text-xl font-semibold text-muted-foreground">
                     {adjustmentType === "add" 
-                      ? (selectedAdjustItem?.quantity || 0) + adjustmentAmount
-                      : Math.max(0, (selectedAdjustItem?.quantity || 0) - adjustmentAmount)
+                      ? (activeTab === "finished" ? selectedAdjustItem?.stockCount : selectedAdjustItem?.quantity || 0) + adjustmentAmount
+                      : Math.max(0, (activeTab === "finished" ? selectedAdjustItem?.stockCount : selectedAdjustItem?.quantity || 0) - adjustmentAmount)
                     } {selectedAdjustItem?.unit}
                   </div>
                 </div>
-                {adjustmentType === "subtract" && adjustmentAmount > (selectedAdjustItem?.quantity || 0) && (
+                {adjustmentType === "subtract" && adjustmentAmount > (activeTab === "finished" ? selectedAdjustItem?.stockCount : selectedAdjustItem?.quantity || 0) && (
                   <div className="flex items-center gap-2 text-sm text-destructive">
                     <AlertTriangle className="h-4 w-4" />
                     Warning: This will result in negative stock (will be set to 0)

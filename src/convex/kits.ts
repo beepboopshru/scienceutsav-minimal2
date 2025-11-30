@@ -361,3 +361,37 @@ export const updateLmsLink = mutation({
     await ctx.db.patch(id, updates);
   },
 });
+
+export const adjustStock = mutation({
+  args: {
+    id: v.id("kits"),
+    adjustment: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const kit = await ctx.db.get(args.id);
+    if (!kit) throw new Error("Kit not found");
+
+    const newStockCount = kit.stockCount + args.adjustment;
+    if (newStockCount < 0) {
+      throw new Error("Insufficient stock");
+    }
+
+    await ctx.db.patch(args.id, { stockCount: newStockCount });
+  },
+});
+
+export const updateStockCount = mutation({
+  args: {
+    id: v.id("kits"),
+    stockCount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    await ctx.db.patch(args.id, { stockCount: args.stockCount });
+  },
+});
