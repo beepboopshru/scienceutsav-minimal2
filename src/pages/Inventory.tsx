@@ -20,7 +20,9 @@ import {
   Edit,
   Eye,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  PlusCircle,
+  MinusCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +64,7 @@ export default function Inventory() {
   const createVendorImport = useMutation(api.vendorImports.create);
   const updateKit = useMutation(api.kits.update);
   const generateUploadUrl = useMutation(api.vendorImports.generateUploadUrl);
+  const adjustStock = useMutation(api.inventory.adjustStock);
 
   const [activeTab, setActiveTab] = useState<"raw" | "pre_processed" | "finished" | "sealed_packet">("raw");
   const [searchTerm, setSearchTerm] = useState("");
@@ -75,6 +78,10 @@ export default function Inventory() {
 
   // Dialog states
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [adjustStockOpen, setAdjustStockOpen] = useState(false);
+  const [adjustmentType, setAdjustmentType] = useState<"add" | "subtract">("add");
+  const [adjustmentAmount, setAdjustmentAmount] = useState<number>(0);
+  const [selectedAdjustItem, setSelectedAdjustItem] = useState<any>(null);
   const [editItemOpen, setEditItemOpen] = useState(false);
   const [billImportOpen, setBillImportOpen] = useState(false);
   const [categoryManagementOpen, setCategoryManagementOpen] = useState(false);
@@ -371,6 +378,31 @@ export default function Inventory() {
       setSelectedItem(null);
     } catch (error) {
       toast.error("Failed to delete item");
+    }
+  };
+
+  const handleOpenAdjustStock = (item: any, type: "add" | "subtract") => {
+    setSelectedAdjustItem(item);
+    setAdjustmentType(type);
+    setAdjustmentAmount(0);
+    setAdjustStockOpen(true);
+  };
+
+  const handleAdjustStock = async () => {
+    if (!selectedAdjustItem || adjustmentAmount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    try {
+      const adjustment = adjustmentType === "add" ? adjustmentAmount : -adjustmentAmount;
+      await adjustStock({ id: selectedAdjustItem._id, adjustment });
+      toast.success(`Stock ${adjustmentType === "add" ? "added" : "subtracted"} successfully`);
+      setAdjustStockOpen(false);
+      setSelectedAdjustItem(null);
+      setAdjustmentAmount(0);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to adjust stock");
     }
   };
 
@@ -1078,6 +1110,22 @@ export default function Inventory() {
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
+                                    onClick={() => handleOpenAdjustStock(item, "add")}
+                                    title="Add Stock"
+                                  >
+                                    <PlusCircle className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    onClick={() => handleOpenAdjustStock(item, "subtract")}
+                                    title="Subtract Stock"
+                                  >
+                                    <MinusCircle className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="ghost" 
                                     onClick={() => openEditDialog(item)}
                                     title="Edit"
                                   >
@@ -1395,6 +1443,64 @@ export default function Inventory() {
               </div>
               <DialogFooter>
                 <Button onClick={() => setVendorInfoOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Adjust Stock Dialog */}
+          <Dialog open={adjustStockOpen} onOpenChange={setAdjustStockOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>
+                  {adjustmentType === "add" ? "Add Stock" : "Subtract Stock"}
+                </DialogTitle>
+                <DialogDescription>
+                  {adjustmentType === "add" 
+                    ? `Add stock to: ${selectedAdjustItem?.name}` 
+                    : `Subtract stock from: ${selectedAdjustItem?.name}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Current Quantity</Label>
+                  <div className="text-2xl font-bold">
+                    {selectedAdjustItem?.quantity} {selectedAdjustItem?.unit}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount to {adjustmentType === "add" ? "Add" : "Subtract"}</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(Number(e.target.value))}
+                    placeholder={`Enter amount in ${selectedAdjustItem?.unit}`}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>New Quantity</Label>
+                  <div className="text-xl font-semibold text-muted-foreground">
+                    {adjustmentType === "add" 
+                      ? (selectedAdjustItem?.quantity || 0) + adjustmentAmount
+                      : Math.max(0, (selectedAdjustItem?.quantity || 0) - adjustmentAmount)
+                    } {selectedAdjustItem?.unit}
+                  </div>
+                </div>
+                {adjustmentType === "subtract" && adjustmentAmount > (selectedAdjustItem?.quantity || 0) && (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    Warning: This will result in negative stock (will be set to 0)
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAdjustStockOpen(false)}>Cancel</Button>
+                <Button 
+                  onClick={handleAdjustStock}
+                  variant={adjustmentType === "add" ? "default" : "destructive"}
+                >
+                  {adjustmentType === "add" ? "Add Stock" : "Subtract Stock"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
