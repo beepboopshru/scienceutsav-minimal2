@@ -97,10 +97,9 @@ export const updateStatus = mutation({
   args: {
     id: v.id("assignments"),
     status: v.union(
-      v.literal("pending"),
+      v.literal("assigned"),
       v.literal("in_production"),
-      v.literal("ready_for_packing"),
-      v.literal("packed"),
+      v.literal("ready_to_pack"),
       v.literal("transferred_to_dispatch"),
       v.literal("ready_for_dispatch"),
       v.literal("dispatched"),
@@ -112,160 +111,44 @@ export const updateStatus = mutation({
     dispatchDocumentId: v.optional(v.id("_storage")),
     trackingLink: v.optional(v.string()),
     proofPhotoId: v.optional(v.id("_storage")),
-    remarks: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .filter((q) => q.eq(q.field("email"), identity.email))
-      .first();
-
-    if (!user) throw new Error("User not found");
-
     const assignment = await ctx.db.get(args.id);
-    if (!assignment) throw new Error("Assignment not found");
-
-    const previousStatus = assignment.status;
-
-    await ctx.db.insert("deletionRequests", {
-      entityType: "assignment",
-      entityId: args.id,
-      entityName: `Assignment ${assignment._id}`,
-      status: "pending",
-      requestedBy: user._id,
-    });
-
-    const updates: any = { status: args.status };
-
-    // When ready_for_dispatch, reduce the finished kit inventory
-    if (args.status === "ready_for_dispatch" && previousStatus !== "ready_for_dispatch") {
-      const kit = await ctx.db.get(assignment.kitId);
-      if (kit) {
-        const inventoryItem = await ctx.db
-          .query("inventory")
-          .filter((q) => 
-            q.and(
-              q.eq(q.field("name"), kit.name),
-              q.eq(q.field("type"), "finished")
-            )
-          )
-          .first();
-
-        if (inventoryItem) {
-          const newQuantity = inventoryItem.quantity - assignment.quantity;
-          await ctx.db.patch(inventoryItem._id, {
-            quantity: Math.max(0, newQuantity),
-          });
-        }
-      }
+    if (!assignment) {
+      throw new Error("Assignment not found");
     }
 
-    // Set dispatchedAt timestamp when dispatched
-    if (args.status === "dispatched" && previousStatus !== "dispatched") {
-      updates.dispatchedAt = Date.now();
+    const updateData: any = {
+      status: args.status,
+    };
+
+    // Add dispatch-related fields if provided
+    if (args.ewayNumber !== undefined) updateData.ewayNumber = args.ewayNumber;
+    if (args.ewayDocumentId !== undefined) updateData.ewayDocumentId = args.ewayDocumentId;
+    if (args.dispatchNumber !== undefined) updateData.dispatchNumber = args.dispatchNumber;
+    if (args.dispatchDocumentId !== undefined) updateData.dispatchDocumentId = args.dispatchDocumentId;
+    if (args.trackingLink !== undefined) updateData.trackingLink = args.trackingLink;
+    if (args.proofPhotoId !== undefined) updateData.proofPhotoId = args.proofPhotoId;
+
+    // Set timestamps based on status
+    if (args.status === "dispatched" && !assignment.dispatchedAt) {
+      updateData.dispatchedAt = Date.now();
     }
 
     if (args.status === "delivered" && !assignment.deliveredAt) {
-      updates.deliveredAt = Date.now();
+      updateData.deliveredAt = Date.now();
     }
 
-    if (args.ewayNumber) {
-      updates.ewayNumber = args.ewayNumber;
-    }
+    await ctx.db.patch(args.id, updateData);
 
-    if (args.ewayDocumentId) {
-      updates.ewayDocumentId = args.ewayDocumentId;
-    }
-
-    if (args.dispatchNumber) {
-      updates.dispatchNumber = args.dispatchNumber;
-    }
-
-    if (args.dispatchDocumentId) {
-      updates.dispatchDocumentId = args.dispatchDocumentId;
-    }
-
-      if (args.trackingLink) {
-        updates.trackingLink = args.trackingLink;
-      }
-      if (args.proofPhotoId) {
-        updates.proofPhotoId = args.proofPhotoId;
-      }
-      if (args.remarks) {
-        updates.remarks = args.remarks;
-      }
-
-    await ctx.db.patch(args.id, updates);
-
-    // Only move to order history when status is delivered
-    if (args.status === "delivered") {
-      // Create order history record
-      const orderHistoryData: any = {
-        kitId: assignment.kitId,
-        clientId: assignment.clientId,
-        clientType: assignment.clientType,
-        quantity: assignment.quantity,
-        grade: assignment.grade,
-        productionMonth: assignment.productionMonth,
-        batchId: assignment.batchId,
-        dispatchedAt: updates.dispatchedAt || assignment.dispatchedAt || Date.now(),
-        dispatchedBy: user._id,
-        status: args.status as "dispatched" | "delivered",
-        deliveredAt: updates.deliveredAt || assignment.deliveredAt,
-        notes: assignment.notes,
-        originalAssignmentId: args.id,
-      };
-
-      if (updates.ewayNumber || (assignment as any).ewayNumber) {
-        orderHistoryData.ewayNumber = updates.ewayNumber || (assignment as any).ewayNumber;
-      }
-
-      if (updates.ewayDocumentId || (assignment as any).ewayDocumentId) {
-        orderHistoryData.ewayDocumentId = updates.ewayDocumentId || (assignment as any).ewayDocumentId;
-      }
-
-      if (updates.dispatchNumber || (assignment as any).dispatchNumber) {
-        orderHistoryData.dispatchNumber = updates.dispatchNumber || (assignment as any).dispatchNumber;
-      }
-
-      if (updates.dispatchDocumentId || (assignment as any).dispatchDocumentId) {
-        orderHistoryData.dispatchDocumentId = updates.dispatchDocumentId || (assignment as any).dispatchDocumentId;
-      }
-
-      if (updates.trackingLink || (assignment as any).trackingLink) {
-        orderHistoryData.trackingLink = updates.trackingLink || (assignment as any).trackingLink;
-      }
-
-      if (updates.proofPhotoId || (assignment as any).proofPhotoId) {
-        orderHistoryData.proofPhotoId = updates.proofPhotoId || (assignment as any).proofPhotoId;
-      }
-
-      if (updates.remarks || assignment.remarks) {
-        orderHistoryData.remarks = updates.remarks || assignment.remarks;
-      }
-
-      await ctx.db.insert("orderHistory", orderHistoryData);
-
-      // Delete the assignment
-      await ctx.db.delete(args.id);
-
-      await ctx.db.insert("activityLogs", {
-        userId: user._id,
-        actionType: "assignment_archived",
-        details: `Assignment ${args.id} moved to order history with status ${args.status}`,
-      });
-    } else {
-      await ctx.db.insert("activityLogs", {
-        userId: user._id,
-        actionType: "assignment_status_updated",
-        details: `Assignment ${args.id} status updated to ${args.status}`,
-      });
-    }
-
-    return args.id;
+    // Log the status change
+    await ctx.db.insert("activityLogs", {
+      entityType: "assignment",
+      entityId: args.id,
+      action: "status_updated",
+      details: `Status changed to ${args.status}`,
+      timestamp: Date.now(),
+    });
   },
 });
 
