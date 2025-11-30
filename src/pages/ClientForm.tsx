@@ -138,7 +138,16 @@ export default function ClientForm() {
     e.preventDefault();
     try {
       const payload = {
-        ...formData,
+        name: formData.name,
+        clientId: formData.clientId,
+        organization: formData.organization,
+        contact: formData.contact,
+        email: formData.email,
+        address: formData.address,
+        type: formData.type,
+        notes: formData.notes,
+        salesPerson: formData.salesPerson,
+        pointsOfContact: formData.pointsOfContact,
         gradePlanning: formData.gradePlanning.map(p => ({
           grade: p.grade,
           studentStrength: p.studentStrength,
