@@ -44,6 +44,65 @@ export const list = query({
   },
 });
 
+// Create custom dispatch record directly to order history
+export const createCustomDispatch = mutation({
+  args: {
+    clientId: v.string(),
+    clientType: v.union(v.literal("b2b"), v.literal("b2c")),
+    customName: v.string(),
+    remarks: v.optional(v.string()),
+    dispatchNumber: v.optional(v.string()),
+    dispatchDocumentId: v.optional(v.id("_storage")),
+    ewayNumber: v.optional(v.string()),
+    ewayDocumentId: v.optional(v.id("_storage")),
+    trackingLink: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), identity.email))
+      .first();
+
+    if (!user) throw new Error("User not found");
+
+    // Create a placeholder kit entry for custom dispatch
+    const kitId = await ctx.db.insert("kits", {
+      name: args.customName,
+      programId: "placeholder" as any, // This will be a custom dispatch marker
+      stockCount: 0,
+      status: "archived",
+      notes: "Custom dispatch record - not a real kit",
+      createdBy: user._id,
+    });
+
+    // Create order history record
+    const orderHistoryId = await ctx.db.insert("orderHistory", {
+      kitId: kitId,
+      clientId: args.clientId,
+      clientType: args.clientType,
+      quantity: 1,
+      dispatchedAt: Date.now(),
+      dispatchedBy: user._id,
+      status: "dispatched",
+      remarks: args.remarks,
+      notes: "Custom dispatch created directly",
+      originalAssignmentId: "custom_dispatch" as any,
+    });
+
+    // Log activity
+    await ctx.db.insert("activityLogs", {
+      userId: user._id,
+      actionType: "custom_dispatch_created",
+      details: `Custom dispatch created: ${args.customName} for client ${args.clientId}`,
+    });
+
+    return orderHistoryId;
+  },
+});
+
 // Create order history from dispatched assignment
 export const createFromAssignment = mutation({
   args: {
