@@ -160,7 +160,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                     >
                       <InputOTPGroup>
                         {Array.from({ length: 6 }).map((_, index) => (
-                          <InputOTPSlot key={index} index={index} className="border-gray-400" />
+                          <InputOTPSlot key={index} index={index} />
                         ))}
                       </InputOTPGroup>
                     </InputOTP>
