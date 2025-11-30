@@ -51,7 +51,7 @@ export const create = mutation({
         unit: v.string(),
         category: v.optional(v.string()),
         inventoryType: v.optional(v.string()),
-        sourceKits: v.optional(v.string()),
+        sourceKits: v.optional(v.array(v.string())),
         traceability: v.optional(v.string()),
       })
     ),
