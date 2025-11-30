@@ -250,7 +250,15 @@ export default function Dispatch() {
   };
 
   const handleViewClient = (assignment: any) => {
-    setSelectedClientForView(assignment.client);
+    // Merge client data with dispatch information from the assignment
+    const clientWithDispatchInfo = {
+      ...assignment.client,
+      ewayNumber: assignment.ewayNumber,
+      ewayDocumentId: assignment.ewayDocumentId,
+      dispatchNumber: assignment.dispatchNumber,
+      dispatchDocumentId: assignment.dispatchDocumentId,
+    };
+    setSelectedClientForView(clientWithDispatchInfo);
     setViewClientDialogOpen(true);
   };
 
@@ -989,64 +997,141 @@ export default function Dispatch() {
 
         {/* View Client Dialog */}
         <Dialog open={viewClientDialogOpen} onOpenChange={setViewClientDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Client Details</DialogTitle>
+              <DialogTitle>Dispatch & Client Details</DialogTitle>
               <DialogDescription>
                 {selectedClientForView?.organization || selectedClientForView?.buyerName || selectedClientForView?.name}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              {selectedClientForView?.organization && (
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Organization:</span>
-                  <span>{selectedClientForView.organization}</span>
-                </div>
-              )}
-              {selectedClientForView?.contact && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Phone:</span>
-                  <span>{selectedClientForView.contact}</span>
-                </div>
-              )}
-              {selectedClientForView?.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Phone:</span>
-                  <span>{selectedClientForView.phone}</span>
-                </div>
-              )}
-              {selectedClientForView?.email && (
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Email:</span>
-                  <span>{selectedClientForView.email}</span>
-                </div>
-              )}
-              {selectedClientForView?.address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <span className="font-medium">Address:</span>
-                    <div className="text-sm mt-1">
-                      <div>{selectedClientForView.address.line1}</div>
-                      {selectedClientForView.address.line2 && <div>{selectedClientForView.address.line2}</div>}
-                      {selectedClientForView.address.line3 && <div>{selectedClientForView.address.line3}</div>}
-                      <div>{selectedClientForView.address.state} - {selectedClientForView.address.pincode}</div>
-                      <div>{selectedClientForView.address.country}</div>
-                    </div>
+            <div className="space-y-6">
+              {/* Dispatch Information Section */}
+              {selectedClientForView && (
+                <div className="border rounded-lg p-4 bg-muted/30">
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Dispatch Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(selectedClientForView as any).ewayNumber && (
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium text-muted-foreground">E-Way Number</span>
+                        <div className="text-base">{(selectedClientForView as any).ewayNumber}</div>
+                      </div>
+                    )}
+                    {(selectedClientForView as any).dispatchNumber && (
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium text-muted-foreground">Dispatch Number</span>
+                        <div className="text-base">{(selectedClientForView as any).dispatchNumber}</div>
+                      </div>
+                    )}
+                    {(selectedClientForView as any).ewayDocumentId && (
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium text-muted-foreground">E-Way Document</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const storageId = (selectedClientForView as any).ewayDocumentId;
+                            // Convex storage URLs follow this pattern
+                            const url = `${import.meta.env.VITE_CONVEX_URL}/api/storage/${storageId}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="mt-1"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Document
+                        </Button>
+                      </div>
+                    )}
+                    {(selectedClientForView as any).dispatchDocumentId && (
+                      <div className="space-y-1">
+                        <span className="text-sm font-medium text-muted-foreground">Dispatch Document</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const storageId = (selectedClientForView as any).dispatchDocumentId;
+                            // Convex storage URLs follow this pattern
+                            const url = `${import.meta.env.VITE_CONVEX_URL}/api/storage/${storageId}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="mt-1"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          View Document
+                        </Button>
+                      </div>
+                    )}
                   </div>
+                  {!(selectedClientForView as any).ewayNumber && 
+                   !(selectedClientForView as any).dispatchNumber && 
+                   !(selectedClientForView as any).ewayDocumentId && 
+                   !(selectedClientForView as any).dispatchDocumentId && (
+                    <p className="text-sm text-muted-foreground italic">No dispatch information available yet</p>
+                  )}
                 </div>
               )}
-              {selectedClientForView?.salesPerson && (
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Sales Person:</span>
-                  <span>{selectedClientForView.salesPerson}</span>
+
+              {/* Client Information Section */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Client Information
+                </h3>
+                <div className="space-y-3">
+                  {selectedClientForView?.organization && (
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Organization:</span>
+                      <span>{selectedClientForView.organization}</span>
+                    </div>
+                  )}
+                  {selectedClientForView?.contact && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Phone:</span>
+                      <span>{selectedClientForView.contact}</span>
+                    </div>
+                  )}
+                  {selectedClientForView?.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Phone:</span>
+                      <span>{selectedClientForView.phone}</span>
+                    </div>
+                  )}
+                  {selectedClientForView?.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Email:</span>
+                      <span>{selectedClientForView.email}</span>
+                    </div>
+                  )}
+                  {selectedClientForView?.address && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <div>
+                        <span className="font-medium">Address:</span>
+                        <div className="text-sm mt-1">
+                          <div>{selectedClientForView.address.line1}</div>
+                          {selectedClientForView.address.line2 && <div>{selectedClientForView.address.line2}</div>}
+                          {selectedClientForView.address.line3 && <div>{selectedClientForView.address.line3}</div>}
+                          <div>{selectedClientForView.address.state} - {selectedClientForView.address.pincode}</div>
+                          <div>{selectedClientForView.address.country}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {selectedClientForView?.salesPerson && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Sales Person:</span>
+                      <span>{selectedClientForView.salesPerson}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setViewClientDialogOpen(false)}>
