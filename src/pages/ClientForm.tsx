@@ -104,11 +104,9 @@ export default function ClientForm() {
 
   useEffect(() => {
     if (client) {
-      // Ensure we always have a valid type, never empty string
-      let clientType: "monthly" | "one_time" = "one_time";
-      if (client.type === "monthly" || client.type === "one_time") {
-        clientType = client.type;
-      }
+      const clientType = client.type === "monthly" || client.type === "one_time" 
+        ? client.type 
+        : "one_time";
       
       setFormData({
         name: client.name,
@@ -143,9 +141,6 @@ export default function ClientForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Ensure type is never empty string
-      const validType = formData.type || "one_time";
-      
       const payload = {
         name: formData.name,
         clientId: formData.clientId,
@@ -153,7 +148,7 @@ export default function ClientForm() {
         contact: formData.contact,
         email: formData.email,
         address: formData.address,
-        type: validType as "monthly" | "one_time",
+        type: formData.type,
         notes: formData.notes,
         salesPerson: formData.salesPerson,
         pointsOfContact: formData.pointsOfContact,

@@ -8,9 +8,8 @@ export const addTypeToClient = mutation({
     type: v.union(v.literal("monthly"), v.literal("one_time")),
   },
   handler: async (ctx, args) => {
-    // Temporarily allow without auth for fixing existing records
-    // const userId = await getAuthUserId(ctx);
-    // if (!userId) throw new Error("Not authenticated");
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
 
     await ctx.db.patch(args.clientId, {
       type: args.type,
