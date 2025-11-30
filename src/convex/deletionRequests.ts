@@ -215,22 +215,128 @@ async function performDeletion(ctx: MutationCtx, entityType: string, entityId: s
       break;
     case "assignment":
       const assignment = await ctx.db.get(entityId as Id<"assignments">);
-      if (assignment && assignment.status !== "dispatched") {
-        const kit = await ctx.db.get(assignment.kitId);
-        if (kit) {
-          const newStockCount = kit.stockCount + assignment.quantity;
-          let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-          
-          if (newStockCount === 0) {
-            newStatus = "assigned";
-          } else if (newStockCount < 0) {
-            newStatus = "to_be_made";
-          }
+      if (assignment) {
+        // Only restore inventory if the assignment was transferred to dispatch
+        // (where component stock was reduced and finished kit stock was increased)
+        if (assignment.status === "transferred_to_dispatch" || 
+            assignment.status === "ready_for_dispatch" || 
+            assignment.status === "dispatched") {
+          const kit = await ctx.db.get(assignment.kitId);
+          if (kit) {
+            // Decrease finished kit inventory
+            const inventoryItem = await ctx.db
+              .query("inventory")
+              .filter((q) => 
+                q.and(
+                  q.eq(q.field("name"), kit.name),
+                  q.eq(q.field("type"), "finished")
+                )
+              )
+              .first();
 
-          await ctx.db.patch(assignment.kitId, {
-            stockCount: newStockCount,
-            status: newStatus,
-          });
+            if (inventoryItem) {
+              const newQuantity = inventoryItem.quantity - assignment.quantity;
+              await ctx.db.patch(inventoryItem._id, {
+                quantity: Math.max(0, newQuantity),
+              });
+            }
+
+            // Restore component stock
+            const componentsToRestore: Array<{ name: string; quantity: number; unit: string }> = [];
+
+            // Process structured packing requirements
+            if (kit.isStructured && kit.packingRequirements) {
+              try {
+                const packingData = JSON.parse(kit.packingRequirements);
+                
+                if (packingData.pouches && Array.isArray(packingData.pouches)) {
+                  packingData.pouches.forEach((pouch: any) => {
+                    if (pouch.materials && Array.isArray(pouch.materials)) {
+                      pouch.materials.forEach((material: any) => {
+                        componentsToRestore.push({
+                          name: material.name,
+                          quantity: material.quantity * assignment.quantity,
+                          unit: material.unit,
+                        });
+                      });
+                    }
+                  });
+                }
+
+                if (packingData.packets && Array.isArray(packingData.packets)) {
+                  packingData.packets.forEach((packet: any) => {
+                    if (packet.materials && Array.isArray(packet.materials)) {
+                      packet.materials.forEach((material: any) => {
+                        componentsToRestore.push({
+                          name: material.name,
+                          quantity: material.quantity * assignment.quantity,
+                          unit: material.unit,
+                        });
+                      });
+                    }
+                  });
+                }
+              } catch (error) {
+                console.error("Error parsing packing requirements:", error);
+              }
+            }
+
+            if (kit.spareKits && Array.isArray(kit.spareKits)) {
+              kit.spareKits.forEach((spare: any) => {
+                componentsToRestore.push({
+                  name: spare.name,
+                  quantity: spare.quantity * assignment.quantity,
+                  unit: spare.unit,
+                });
+              });
+            }
+
+            if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+              kit.bulkMaterials.forEach((bulk: any) => {
+                componentsToRestore.push({
+                  name: bulk.name,
+                  quantity: bulk.quantity * assignment.quantity,
+                  unit: bulk.unit,
+                });
+              });
+            }
+
+            if (kit.miscellaneous && Array.isArray(kit.miscellaneous)) {
+              kit.miscellaneous.forEach((misc: any) => {
+                componentsToRestore.push({
+                  name: misc.name,
+                  quantity: misc.quantity * assignment.quantity,
+                  unit: misc.unit,
+                });
+              });
+            }
+
+            // Aggregate components by name
+            const componentMap = new Map<string, { quantity: number; unit: string }>();
+            componentsToRestore.forEach((comp) => {
+              const key = comp.name.toLowerCase();
+              if (componentMap.has(key)) {
+                const existing = componentMap.get(key)!;
+                existing.quantity += comp.quantity;
+              } else {
+                componentMap.set(key, { quantity: comp.quantity, unit: comp.unit });
+              }
+            });
+
+            // Restore inventory for each component
+            for (const [name, data] of componentMap.entries()) {
+              const invItem = await ctx.db
+                .query("inventory")
+                .filter((q) => q.eq(q.field("name"), name))
+                .first();
+
+              if (invItem) {
+                await ctx.db.patch(invItem._id, {
+                  quantity: invItem.quantity + data.quantity,
+                });
+              }
+            }
+          }
         }
       }
       await ctx.db.delete(entityId as Id<"assignments">);
