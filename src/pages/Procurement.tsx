@@ -29,6 +29,7 @@ export default function Procurement() {
   
   const assignments = useQuery(api.assignments.list, {});
   const inventory = useQuery(api.inventory.list);
+  const vendors = useQuery(api.vendors.list);
   
   const removeJob = useMutation(api.procurementJobs.remove);
   
@@ -66,7 +67,7 @@ export default function Procurement() {
     );
   }
 
-  if (isLoading || !assignments || !inventory) {
+  if (isLoading || !assignments || !inventory || !vendors) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-full">
@@ -186,6 +187,9 @@ export default function Procurement() {
           existing.kits.add(assignment.kit?.name || "Unknown");
           existing.programs.add(assignment.program?.name || "Unknown");
         } else {
+          const invItem = inventoryByName.get(item.name.toLowerCase());
+          const vendorPrice = getVendorPrice(invItem?._id);
+          
           materialMap.set(key, {
             name: item.name,
             required: item.required,
@@ -197,6 +201,8 @@ export default function Procurement() {
             kits: new Set([assignment.kit?.name || "Unknown"]),
             programs: new Set([assignment.program?.name || "Unknown"]),
             processedShortage: 0, // Track processed shortage for BOM explosion
+            vendorPrice: vendorPrice,
+            inventoryId: invItem?._id,
           });
         }
       });
@@ -261,6 +267,8 @@ export default function Procurement() {
                   // Add to queue to re-evaluate this component's shortage
                   if (!queue.includes(compKey)) queue.push(compKey);
                 } else {
+                  const vendorPrice = getVendorPrice(compInvItem._id);
+                  
                   materialMap.set(compKey, {
                     name: compInvItem.name,
                     required: qtyNeeded,
@@ -273,6 +281,8 @@ export default function Procurement() {
                     programs: new Set(item.programs),
                     processedShortage: 0,
                     minStockLevel: compInvItem.minStockLevel || 0,
+                    vendorPrice: vendorPrice,
+                    inventoryId: compInvItem._id,
                   });
                   queue.push(compKey);
                 }
@@ -290,6 +300,21 @@ export default function Procurement() {
       kits: Array.from(item.kits),
       programs: Array.from(item.programs),
     }));
+  };
+
+  // --- Helper: Get Vendor Price ---
+  const getVendorPrice = (inventoryId?: string) => {
+    if (!inventoryId || !vendors) return null;
+    
+    for (const vendor of vendors) {
+      if (vendor.itemPrices) {
+        const priceEntry = vendor.itemPrices.find(p => p.itemId === inventoryId);
+        if (priceEntry) {
+          return priceEntry.averagePrice;
+        }
+      }
+    }
+    return null;
   };
 
   // --- Data Generation ---
@@ -456,12 +481,14 @@ export default function Procurement() {
           <TableHead>Min. Stock</TableHead>
           <TableHead>Shortage (Procurement)</TableHead>
           <TableHead>Purchasing Qty</TableHead>
+          <TableHead>Est. Cost</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {materials.map((mat: any, idx: number) => {
           const materialKey = mat.name.toLowerCase();
           const purchasingQty = purchasingQuantities.get(materialKey) ?? mat.shortage;
+          const estimatedCost = mat.vendorPrice ? (purchasingQty * mat.vendorPrice).toFixed(2) : null;
           
           return (
             <TableRow key={idx}>
@@ -493,6 +520,13 @@ export default function Procurement() {
                   className="w-24"
                   placeholder="0"
                 />
+              </TableCell>
+              <TableCell>
+                {estimatedCost ? (
+                  <span className="font-medium">₹{estimatedCost}</span>
+                ) : (
+                  <span className="text-muted-foreground text-xs">No price</span>
+                )}
               </TableCell>
             </TableRow>
           );
@@ -588,6 +622,7 @@ export default function Procurement() {
                             <TableHead>Min. Stock</TableHead>
                             <TableHead>Shortage (Procurement)</TableHead>
                             <TableHead>Purchasing Qty</TableHead>
+                            <TableHead>Est. Cost</TableHead>
                             <TableHead>Used In (Kits)</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -595,6 +630,7 @@ export default function Procurement() {
                           {materialSummary.map((item, idx) => {
                             const materialKey = item.name.toLowerCase();
                             const purchasingQty = purchasingQuantities.get(materialKey) ?? item.shortage;
+                            const estimatedCost = item.vendorPrice ? (purchasingQty * item.vendorPrice).toFixed(2) : null;
                             
                             return (
                               <TableRow key={idx}>
@@ -626,6 +662,13 @@ export default function Procurement() {
                                     className="w-24"
                                     placeholder="0"
                                   />
+                                </TableCell>
+                                <TableCell>
+                                  {estimatedCost ? (
+                                    <span className="font-medium">₹{estimatedCost}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">No price</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
                                   {item.kits.join(", ")}

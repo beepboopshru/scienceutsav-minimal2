@@ -14,6 +14,7 @@ interface Material {
   kits?: string[];
   programs?: string[];
   purchasingQty?: number;
+  vendorPrice?: number | null;
 }
 
 interface GroupedData {
@@ -71,19 +72,26 @@ export const exportProcurementPDF = (
       doc.setTextColor(0);
       finalY += 5;
 
-      const tableData = items.map(item => [
-        item.name,
-        item.category,
-        `${item.required} ${item.unit}`,
-        `${item.available} ${item.unit}`,
-        item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
-        `${item.purchasingQty || item.shortage} ${item.unit}`,
-        item.kits ? (item.kits.join(", ").substring(0, 30) + (item.kits.join(", ").length > 30 ? "..." : "")) : ""
-      ]);
+      const tableData = items.map(item => {
+        const cost = item.vendorPrice && item.purchasingQty 
+          ? `₹${(item.purchasingQty * item.vendorPrice).toFixed(2)}`
+          : "-";
+        
+        return [
+          item.name,
+          item.category,
+          `${item.required} ${item.unit}`,
+          `${item.available} ${item.unit}`,
+          item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
+          `${item.purchasingQty || item.shortage} ${item.unit}`,
+          cost,
+          item.kits ? (item.kits.join(", ").substring(0, 30) + (item.kits.join(", ").length > 30 ? "..." : "")) : ""
+        ];
+      });
 
       autoTable(doc, {
         startY: finalY,
-        head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Used In"]],
+        head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Est. Cost", "Used In"]],
         body: tableData,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [71, 85, 105] },
@@ -131,18 +139,25 @@ export const exportProcurementPDF = (
           doc.setTextColor(0);
           finalY += 5;
 
-          const tableData = items.map(item => [
-            item.name,
-            item.category,
-            `${item.required} ${item.unit}`,
-            `${item.available} ${item.unit}`,
-            item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
-            `${item.purchasingQty || item.shortage} ${item.unit}`
-          ]);
+          const tableData = items.map(item => {
+            const cost = item.vendorPrice && item.purchasingQty 
+              ? `₹${(item.purchasingQty * item.vendorPrice).toFixed(2)}`
+              : "-";
+            
+            return [
+              item.name,
+              item.category,
+              `${item.required} ${item.unit}`,
+              `${item.available} ${item.unit}`,
+              item.shortage > 0 ? `${item.shortage} ${item.unit}` : "In Stock",
+              `${item.purchasingQty || item.shortage} ${item.unit}`,
+              cost
+            ];
+          });
 
           autoTable(doc, {
             startY: finalY,
-            head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty"]],
+            head: [["Material", "Category", "Required", "Available", "Shortage", "Purchasing Qty", "Est. Cost"]],
             body: tableData,
             styles: { fontSize: 8 },
             headStyles: { fillColor: [71, 85, 105] },
