@@ -111,6 +111,7 @@ export const updateStatus = mutation({
     dispatchNumber: v.optional(v.string()),
     dispatchDocumentId: v.optional(v.id("_storage")),
     trackingLink: v.optional(v.string()),
+    proofPhotoId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -160,9 +161,12 @@ export const updateStatus = mutation({
       updates.dispatchDocumentId = args.dispatchDocumentId;
     }
 
-    if (args.trackingLink) {
-      updates.trackingLink = args.trackingLink;
-    }
+      if (args.trackingLink) {
+        updates.trackingLink = args.trackingLink;
+      }
+      if (args.proofPhotoId) {
+        updates.proofPhotoId = args.proofPhotoId;
+      }
 
     await ctx.db.patch(args.id, updates);
 

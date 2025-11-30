@@ -71,6 +71,7 @@ export default function Dispatch() {
   
   const ewayDocUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.ewayDocumentId ? { storageId: (selectedClientForView as any).ewayDocumentId } : "skip");
   const dispatchDocUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.dispatchDocumentId ? { storageId: (selectedClientForView as any).dispatchDocumentId } : "skip");
+  const proofPhotoUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.proofPhotoId ? { storageId: (selectedClientForView as any).proofPhotoId } : "skip");
 
   const [selectedAssignments, setSelectedAssignments] = useState<Set<Id<"assignments">>>(new Set());
 
@@ -110,6 +111,12 @@ export default function Dispatch() {
   const [dispatchDocument, setDispatchDocument] = useState<File | null>(null);
   const [trackingLink, setTrackingLink] = useState("");
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  
+  // Proof photo state for dispatched status
+  const [proofPhotoDialogOpen, setProofPhotoDialogOpen] = useState(false);
+  const [selectedAssignmentForProof, setSelectedAssignmentForProof] = useState<Id<"assignments"> | null>(null);
+  const [proofPhoto, setProofPhoto] = useState<File | null>(null);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
 
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
@@ -263,6 +270,7 @@ export default function Dispatch() {
       dispatchNumber: assignment.dispatchNumber,
       dispatchDocumentId: assignment.dispatchDocumentId,
       trackingLink: assignment.trackingLink,
+      proofPhotoId: assignment.proofPhotoId,
       assignmentId: assignment._id,
     };
     setSelectedClientForView(clientWithDispatchInfo);
@@ -301,6 +309,11 @@ export default function Dispatch() {
         spareKitsTools: false,
       });
       setChecklistDialogOpen(true);
+    } else if (newStatus === "dispatched") {
+      // Open proof photo dialog for dispatched status
+      setSelectedAssignmentForProof(assignmentId);
+      setProofPhoto(null);
+      setProofPhotoDialogOpen(true);
     } else if (newStatus === "delivered") {
       // Show confirmation dialog for delivered status
       if (window.confirm("Are you sure this order has been delivered? This will move it to order history.")) {
@@ -312,13 +325,78 @@ export default function Dispatch() {
         }
       }
     } else {
-      // Directly update status for other statuses (including dispatched)
+      // Directly update status for other statuses
       try {
         await updateStatus({ id: assignmentId, status: newStatus as any });
         toast.success(`Status updated to ${newStatus.replace(/_/g, " ")}`);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to update status");
       }
+    }
+  };
+
+  const handleConfirmProofPhoto = async () => {
+    if (!proofPhoto) {
+      toast.error("Please upload a proof photo");
+      return;
+    }
+
+    if (!selectedAssignmentForProof) return;
+
+    try {
+      setIsUploadingProof(true);
+
+      // Helper function to convert image to WebP
+      const convertToWebP = async (file: File): Promise<Blob> => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+
+        return new Promise<Blob>((resolve) => {
+          canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
+        });
+      };
+
+      // Convert and upload proof photo
+      const proofWebpBlob = await convertToWebP(proofPhoto);
+      const proofUploadUrl = await generateUploadUrl();
+      const proofUploadResponse = await fetch(proofUploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/webp' },
+        body: proofWebpBlob,
+      });
+
+      if (!proofUploadResponse.ok) {
+        throw new Error('Failed to upload proof photo');
+      }
+
+      const { storageId: proofStorageId } = await proofUploadResponse.json();
+
+      // Update assignment with proof photo
+      await updateStatus({ 
+        id: selectedAssignmentForProof, 
+        status: "dispatched",
+        proofPhotoId: proofStorageId,
+      });
+
+      toast.success("Status updated to Dispatched with proof photo");
+      setProofPhotoDialogOpen(false);
+      setSelectedAssignmentForProof(null);
+      setProofPhoto(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update status");
+    } finally {
+      setIsUploadingProof(false);
     }
   };
 
@@ -1076,6 +1154,20 @@ export default function Dispatch() {
                           </Button>
                         </div>
                       )}
+                      {(selectedClientForView as any).proofPhotoId && proofPhotoUrl && (
+                        <div className="space-y-1">
+                          <span className="text-sm font-medium text-muted-foreground">Proof Photo</span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(proofPhotoUrl, '_blank')}
+                            className="mt-1"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            View Photo
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     {!(selectedClientForView as any).ewayNumber && 
                      !(selectedClientForView as any).dispatchNumber && 
@@ -1723,6 +1815,63 @@ export default function Dispatch() {
                 setBoxKits([]);
               }}>
                 Generate & Print
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Proof Photo Dialog */}
+        <Dialog open={proofPhotoDialogOpen} onOpenChange={setProofPhotoDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Upload Proof Photo</DialogTitle>
+              <DialogDescription>
+                Please upload a proof photo before marking as dispatched
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="proofPhoto">Proof Photo (PNG/JPEG/WEBP) *</Label>
+                <Input
+                  id="proofPhoto"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+                      if (!validTypes.includes(file.type)) {
+                        toast.error('Please upload a PNG, JPEG, or WEBP file');
+                        e.target.value = '';
+                        return;
+                      }
+                      setProofPhoto(file);
+                    }
+                  }}
+                />
+                {proofPhoto && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {proofPhoto.name} (will be converted to WebP)
+                  </p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setProofPhotoDialogOpen(false);
+                setProofPhoto(null);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmProofPhoto} disabled={isUploadingProof}>
+                {isUploadingProof ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Confirm Dispatched"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
