@@ -397,7 +397,7 @@ export const updatePackingStatus = mutation({
       status: args.packingStatus,
     });
 
-    // If status changed to transferred_to_dispatch, increase kit inventory
+    // If status changed to transferred_to_dispatch, increase kit inventory AND reduce component stock
     if (args.packingStatus === "transferred_to_dispatch" && previousStatus !== "transferred_to_dispatch") {
       const kit = await ctx.db.get(assignment.kitId);
       if (kit) {
@@ -428,10 +428,112 @@ export const updatePackingStatus = mutation({
             minStockLevel: 0,
           });
         }
+
+        // Reduce component stock from inventory
+        const componentsToReduce: Array<{ name: string; quantity: number; unit: string }> = [];
+
+        // Process structured packing requirements
+        if (kit.isStructured && kit.packingRequirements) {
+          try {
+            const packingData = JSON.parse(kit.packingRequirements);
+            
+            // Process pouches
+            if (packingData.pouches && Array.isArray(packingData.pouches)) {
+              packingData.pouches.forEach((pouch: any) => {
+                if (pouch.materials && Array.isArray(pouch.materials)) {
+                  pouch.materials.forEach((material: any) => {
+                    componentsToReduce.push({
+                      name: material.name,
+                      quantity: material.quantity * assignment.quantity,
+                      unit: material.unit,
+                    });
+                  });
+                }
+              });
+            }
+
+            // Process packets
+            if (packingData.packets && Array.isArray(packingData.packets)) {
+              packingData.packets.forEach((packet: any) => {
+                if (packet.materials && Array.isArray(packet.materials)) {
+                  packet.materials.forEach((material: any) => {
+                    componentsToReduce.push({
+                      name: material.name,
+                      quantity: material.quantity * assignment.quantity,
+                      unit: material.unit,
+                    });
+                  });
+                }
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing packing requirements:", error);
+          }
+        }
+
+        // Process spare kits
+        if (kit.spareKits && Array.isArray(kit.spareKits)) {
+          kit.spareKits.forEach((spare: any) => {
+            componentsToReduce.push({
+              name: spare.name,
+              quantity: spare.quantity * assignment.quantity,
+              unit: spare.unit,
+            });
+          });
+        }
+
+        // Process bulk materials
+        if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+          kit.bulkMaterials.forEach((bulk: any) => {
+            componentsToReduce.push({
+              name: bulk.name,
+              quantity: bulk.quantity * assignment.quantity,
+              unit: bulk.unit,
+            });
+          });
+        }
+
+        // Process miscellaneous
+        if (kit.miscellaneous && Array.isArray(kit.miscellaneous)) {
+          kit.miscellaneous.forEach((misc: any) => {
+            componentsToReduce.push({
+              name: misc.name,
+              quantity: misc.quantity * assignment.quantity,
+              unit: misc.unit,
+            });
+          });
+        }
+
+        // Aggregate components by name
+        const componentMap = new Map<string, { quantity: number; unit: string }>();
+        componentsToReduce.forEach((comp) => {
+          const key = comp.name.toLowerCase();
+          if (componentMap.has(key)) {
+            const existing = componentMap.get(key)!;
+            existing.quantity += comp.quantity;
+          } else {
+            componentMap.set(key, { quantity: comp.quantity, unit: comp.unit });
+          }
+        });
+
+        // Reduce inventory for each component
+        for (const [name, data] of componentMap.entries()) {
+          const invItem = await ctx.db
+            .query("inventory")
+            .filter((q) => q.eq(q.field("name"), name))
+            .first();
+
+          if (invItem) {
+            const newQuantity = invItem.quantity - data.quantity;
+            await ctx.db.patch(invItem._id, {
+              quantity: Math.max(0, newQuantity),
+            });
+          }
+        }
       }
     }
 
-    // If status changed from transferred_to_dispatch back to another status, decrease kit inventory
+    // If status changed from transferred_to_dispatch back to another status, decrease kit inventory AND restore component stock
     if (previousStatus === "transferred_to_dispatch" && args.packingStatus !== "transferred_to_dispatch") {
       const kit = await ctx.db.get(assignment.kitId);
       if (kit) {
@@ -450,6 +552,102 @@ export const updatePackingStatus = mutation({
           await ctx.db.patch(inventoryItem._id, {
             quantity: Math.max(0, newQuantity),
           });
+        }
+
+        // Restore component stock
+        const componentsToRestore: Array<{ name: string; quantity: number; unit: string }> = [];
+
+        // Process structured packing requirements
+        if (kit.isStructured && kit.packingRequirements) {
+          try {
+            const packingData = JSON.parse(kit.packingRequirements);
+            
+            if (packingData.pouches && Array.isArray(packingData.pouches)) {
+              packingData.pouches.forEach((pouch: any) => {
+                if (pouch.materials && Array.isArray(pouch.materials)) {
+                  pouch.materials.forEach((material: any) => {
+                    componentsToRestore.push({
+                      name: material.name,
+                      quantity: material.quantity * assignment.quantity,
+                      unit: material.unit,
+                    });
+                  });
+                }
+              });
+            }
+
+            if (packingData.packets && Array.isArray(packingData.packets)) {
+              packingData.packets.forEach((packet: any) => {
+                if (packet.materials && Array.isArray(packet.materials)) {
+                  packet.materials.forEach((material: any) => {
+                    componentsToRestore.push({
+                      name: material.name,
+                      quantity: material.quantity * assignment.quantity,
+                      unit: material.unit,
+                    });
+                  });
+                }
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing packing requirements:", error);
+          }
+        }
+
+        if (kit.spareKits && Array.isArray(kit.spareKits)) {
+          kit.spareKits.forEach((spare: any) => {
+            componentsToRestore.push({
+              name: spare.name,
+              quantity: spare.quantity * assignment.quantity,
+              unit: spare.unit,
+            });
+          });
+        }
+
+        if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+          kit.bulkMaterials.forEach((bulk: any) => {
+            componentsToRestore.push({
+              name: bulk.name,
+              quantity: bulk.quantity * assignment.quantity,
+              unit: bulk.unit,
+            });
+          });
+        }
+
+        if (kit.miscellaneous && Array.isArray(kit.miscellaneous)) {
+          kit.miscellaneous.forEach((misc: any) => {
+            componentsToRestore.push({
+              name: misc.name,
+              quantity: misc.quantity * assignment.quantity,
+              unit: misc.unit,
+            });
+          });
+        }
+
+        // Aggregate components by name
+        const componentMap = new Map<string, { quantity: number; unit: string }>();
+        componentsToRestore.forEach((comp) => {
+          const key = comp.name.toLowerCase();
+          if (componentMap.has(key)) {
+            const existing = componentMap.get(key)!;
+            existing.quantity += comp.quantity;
+          } else {
+            componentMap.set(key, { quantity: comp.quantity, unit: comp.unit });
+          }
+        });
+
+        // Restore inventory for each component
+        for (const [name, data] of componentMap.entries()) {
+          const invItem = await ctx.db
+            .query("inventory")
+            .filter((q) => q.eq(q.field("name"), name))
+            .first();
+
+          if (invItem) {
+            await ctx.db.patch(invItem._id, {
+              quantity: invItem.quantity + data.quantity,
+            });
+          }
         }
       }
     }
