@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Search, Trash2, CheckCircle, XCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export function MaterialRequestsTab() {
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
@@ -31,6 +32,7 @@ export function MaterialRequestsTab() {
   const createRequest = useMutation(api.materialRequests.create);
   const approveRequest = useMutation(api.materialRequests.approve);
   const rejectRequest = useMutation(api.materialRequests.reject);
+  const { hasPermission } = usePermissions();
 
   const filteredInventory = inventory?.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -114,6 +116,9 @@ export function MaterialRequestsTab() {
   if (!requestsData) return <div>Loading...</div>;
 
   const { requests, isManager } = requestsData;
+  const canCreate = hasPermission("materialRequests", "create");
+  const canApprove = hasPermission("materialRequests", "approve");
+  const canReject = hasPermission("materialRequests", "reject");
 
   return (
     <div className="space-y-6">
@@ -122,107 +127,109 @@ export function MaterialRequestsTab() {
           <h2 className="text-2xl font-bold tracking-tight">Material Requests</h2>
           <p className="text-muted-foreground">Request items from inventory for projects or usage.</p>
         </div>
-        <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Request
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>New Material Request</DialogTitle>
-              <DialogDescription>Select items from inventory to request.</DialogDescription>
-            </DialogHeader>
-            
-            <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search inventory..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
+        {canCreate && (
+          <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                New Request
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle>New Material Request</DialogTitle>
+                <DialogDescription>Select items from inventory to request.</DialogDescription>
+              </DialogHeader>
+              
+              <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search inventory..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+                  <Card className="flex flex-col min-h-0">
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-sm">Available Items</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto p-0">
+                      <div className="divide-y">
+                        {filteredInventory.map((item) => (
+                          <div key={item._id} className="p-3 flex justify-between items-center hover:bg-muted/50">
+                            <div className="overflow-hidden">
+                              <p className="font-medium truncate">{item.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Stock: {item.quantity} {item.unit}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={() => handleAddItem(item)}>
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="flex flex-col min-h-0">
+                    <CardHeader className="py-3 px-4">
+                      <CardTitle className="text-sm">Selected Items</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
+                      {selectedItems.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No items selected</p>
+                      ) : (
+                        selectedItems.map((item, idx) => (
+                          <div key={idx} className="flex flex-col gap-2 p-3 border rounded-md bg-card">
+                            <div className="flex justify-between items-start">
+                              <span className="font-medium text-sm">{item.name}</span>
+                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveItem(idx)}>
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min="0.1"
+                                step="0.1"
+                                value={item.quantity}
+                                onChange={(e) => handleQuantityChange(idx, parseFloat(e.target.value))}
+                                className="h-8 w-24"
+                              />
+                              <span className="text-xs text-muted-foreground">{item.unit}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div>
+                  <Label>Purpose / Note</Label>
+                  <Textarea 
+                    placeholder="Why do you need these materials?"
+                    value={purpose}
+                    onChange={(e) => setPurpose(e.target.value)}
+                    className="mt-1.5"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-                <Card className="flex flex-col min-h-0">
-                  <CardHeader className="py-3 px-4">
-                    <CardTitle className="text-sm">Available Items</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto p-0">
-                    <div className="divide-y">
-                      {filteredInventory.map((item) => (
-                        <div key={item._id} className="p-3 flex justify-between items-center hover:bg-muted/50">
-                          <div className="overflow-hidden">
-                            <p className="font-medium truncate">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Stock: {item.quantity} {item.unit}
-                            </p>
-                          </div>
-                          <Button size="sm" variant="ghost" onClick={() => handleAddItem(item)}>
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="flex flex-col min-h-0">
-                  <CardHeader className="py-3 px-4">
-                    <CardTitle className="text-sm">Selected Items</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {selectedItems.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No items selected</p>
-                    ) : (
-                      selectedItems.map((item, idx) => (
-                        <div key={idx} className="flex flex-col gap-2 p-3 border rounded-md bg-card">
-                          <div className="flex justify-between items-start">
-                            <span className="font-medium text-sm">{item.name}</span>
-                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveItem(idx)}>
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="0.1"
-                              step="0.1"
-                              value={item.quantity}
-                              onChange={(e) => handleQuantityChange(idx, parseFloat(e.target.value))}
-                              className="h-8 w-24"
-                            />
-                            <span className="text-xs text-muted-foreground">{item.unit}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div>
-                <Label>Purpose / Note</Label>
-                <Textarea 
-                  placeholder="Why do you need these materials?"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSubmitRequest}>Submit Request</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSubmitRequest}>Submit Request</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Card>
@@ -235,13 +242,13 @@ export function MaterialRequestsTab() {
                 <TableHead>Items</TableHead>
                 <TableHead>Purpose</TableHead>
                 <TableHead>Status</TableHead>
-                {isManager && <TableHead>Actions</TableHead>}
+                {(canApprove || canReject) && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={isManager ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={(canApprove || canReject) ? 6 : 5} className="text-center py-8 text-muted-foreground">
                     No requests found
                   </TableCell>
                 </TableRow>
@@ -284,16 +291,20 @@ export function MaterialRequestsTab() {
                       </div>
                     )}
                   </TableCell>
-                  {isManager && (
+                  {(canApprove || canReject) && (
                     <TableCell>
                       {req.status === "pending" && (
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={() => handleApprove(req._id)} className="h-8">
-                            Approve
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleReject(req._id)} className="h-8 text-destructive hover:text-destructive">
-                            Reject
-                          </Button>
+                          {canApprove && (
+                            <Button size="sm" onClick={() => handleApprove(req._id)} className="h-8">
+                              Approve
+                            </Button>
+                          )}
+                          {canReject && (
+                            <Button size="sm" variant="outline" onClick={() => handleReject(req._id)} className="h-8 text-destructive hover:text-destructive">
+                              Reject
+                            </Button>
+                          )}
                         </div>
                       )}
                     </TableCell>

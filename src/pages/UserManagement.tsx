@@ -88,6 +88,7 @@ export default function UserManagement() {
         userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
         kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
         lms: { view: false, edit: false },
+        materialRequests: { view: true, create: true, approve: false, reject: false },
       };
 
       if (existingPermissions?.permissions) {
@@ -457,6 +458,8 @@ export default function UserManagement() {
                     <h4 className="font-semibold capitalize text-base">
                       {section === 'kitStatistics' ? 'Kit Statistics' : 
                        section === 'lms' ? 'LMS' :
+                       section === 'procurementJobs' ? 'Packing Requests' :
+                       section === 'materialRequests' ? 'Material Requests' :
                        section.replace(/([A-Z])/g, ' $1').trim()}
                     </h4>
                     <Button

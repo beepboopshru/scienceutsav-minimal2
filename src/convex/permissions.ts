@@ -7,7 +7,7 @@ type PermissionResource =
   | "processingJobs" | "procurementJobs" | "packing" | "dispatch"
   | "discrepancyTickets" | "billTracking" | "vendorImports" 
   | "orderHistory" | "laserFiles" | "reports" | "adminZone" | "userManagement"
-  | "kitStatistics" | "lms";
+  | "kitStatistics" | "lms" | "materialRequests";
 
 type PermissionAction = string;
 
@@ -37,6 +37,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: true, approveUsers: true, manageRoles: true, managePermissions: true, deleteUsers: true },
     kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
     lms: { view: true, edit: true },
+    materialRequests: { view: true, create: true, approve: true, reject: true },
   },
   manager: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -62,6 +63,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
     lms: { view: true, edit: true },
+    materialRequests: { view: true, create: true, approve: true, reject: true },
   },
   sales: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -87,6 +89,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: false, viewCapacityPricing: true },
     lms: { view: false, edit: false },
+    materialRequests: { view: true, create: true, approve: false, reject: false },
   },
   finance: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -112,6 +115,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
+    materialRequests: { view: true, create: true, approve: false, reject: false },
   },
   laser_operator: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -137,6 +141,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
+    materialRequests: { view: true, create: true, approve: false, reject: false },
   },
   research_head: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -162,6 +167,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: true, viewCapacityPricing: false },
     lms: { view: true, edit: true },
+    materialRequests: { view: true, create: true, approve: false, reject: false },
   },
   research_development: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -187,6 +193,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: true, viewCapacityPricing: false },
     lms: { view: true, edit: true },
+    materialRequests: { view: true, create: true, approve: false, reject: false },
   },
   operations: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -212,6 +219,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: false, viewCapacityPricing: true },
     lms: { view: false, edit: false },
+    materialRequests: { view: true, create: true, approve: true, reject: true },
   },
   inventory: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -237,6 +245,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
+    materialRequests: { view: true, create: true, approve: true, reject: true },
   },
   content: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -262,6 +271,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     userManagement: { view: false, approveUsers: false, manageRoles: false, managePermissions: false, deleteUsers: false },
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
+    materialRequests: { view: true, create: true, approve: false, reject: false },
   },
 };
 

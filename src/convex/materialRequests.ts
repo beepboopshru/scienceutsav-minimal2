@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { checkPermission, hasPermission } from "./permissions";
 
 export const list = query({
   args: {},
@@ -8,20 +9,14 @@ export const list = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found");
+    // Check if user has permission to view requests
+    await checkPermission(ctx, userId, "materialRequests", "view");
 
-    // Check if user has inventory management permissions (manager)
-    // We'll check if they have the 'inventory' role or specific permissions
-    // For now, let's assume 'manager', 'admin', 'inventory', 'operations' roles can view all
-    const isManager = 
-      user.role === "admin" || 
-      user.role === "manager" || 
-      user.role === "inventory" || 
-      user.role === "operations";
+    // Check if user can approve requests (manager view)
+    const canApprove = await hasPermission(ctx, userId, "materialRequests", "approve");
 
     let requests;
-    if (isManager) {
+    if (canApprove) {
       requests = await ctx.db.query("materialRequests").order("desc").collect();
     } else {
       requests = await ctx.db
@@ -44,7 +39,7 @@ export const list = query({
       })
     );
 
-    return { requests: enrichedRequests, isManager };
+    return { requests: enrichedRequests, isManager: canApprove };
   },
 });
 
@@ -64,6 +59,8 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    await checkPermission(ctx, userId, "materialRequests", "create");
+
     await ctx.db.insert("materialRequests", {
       userId,
       items: args.items,
@@ -79,15 +76,7 @@ export const approve = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const user = await ctx.db.get(userId);
-    // Basic permission check - in a real app, use the permissions system
-    const canApprove = 
-      user?.role === "admin" || 
-      user?.role === "manager" || 
-      user?.role === "inventory" || 
-      user?.role === "operations";
-
-    if (!canApprove) throw new Error("Unauthorized to approve requests");
+    await checkPermission(ctx, userId, "materialRequests", "approve");
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found");
@@ -121,20 +110,13 @@ export const approve = mutation({
 export const reject = mutation({
   args: { 
     requestId: v.id("materialRequests"),
-    reason: v.optional(v.string()) // Optional rejection reason if we want to add it later to schema, but for now schema doesn't have it, so we'll just mark rejected.
+    reason: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const user = await ctx.db.get(userId);
-    const canReject = 
-      user?.role === "admin" || 
-      user?.role === "manager" || 
-      user?.role === "inventory" || 
-      user?.role === "operations";
-
-    if (!canReject) throw new Error("Unauthorized to reject requests");
+    await checkPermission(ctx, userId, "materialRequests", "reject");
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found");
