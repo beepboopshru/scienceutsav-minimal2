@@ -421,114 +421,6 @@ export default function Procurement() {
     </div>
   );
 
-  const ProcurementJobsSection = () => (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Procurement Jobs</CardTitle>
-        <CardDescription>View and manage procurement requests</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4 mb-4">
-          <div className="flex-1">
-            <Label className="text-xs">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <Label className="text-xs">Priority</Label>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="border rounded-md overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Job ID</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Materials</TableHead>
-                <TableHead>Assignments</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Created On</TableHead>
-                {canEdit && <TableHead>Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProcurementJobs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center text-muted-foreground">
-                    No procurement jobs found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProcurementJobs.map((job: any) => (
-                  <TableRow key={job._id}>
-                    <TableCell className="font-medium">{job.jobId}</TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        job.status === "completed" ? "default" :
-                        job.status === "in_progress" ? "secondary" : "outline"
-                      }>
-                        {job.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={
-                        job.priority === "high" ? "destructive" :
-                        job.priority === "medium" ? "default" : "secondary"
-                      }>
-                        {job.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{job.materialShortages?.length || 0}</TableCell>
-                    <TableCell>{job.assignmentIds?.length || 0}</TableCell>
-                    <TableCell className="text-sm">{job.creatorName}</TableCell>
-                    <TableCell className="text-sm">
-                      {new Date(job._creationTime).toLocaleDateString()}
-                    </TableCell>
-                    {canEdit && (
-                      <TableCell>
-                        {job.status !== "completed" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleMarkComplete(job._id)}
-                          >
-                            Mark Complete
-                          </Button>
-                        )}
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <Layout>
       <div className="p-8 h-full flex flex-col">
@@ -552,8 +444,6 @@ export default function Procurement() {
             )}
           </div>
         </div>
-
-        <ProcurementJobsSection />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
