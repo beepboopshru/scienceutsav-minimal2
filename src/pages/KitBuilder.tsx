@@ -140,7 +140,10 @@ export default function KitBuilder() {
     return inventory.filter((item) => item.subcategory === subcategory);
   };
 
-  const getInventoryItem = (name: string) => {
+  const getInventoryItem = (name: string, inventoryItemId?: string) => {
+    if (inventoryItemId) {
+      return inventory.find((i) => i._id === inventoryItemId);
+    }
     return inventory.find((i) => i.name === name);
   };
 
@@ -341,7 +344,7 @@ export default function KitBuilder() {
                             <p className="text-sm font-medium mb-1">{pouch.name}</p>
                             <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                               {pouch.materials.map((mat, matIdx) => {
-                                const desc = getInventoryItem(mat.name)?.description;
+                                const desc = getInventoryItem(mat.name, mat.inventoryItemId)?.description;
                                 return (
                                   <li key={matIdx}>
                                     • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} {desc ? `(${desc})` : ""} - {mat.quantity} {mat.unit}
@@ -365,7 +368,7 @@ export default function KitBuilder() {
                               <p className="text-sm font-medium mb-1">{packet.name}</p>
                               <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                                 {packet.materials.map((mat, matIdx) => {
-                                  const desc = getInventoryItem(mat.name)?.description;
+                                  const desc = getInventoryItem(mat.name, mat.inventoryItemId)?.description;
                                   return (
                                     <li key={matIdx}>
                                       • {mat.subcategory ? `[${mat.subcategory}] ` : ""}{mat.name} {desc ? `(${desc})` : ""} - {mat.quantity} {mat.unit}
@@ -387,7 +390,7 @@ export default function KitBuilder() {
                           <h4 className="font-semibold text-sm mb-2">Spare Materials ({kitForm.spareKits.filter(s => s.name && s.name.trim()).length})</h4>
                           <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                             {kitForm.spareKits.filter(s => s.name && s.name.trim()).map((spare, idx) => {
-                              const desc = getInventoryItem(spare.name)?.description;
+                              const desc = getInventoryItem(spare.name, spare.inventoryItemId)?.description;
                               return (
                                 <li key={idx}>
                                   • {spare.subcategory ? `[${spare.subcategory}] ` : ""}{spare.name} {desc ? `(${desc})` : ""} - {spare.quantity} {spare.unit}
@@ -407,7 +410,7 @@ export default function KitBuilder() {
                           <h4 className="font-semibold text-sm mb-2">Bulk Materials ({kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).length})</h4>
                           <ul className="text-sm text-muted-foreground space-y-1 ml-4">
                             {kitForm.bulkMaterials.filter(b => b.name && b.name.trim()).map((bulk, idx) => {
-                              const desc = getInventoryItem(bulk.name)?.description;
+                              const desc = getInventoryItem(bulk.name, bulk.inventoryItemId)?.description;
                               return (
                                 <li key={idx}>
                                   • {bulk.subcategory ? `[${bulk.subcategory}] ` : ""}{bulk.name} {desc ? `(${desc})` : ""} - {bulk.quantity} {bulk.unit}
@@ -704,7 +707,7 @@ export default function KitBuilder() {
                                 </PopoverContent>
                               </Popover>
                               <Input
-                                value={getInventoryItem(material.name)?.description || ""}
+                                value={getInventoryItem(material.name, material.inventoryItemId)?.description || ""}
                                 placeholder="Description"
                                 className="w-[25%] bg-muted/50"
                                 readOnly
@@ -871,7 +874,7 @@ export default function KitBuilder() {
                                 </PopoverContent>
                               </Popover>
                               <Input
-                                value={getInventoryItem(material.name)?.description || ""}
+                                value={getInventoryItem(material.name, material.inventoryItemId)?.description || ""}
                                 placeholder="Description"
                                 className="w-[25%] bg-muted/50"
                                 readOnly
@@ -1021,7 +1024,7 @@ export default function KitBuilder() {
                             </PopoverContent>
                           </Popover>
                           <Input
-                            value={getInventoryItem(spare.name)?.description || ""}
+                            value={getInventoryItem(spare.name, spare.inventoryItemId)?.description || ""}
                             placeholder="Description"
                             className="w-[25%] bg-muted/50"
                             readOnly
@@ -1155,7 +1158,7 @@ export default function KitBuilder() {
                             </PopoverContent>
                           </Popover>
                           <Input
-                            value={getInventoryItem(bulk.name)?.description || ""}
+                            value={getInventoryItem(bulk.name, bulk.inventoryItemId)?.description || ""}
                             placeholder="Description"
                             className="w-[25%] bg-muted/50"
                             readOnly
