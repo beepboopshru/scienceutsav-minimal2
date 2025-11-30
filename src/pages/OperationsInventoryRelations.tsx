@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -47,7 +48,7 @@ export default function OperationsInventoryRelations() {
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
-  const [detailsDialog, setDetailsDialog] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [notesDialog, setNotesDialog] = useState(false);
   const [editingNotes, setEditingNotes] = useState("");
   const [selectedJobs, setSelectedJobs] = useState<Set<Id<"procurementJobs">>>(new Set());
@@ -119,8 +120,8 @@ export default function OperationsInventoryRelations() {
     };
 
     job.materialShortages.forEach((mat: any) => {
-      if (mat.shortage > 0) {
-        processShortage(mat.name, mat.shortage);
+      if (mat.required > 0) {
+        processShortage(mat.name, mat.required);
       }
     });
 
@@ -237,14 +238,14 @@ export default function OperationsInventoryRelations() {
     toast.success("Procurement job exported as PDF");
   };
 
-  const openDetailsDialog = (job: any) => {
+  const openDetailsSheet = (job: any) => {
     setSelectedJob(job);
-    setDetailsDialog(true);
+    setDetailsOpen(true);
   };
 
   const openNotesDialog = (job: any) => {
     setSelectedJob(job);
-    setEditingNotes(job.notes || "");
+    setEditingNotes(job.notes || "0");
     setNotesDialog(true);
   };
 
@@ -486,17 +487,17 @@ export default function OperationsInventoryRelations() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Inventory Requests</h1>
             <p className="text-muted-foreground mt-2">
-              Manage procurement requests and material shortages
+              Manage packing requests and material shortages
             </p>
           </div>
 
-          <Tabs defaultValue="procurement" className="mt-6">
+          <Tabs defaultValue="packing" className="mt-6">
             <TabsList>
-              <TabsTrigger value="procurement">Procurement Jobs</TabsTrigger>
+              <TabsTrigger value="packing">Packing Requests</TabsTrigger>
               <TabsTrigger value="requests">Material Requests</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="procurement" className="space-y-6">
+            <TabsContent value="packing" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <Card>
                   <CardHeader className="pb-3">
@@ -679,7 +680,7 @@ export default function OperationsInventoryRelations() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => openDetailsDialog(job)}
+                                onClick={() => openDetailsSheet(job)}
                                 title="View Details"
                               >
                                 <FileText className="h-4 w-4" />
@@ -721,7 +722,7 @@ export default function OperationsInventoryRelations() {
                   {filteredJobs.length === 0 && (
                     <div className="text-center py-12">
                       <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-medium">No procurement jobs found</h3>
+                      <h3 className="text-lg font-medium">No packing requests found</h3>
                       <p className="text-muted-foreground">Try adjusting your filters</p>
                     </div>
                   )}
@@ -736,83 +737,98 @@ export default function OperationsInventoryRelations() {
         </motion.div>
       </div>
 
-      <Dialog open={detailsDialog} onOpenChange={setDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Procurement Job Details</DialogTitle>
-            <DialogDescription>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent className="min-w-[600px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Packing Request Details</SheetTitle>
+            <SheetDescription>
               {selectedJob?.jobId} - Created by {selectedJob?.creatorName}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           {selectedJob && (
-            <div className="space-y-4">
+            <div className="space-y-6 mt-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">Status</Label>
-                  <Badge variant="outline" className="mt-1">
-                    {selectedJob.status}
-                  </Badge>
+                  <div className="mt-1">
+                    <Badge variant="outline" className={
+                      selectedJob.status === "completed" ? "bg-green-100 text-green-800 border-green-200" :
+                      selectedJob.status === "in_progress" ? "bg-blue-100 text-blue-800 border-blue-200" :
+                      "bg-yellow-100 text-yellow-800 border-yellow-200"
+                    }>
+                      {selectedJob.status.replace("_", " ").toUpperCase()}
+                    </Badge>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Priority</Label>
-                  <Badge variant="outline" className="mt-1">
-                    {selectedJob.priority}
-                  </Badge>
+                  <div className="mt-1">
+                    <Badge variant="outline" className={
+                      selectedJob.priority === "high" ? "bg-red-100 text-red-800 border-red-200" :
+                      selectedJob.priority === "medium" ? "bg-orange-100 text-orange-800 border-orange-200" :
+                      "bg-slate-100 text-slate-800 border-slate-200"
+                    }>
+                      {selectedJob.priority.toUpperCase()}
+                    </Badge>
+                  </div>
                 </div>
               </div>
               
               {selectedJob.notes && (
-                <div>
+                <div className="bg-muted/50 p-3 rounded-md">
                   <Label className="text-xs text-muted-foreground">Notes</Label>
                   <p className="text-sm mt-1">{selectedJob.notes}</p>
                 </div>
               )}
 
               <div>
-                <Label className="text-sm font-semibold">Material Shortages (BOM Exploded)</Label>
-                <Table className="mt-2">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Subcategory</TableHead>
-                      <TableHead>Item Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Current Stock</TableHead>
-                      <TableHead>Required</TableHead>
-                      <TableHead>Shortage</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getExplodedShortages(selectedJob).map((mat: any, idx: number) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{mat.subcategory}</TableCell>
-                        <TableCell>{mat.name}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={mat.description}>
-                          {mat.description}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{mat.inventoryType}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {mat.currentStock} {mat.unit}
-                        </TableCell>
-                        <TableCell>
-                          {mat.requiredQty.toFixed(2)} {mat.unit}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={mat.shortage > 0 ? "destructive" : "secondary"}>
-                            {mat.shortage.toFixed(2)} {mat.unit}
-                          </Badge>
-                        </TableCell>
+                <Label className="text-sm font-semibold">Material Requirements (BOM Exploded)</Label>
+                <div className="mt-2 border rounded-md overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item Name</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead>Required</TableHead>
+                        <TableHead>Shortage</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {getExplodedShortages(selectedJob).map((mat: any, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{mat.name}</span>
+                              <span className="text-xs text-muted-foreground">{mat.subcategory}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {mat.currentStock} {mat.unit}
+                          </TableCell>
+                          <TableCell>
+                            {mat.requiredQty.toFixed(2)} {mat.unit}
+                          </TableCell>
+                          <TableCell>
+                            {mat.shortage > 0 ? (
+                              <Badge variant="destructive">
+                                {mat.shortage.toFixed(2)} {mat.unit}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                OK
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={notesDialog} onOpenChange={setNotesDialog}>
         <DialogContent>
