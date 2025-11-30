@@ -195,7 +195,23 @@ export const update = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     const { id, ...updates } = args;
-    await ctx.db.patch(id, updates);
+    
+    // Ensure type field is included if provided
+    const updateData: any = {};
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.clientId !== undefined) updateData.clientId = updates.clientId;
+    if (updates.email !== undefined) updateData.email = updates.email;
+    if (updates.contact !== undefined) updateData.contact = updates.contact;
+    if (updates.organization !== undefined) updateData.organization = updates.organization;
+    if (updates.address !== undefined) updateData.address = updates.address;
+    if (updates.type !== undefined) updateData.type = updates.type;
+    if (updates.notes !== undefined) updateData.notes = updates.notes;
+    if (updates.salesPerson !== undefined) updateData.salesPerson = updates.salesPerson;
+    if (updates.pointsOfContact !== undefined) updateData.pointsOfContact = updates.pointsOfContact;
+    if (updates.gradeAttendance !== undefined) updateData.gradeAttendance = updates.gradeAttendance;
+    if (updates.gradePlanning !== undefined) updateData.gradePlanning = updates.gradePlanning;
+    
+    await ctx.db.patch(id, updateData);
   },
 });
 
