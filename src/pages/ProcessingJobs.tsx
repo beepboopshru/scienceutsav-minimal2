@@ -376,7 +376,6 @@ export default function ProcessingJobs() {
     }
     
     try {
-      // Validate materials before starting
       const job = jobs.find(j => j._id === jobId);
       console.log("Found job:", job);
       console.log("Job ID match check:", jobs.map(j => ({ id: j._id, matches: j._id === jobId })));
@@ -387,31 +386,36 @@ export default function ProcessingJobs() {
         return;
       }
 
-      // Check if all source materials have sufficient stock
-      const insufficientMaterials: string[] = [];
-      for (const source of job.sources) {
-        const sourceItem = inventory?.find(i => i._id === source.sourceItemId);
-        if (!sourceItem) {
-          insufficientMaterials.push(`Material not found: ${source.sourceItemId}`);
-        } else if (sourceItem.quantity < source.sourceQuantity) {
-          insufficientMaterials.push(
-            `${sourceItem.name}: Need ${source.sourceQuantity} ${sourceItem.unit}, Have ${sourceItem.quantity} ${sourceItem.unit}`
-          );
+      // Only check materials if sources exist
+      if (job.sources && job.sources.length > 0) {
+        const insufficientMaterials: string[] = [];
+        for (const source of job.sources) {
+          const sourceItem = inventory?.find(i => i._id === source.sourceItemId);
+          if (!sourceItem) {
+            insufficientMaterials.push(`Material not found: ${source.sourceItemId}`);
+          } else if (sourceItem.quantity < source.sourceQuantity) {
+            insufficientMaterials.push(
+              `${sourceItem.name}: Need ${source.sourceQuantity} ${sourceItem.unit}, Have ${sourceItem.quantity} ${sourceItem.unit}`
+            );
+          }
         }
-      }
 
-      if (insufficientMaterials.length > 0) {
-        console.log("Insufficient materials:", insufficientMaterials);
-        toast.error(
-          `Cannot start job - Insufficient materials: ${insufficientMaterials.join(", ")}`,
-          { duration: 5000 }
-        );
-        return;
+        if (insufficientMaterials.length > 0) {
+          console.log("Insufficient materials:", insufficientMaterials);
+          toast.error(
+            `Cannot start job - Insufficient materials: ${insufficientMaterials.join(", ")}`,
+            { duration: 5000 }
+          );
+          return;
+        }
+      } else {
+        // No source materials - this is allowed
+        toast.info("Starting job without source materials - only target quantity will be increased");
       }
 
       console.log("Starting job with id:", jobId);
       await startJob({ id: jobId });
-      toast.success("Job started and materials deducted from inventory");
+      toast.success("Job started successfully");
     } catch (error: any) {
       console.error("Error starting job:", error);
       toast.error(error.message || "Failed to start job");
