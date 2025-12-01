@@ -124,6 +124,10 @@ export const update = mutation({
         updateStatus: v.boolean(),
         delete: v.boolean(),
       })),
+      billRecords: v.optional(v.object({
+        view: v.boolean(),
+        download: v.boolean(),
+      })),
       vendorImports: v.optional(v.object({
         view: v.boolean(),
         create: v.boolean(),
