@@ -75,6 +75,52 @@ export const approveUser = mutation({
       role: args.role,
     });
 
+    // If role is admin, create userPermissions with all permissions set to true
+    if (args.role === "admin") {
+      const existing = await ctx.db
+        .query("userPermissions")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .first();
+
+      const allPermissions = {
+        dashboard: { view: true },
+        programs: { view: true, create: true, edit: true, delete: true, archive: true },
+        kits: { view: true, create: true, edit: true, delete: true, editStock: true, uploadImages: true, clone: true },
+        clients: { view: true, create: true, edit: true, delete: true },
+        b2cClients: { view: true, create: true, edit: true, delete: true },
+        batches: { view: true, create: true, edit: true, delete: true },
+        assignments: { view: true, create: true, edit: true, delete: true, updateStatus: true },
+        inventory: { view: true, create: true, edit: true, delete: true, editStock: true, createCategories: true, importData: true, editBOM: true },
+        vendors: { view: true, create: true, edit: true, delete: true },
+        services: { view: true, create: true, edit: true, delete: true },
+        processingJobs: { view: true, create: true, edit: true, complete: true, delete: true, editBOM: true, editTargets: true },
+        procurementJobs: { view: true, create: true, edit: true, complete: true, delete: true },
+        packing: { view: true, initiate: true, validate: true, transfer: true },
+        dispatch: { view: true, verify: true, dispatch: true, updateStatus: true },
+        discrepancyTickets: { view: true, create: true, edit: true, resolve: true, delete: true },
+        billTracking: { view: true, create: true, edit: true, updateStatus: true, delete: true },
+        vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: true, delete: true },
+        orderHistory: { view: true, export: true },
+        laserFiles: { view: true, upload: true, delete: true },
+        reports: { view: true, download: true },
+        adminZone: { view: true, clearAssignments: true, viewActivityLogs: true, deleteActivityLogs: true },
+        userManagement: { view: true, approveUsers: true, manageRoles: true, managePermissions: true, deleteUsers: true },
+        kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
+        lms: { view: true, edit: true },
+        deletionRequests: { view: true, create: true, approve: true, reject: true },
+        materialRequests: { view: true, create: true, approve: true, reject: true },
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, { permissions: allPermissions });
+      } else {
+        await ctx.db.insert("userPermissions", {
+          userId: args.userId,
+          permissions: allPermissions,
+        });
+      }
+    }
+
     // Log the activity
     await ctx.db.insert("activityLogs", {
       userId: args.userId,
@@ -105,6 +151,52 @@ export const updateRole = mutation({
     const oldRole = user?.role;
 
     await ctx.db.patch(args.userId, { role: args.role });
+
+    // If role is admin, create userPermissions with all permissions set to true
+    if (args.role === "admin") {
+      const existing = await ctx.db
+        .query("userPermissions")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .first();
+
+      const allPermissions = {
+        dashboard: { view: true },
+        programs: { view: true, create: true, edit: true, delete: true, archive: true },
+        kits: { view: true, create: true, edit: true, delete: true, editStock: true, uploadImages: true, clone: true },
+        clients: { view: true, create: true, edit: true, delete: true },
+        b2cClients: { view: true, create: true, edit: true, delete: true },
+        batches: { view: true, create: true, edit: true, delete: true },
+        assignments: { view: true, create: true, edit: true, delete: true, updateStatus: true },
+        inventory: { view: true, create: true, edit: true, delete: true, editStock: true, createCategories: true, importData: true, editBOM: true },
+        vendors: { view: true, create: true, edit: true, delete: true },
+        services: { view: true, create: true, edit: true, delete: true },
+        processingJobs: { view: true, create: true, edit: true, complete: true, delete: true, editBOM: true, editTargets: true },
+        procurementJobs: { view: true, create: true, edit: true, complete: true, delete: true },
+        packing: { view: true, initiate: true, validate: true, transfer: true },
+        dispatch: { view: true, verify: true, dispatch: true, updateStatus: true },
+        discrepancyTickets: { view: true, create: true, edit: true, resolve: true, delete: true },
+        billTracking: { view: true, create: true, edit: true, updateStatus: true, delete: true },
+        vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: true, delete: true },
+        orderHistory: { view: true, export: true },
+        laserFiles: { view: true, upload: true, delete: true },
+        reports: { view: true, download: true },
+        adminZone: { view: true, clearAssignments: true, viewActivityLogs: true, deleteActivityLogs: true },
+        userManagement: { view: true, approveUsers: true, manageRoles: true, managePermissions: true, deleteUsers: true },
+        kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
+        lms: { view: true, edit: true },
+        deletionRequests: { view: true, create: true, approve: true, reject: true },
+        materialRequests: { view: true, create: true, approve: true, reject: true },
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, { permissions: allPermissions });
+      } else {
+        await ctx.db.insert("userPermissions", {
+          userId: args.userId,
+          permissions: allPermissions,
+        });
+      }
+    }
 
     // Log the activity
     await ctx.db.insert("activityLogs", {
