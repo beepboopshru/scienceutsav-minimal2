@@ -36,12 +36,12 @@ export const getByStatus = query({
 export const create = mutation({
   args: {
     name: v.string(),
-    sources: v.array(
+    sources: v.optional(v.array(
       v.object({
         sourceItemId: v.id("inventory"),
         sourceQuantity: v.number(),
       })
-    ),
+    )),
     targets: v.array(
       v.object({
         targetItemId: v.id("inventory"),
@@ -57,8 +57,10 @@ export const create = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     // Allow creation with empty sources array
+    // Allow creation with empty sources array
     return await ctx.db.insert("processingJobs", {
       ...args,
+      sources: args.sources || [],
       status: "assigned",
       createdBy: userId,
     });

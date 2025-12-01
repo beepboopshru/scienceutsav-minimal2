@@ -454,9 +454,14 @@ export default function ProcessingJobs() {
 
   const handleCreateProcessingJob = async () => {
     try {
+      // Filter out invalid sources (empty sourceItemId)
+      const validSources = processingForm.sources.filter(
+        (source) => source.sourceItemId && source.sourceItemId !== ""
+      );
+      
       const jobData: any = {
         name: processingForm.name,
-        sources: processingForm.sources,
+        sources: validSources.length > 0 ? validSources : [],
         targets: processingForm.targets,
       };
       
