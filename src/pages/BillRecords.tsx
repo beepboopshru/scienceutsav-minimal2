@@ -19,8 +19,8 @@ export default function BillRecords() {
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   
-  const canView = hasPermission("billTracking", "view");
-  const canEdit = hasPermission("billTracking", "edit");
+  const canView = hasPermission("billRecords", "view");
+  const canDownload = hasPermission("billRecords", "download");
   
   const vendorImports = useQuery(api.vendorImports.list);
   const vendors = useQuery(api.vendors.list);
@@ -171,12 +171,12 @@ export default function BillRecords() {
           className="space-y-6"
         >
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Bill Records</h1>
-              <p className="text-muted-foreground mt-2">
-                View all vendor purchase bills and imports
-              </p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Inventory Bill Records</h1>
+            <p className="text-muted-foreground mt-2">
+              View all vendor purchase bills and imports
+            </p>
+          </div>
             <Button onClick={() => navigate("/inventory")} variant="outline">
               Back to Inventory
             </Button>
@@ -203,7 +203,7 @@ export default function BillRecords() {
                           {getVendorName(billImport.vendorId)} • {billImport.billDate}
                         </CardDescription>
                       </div>
-                      {canEdit && (
+                      {canDownload && (
                         <div className="flex gap-2">
                           {billImport.billImageId && (
                             <Button

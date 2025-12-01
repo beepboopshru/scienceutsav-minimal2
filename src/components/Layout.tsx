@@ -373,10 +373,10 @@ export function Layout({ children }: LayoutProps) {
       roles: [hasPermission("billTracking", "view") ? "allowed" : ""],
     },
     {
-      title: "Bill Records",
+      title: "Inventory Bill Records",
       icon: FileText,
       path: "/inventory/bill-records",
-      roles: [hasPermission("inventory", "view") ? "allowed" : ""],
+      roles: [hasPermission("billRecords", "view") ? "allowed" : ""],
     },
   ];
 

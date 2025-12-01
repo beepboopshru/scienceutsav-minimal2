@@ -7,7 +7,7 @@ type PermissionResource =
   | "programs" | "kits" | "clients" | "b2cClients" | "batches" 
   | "assignments" | "inventory" | "vendors" | "services" 
   | "processingJobs" | "procurementJobs" | "packing" | "dispatch"
-  | "discrepancyTickets" | "billTracking" | "vendorImports" 
+  | "discrepancyTickets" | "billTracking" | "billRecords" | "vendorImports" 
   | "orderHistory" | "laserFiles" | "reports" | "adminZone" | "userManagement"
   | "kitStatistics" | "lms" | "materialRequests";
 
@@ -31,6 +31,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: true, verify: true, dispatch: true, updateStatus: true, edit: true },
     discrepancyTickets: { view: true, create: true, edit: true, resolve: true, delete: true },
     billTracking: { view: true, create: true, edit: true, updateStatus: true, delete: true },
+    billRecords: { view: true, download: true },
     vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: true, delete: true },
     orderHistory: { view: true, export: true },
     laserFiles: { view: true, upload: true, delete: true },
@@ -57,6 +58,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: true, verify: true, dispatch: true, updateStatus: true, edit: true },
     discrepancyTickets: { view: true, create: true, edit: true, resolve: true, delete: true },
     billTracking: { view: true, create: true, edit: true, updateStatus: true, delete: true },
+    billRecords: { view: true, download: true },
     vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: true, delete: true },
     orderHistory: { view: true, export: true },
     laserFiles: { view: true, upload: true, delete: true },
@@ -83,6 +85,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: true, create: true, edit: true, updateStatus: true, delete: true },
+    billRecords: { view: true, download: true },
     vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: true, delete: false },
     orderHistory: { view: true, export: true },
     laserFiles: { view: false, upload: false, delete: false },
@@ -109,6 +112,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: true, verify: true, dispatch: true, updateStatus: true, edit: true },
     discrepancyTickets: { view: true, create: true, edit: true, resolve: true, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: false, download: false },
     vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
     orderHistory: { view: true, export: false },
     laserFiles: { view: false, upload: false, delete: false },
@@ -135,6 +139,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: false, download: false },
     vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
     orderHistory: { view: false, export: false },
     laserFiles: { view: false, upload: false, delete: false },
@@ -161,6 +166,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: false, download: false },
     vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
     orderHistory: { view: false, export: false },
     laserFiles: { view: true, upload: true, delete: true },
@@ -187,6 +193,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: false, download: false },
     vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
     orderHistory: { view: false, export: false },
     laserFiles: { view: true, upload: true, delete: true },
@@ -213,6 +220,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: false, download: false },
     vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
     orderHistory: { view: false, export: false },
     laserFiles: { view: true, upload: true, delete: true },
@@ -239,6 +247,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: true, download: true },
     vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: false, delete: false },
     orderHistory: { view: false, export: false },
     laserFiles: { view: false, upload: false, delete: false },
@@ -265,6 +274,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
     discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
     billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+    billRecords: { view: false, download: false },
     vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
     orderHistory: { view: false, export: false },
     laserFiles: { view: false, upload: false, delete: false },
