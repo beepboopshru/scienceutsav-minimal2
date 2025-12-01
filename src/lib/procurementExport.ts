@@ -75,7 +75,7 @@ export const exportProcurementPDF = (
 
       const tableData = items.map(item => {
         const cost = item.vendorPrice && item.purchasingQty 
-          ? `₹${(item.purchasingQty * item.vendorPrice).toFixed(2)}`
+          ? `Rs ${(item.purchasingQty * item.vendorPrice).toFixed(2)}`
           : "-";
         
         return [
@@ -143,7 +143,7 @@ export const exportProcurementPDF = (
 
           const tableData = items.map(item => {
             const cost = item.vendorPrice && item.purchasingQty 
-              ? `₹${(item.purchasingQty * item.vendorPrice).toFixed(2)}`
+              ? `Rs ${(item.purchasingQty * item.vendorPrice).toFixed(2)}`
               : "-";
             
             return [
