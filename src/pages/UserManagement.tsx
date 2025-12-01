@@ -80,6 +80,7 @@ export default function UserManagement() {
         dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
         discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
         billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
+        billRecords: { view: false, download: false },
         vendorImports: { view: false, create: false, edit: false, updatePaymentStatus: false, delete: false },
         orderHistory: { view: false, export: false },
         laserFiles: { view: false, upload: false, delete: false },
@@ -461,6 +462,7 @@ export default function UserManagement() {
                        section === 'lms' ? 'LMS' :
                        section === 'procurementJobs' ? 'Packing Requests' :
                        section === 'materialRequests' ? 'Material Requests' :
+                       section === 'billRecords' ? 'Inventory Bill Records' :
                        section.replace(/([A-Z])/g, ' $1').trim()}
                     </h4>
                     <Button
