@@ -326,14 +326,14 @@ export function MaterialRequestsTab() {
                   <div>
                     <Label>Vendor</Label>
                     <Select
-                      value={itemForm.vendorId}
-                      onValueChange={(value) => setItemForm({ ...itemForm, vendorId: value as Id<"vendors"> })}
+                      value={itemForm.vendorId || "none"}
+                      onValueChange={(value) => setItemForm({ ...itemForm, vendorId: value === "none" ? "" : value as Id<"vendors"> })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select vendor (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {vendors?.map((vendor) => (
                           <SelectItem key={vendor._id} value={vendor._id}>
                             {vendor.name}
