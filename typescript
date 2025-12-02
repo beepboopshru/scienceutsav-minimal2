@@ -1,28 +1,7 @@
-// Process pouches - reduce individual materials
-if (packingData.pouches && Array.isArray(packingData.pouches)) {
-  packingData.pouches.forEach((pouch: any) => {
-    if (pouch.materials && Array.isArray(pouch.materials)) {
-      pouch.materials.forEach((material: any) => {
-        componentsToReduce.push({
-          name: material.name,
-          quantity: material.quantity * assignment.quantity,
-          unit: material.unit,
-        });
-      });
-    }
-  });
-}
-
-for (const [name, data] of componentMap.entries()) {
-  const invItem = await ctx.db
-    .query("inventory")
-    .filter((q) => q.eq(q.field("name"), name))
-    .first();
-
-  if (invItem) {
-    const newQuantity = invItem.quantity - data.quantity;
-    await ctx.db.patch(invItem._id, {
-      quantity: Math.max(0, newQuantity),
-    });
-  }
-}
+const fileTypeAccepts = {
+  kitImage: "image/*",
+  laser: ".dxf,.pdf,.cdr",
+  component: "image/*",
+  workbook: ".pdf,.doc,.docx,.xls,.xlsx",
+  misc: "*"
+};
