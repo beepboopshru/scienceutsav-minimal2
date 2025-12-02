@@ -156,6 +156,7 @@ export const update = mutation({
   args: {
     id: v.id("kits"),
     name: v.optional(v.string()),
+    location: v.optional(v.string()),
     serialNumber: v.optional(v.string()),
     serialNumbers: v.optional(v.array(v.string())),
     type: v.optional(v.string()),

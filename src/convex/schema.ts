@@ -102,6 +102,7 @@ const schema = defineSchema(
       lmsNotes: v.optional(v.string()),
       stockCount: v.number(),
       lowStockThreshold: v.optional(v.number()),
+      location: v.optional(v.string()),
       status: v.optional(v.union(
         v.literal("active"), 
         v.literal("archived"),

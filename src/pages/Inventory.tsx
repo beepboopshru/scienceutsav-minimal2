@@ -78,6 +78,13 @@ export default function Inventory() {
   const [selectedItemForVendors, setSelectedItemForVendors] = useState<any>(null);
   const [bomViewerOpen, setBomViewerOpen] = useState(false);
   const [selectedBomItem, setSelectedBomItem] = useState<any>(null);
+  const [editKitOpen, setEditKitOpen] = useState(false);
+  const [selectedKit, setSelectedKit] = useState<any>(null);
+  const [kitEditForm, setKitEditForm] = useState({
+    stockCount: 0,
+    lowStockThreshold: 5,
+    location: "",
+  });
 
   // Dialog states
   const [addItemOpen, setAddItemOpen] = useState(false);
@@ -1023,6 +1030,7 @@ export default function Inventory() {
                     <TableHead>Quantity</TableHead>
                     <TableHead>Unit</TableHead>
                     <TableHead>Location</TableHead>
+                    <TableHead>Min Stock Level</TableHead>
                     <TableHead>Status</TableHead>
                     {activeTab !== "finished" && <TableHead>Vendor Info</TableHead>}
                     <TableHead>Actions</TableHead>
@@ -1084,6 +1092,11 @@ export default function Inventory() {
                       <TableCell>{item.unit}</TableCell>
                       <TableCell>{item.location || "-"}</TableCell>
                       <TableCell>
+                        {activeTab === "finished" 
+                          ? (item.lowStockThreshold || "-")
+                          : (item.minStockLevel || "-")}
+                      </TableCell>
+                      <TableCell>
                         {activeTab === "finished" ? (
                           item.lowStockThreshold && item.stockCount <= item.lowStockThreshold ? (
                             <Badge variant="destructive" className="flex items-center gap-1 w-fit">
@@ -1138,6 +1151,24 @@ export default function Inventory() {
                               )}
                               {canEdit && (
                                 <>
+                                  {activeTab === "finished" && (
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      onClick={() => {
+                                        setSelectedKit(item);
+                                        setKitEditForm({
+                                          stockCount: item.stockCount,
+                                          lowStockThreshold: item.lowStockThreshold || 5,
+                                          location: item.location || "",
+                                        });
+                                        setEditKitOpen(true);
+                                      }}
+                                      title="Edit Kit"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  )}
                                   <Button 
                                     size="icon" 
                                     variant="ghost" 
@@ -1539,6 +1570,66 @@ export default function Inventory() {
                   variant={adjustmentType === "add" ? "default" : "destructive"}
                 >
                   {adjustmentType === "add" ? "Add Stock" : "Subtract Stock"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Kit Dialog */}
+          <Dialog open={editKitOpen} onOpenChange={setEditKitOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Kit</DialogTitle>
+                <DialogDescription>
+                  Edit stock count, minimum stock level, and location for: {selectedKit?.name}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Stock Count</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={kitEditForm.stockCount}
+                    onChange={(e) => setKitEditForm({ ...kitEditForm, stockCount: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Minimum Stock Level</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={kitEditForm.lowStockThreshold}
+                    onChange={(e) => setKitEditForm({ ...kitEditForm, lowStockThreshold: Number(e.target.value) })}
+                  />
+                  <p className="text-xs text-muted-foreground">Alert threshold for low stock</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Location</Label>
+                  <Input
+                    value={kitEditForm.location}
+                    onChange={(e) => setKitEditForm({ ...kitEditForm, location: e.target.value })}
+                    placeholder="e.g., Warehouse A, Shelf 3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditKitOpen(false)}>Cancel</Button>
+                <Button onClick={async () => {
+                  try {
+                    await updateKit({
+                      id: selectedKit._id,
+                      stockCount: kitEditForm.stockCount,
+                      lowStockThreshold: kitEditForm.lowStockThreshold,
+                      location: kitEditForm.location,
+                    });
+                    toast.success("Kit updated successfully");
+                    setEditKitOpen(false);
+                  } catch (error: any) {
+                    toast.error(error.message || "Failed to update kit");
+                  }
+                }}>
+                  Save Changes
                 </Button>
               </DialogFooter>
             </DialogContent>
