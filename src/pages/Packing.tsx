@@ -6,8 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -20,7 +18,6 @@ import { toast } from "sonner";
 import { Download, Eye, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { ColumnVisibility } from "@/components/ui/column-visibility";
 
 export default function Packing() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -113,20 +110,13 @@ export default function Packing() {
 
   const [editingPackingNotes, setEditingPackingNotes] = useState<Record<string, { isEditing: boolean; value: string }>>({});
 
-  // Add column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
-    customerType: true,
-    batch: true,
     client: true,
-    program: true,
     kit: true,
-    kitCategory: true,
     quantity: true,
     grade: true,
     status: true,
     dispatchDate: true,
-    productionMonth: true,
-    createdOn: true,
     assignmentNotes: true,
     packingNotes: true,
   });
@@ -134,23 +124,17 @@ export default function Packing() {
   const toggleColumn = (columnId: string) => {
     setColumnVisibility((prev) => ({
       ...prev,
-      [columnId as keyof typeof prev]: !prev[columnId as keyof typeof prev],
+      [columnId]: !prev[columnId as keyof typeof prev],
     }));
   };
 
-  const columns = [
-    { id: "customerType", label: "Customer Type", visible: columnVisibility.customerType },
-    { id: "batch", label: "Batch", visible: columnVisibility.batch },
+  const packingColumns = [
     { id: "client", label: "Client", visible: columnVisibility.client },
-    { id: "program", label: "Program", visible: columnVisibility.program },
     { id: "kit", label: "Kit", visible: columnVisibility.kit },
-    { id: "kitCategory", label: "Kit Category", visible: columnVisibility.kitCategory },
     { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
     { id: "grade", label: "Grade", visible: columnVisibility.grade },
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
-    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "createdOn", label: "Created On", visible: columnVisibility.createdOn },
     { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
     { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
   ];
@@ -598,18 +582,10 @@ export default function Packing() {
 
   return (
     <Layout>
-      <div className="container mx-auto py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Packing Operations</h1>
-            <p className="text-muted-foreground">Manage kit packing and inventory requests</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <ColumnVisibility columns={columns} onToggle={toggleColumn} />
-            <Button onClick={handleRequestInventory} disabled={!canEdit || selectedAssignments.size === 0}>
-              Request Inventory
-            </Button>
-          </div>
+      <div className="px-4 sm:px-6 lg:px-10 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Packing Operations</h1>
+          <p className="text-muted-foreground mt-2">Manage kit packing and dispatch preparation</p>
         </div>
 
         <AssignmentFilters
@@ -695,34 +671,45 @@ export default function Packing() {
           </motion.div>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Assignments for Packing</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {canEdit && <TableHead className="w-12">Select</TableHead>}
-                  {columnVisibility.customerType && <TableHead>Customer Type</TableHead>}
-                  {columnVisibility.batch && <TableHead>Batch</TableHead>}
-                  {columnVisibility.client && <TableHead>Client</TableHead>}
-                  {columnVisibility.program && <TableHead>Program</TableHead>}
-                  {columnVisibility.kit && <TableHead>Kit</TableHead>}
-                  {columnVisibility.kitCategory && <TableHead>Kit Category</TableHead>}
-                  {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
-                  {columnVisibility.grade && <TableHead>Grade</TableHead>}
-                  {columnVisibility.status && <TableHead>Status</TableHead>}
-                  {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
-                  {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
-                  {columnVisibility.createdOn && <TableHead>Created On</TableHead>}
-                  {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
-                  {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
-                  {canEdit && <TableHead>Packing Status</TableHead>}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+        <div className="rounded-md border">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b bg-muted/50">
+                <tr>
+                  {canEdit && (
+                    <th className="px-4 py-3 text-left text-sm font-medium w-10">
+                      <Checkbox
+                        checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
+                          } else {
+                            setSelectedAssignments(new Set());
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
+                  <th className="px-4 py-3 text-left text-sm font-medium w-10"></th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Customer Type</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Batch</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Client</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Program</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Kit</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Kit Category</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Quantity</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Grade</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Dispatch Date</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Production Month</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Created On</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Assignment Notes</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Packing Notes</th>
+                  {canEdit && <th className="px-4 py-3 text-left text-sm font-medium">Packing Status</th>}
+                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
                 {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
                   const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
                   const isExpanded = expandedBatches.has(batchKey);
@@ -755,46 +742,47 @@ export default function Packing() {
                           className="border-b hover:bg-muted/30"
                         >
                           {canEdit && (
-                            <TableCell>
+                            <td className="px-4 py-3">
                               <Checkbox
                                 checked={selectedAssignments.has(assignment._id)}
                                 onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
                               />
-                            </TableCell>
+                            </td>
                           )}
-                          {columnVisibility.customerType && <TableCell>
+                          <td className="px-4 py-3"></td>
+                          <td className="px-4 py-3">
                             <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
                               {assignment.clientType?.toUpperCase() || "N/A"}
                             </Badge>
-                          </TableCell>}
-                          {columnVisibility.batch && <TableCell className="text-sm">—</TableCell>}
-                          {columnVisibility.client && <TableCell className="text-sm">{clientName}</TableCell>}
-                          {columnVisibility.program && <TableCell className="text-sm">{program?.name || "—"}</TableCell>}
-                          {columnVisibility.kit && <TableCell className="text-sm">{kit?.name || "Unknown Kit"}</TableCell>}
-                          {columnVisibility.kitCategory && <TableCell className="text-sm">{kit?.category || "—"}</TableCell>}
-                          {columnVisibility.quantity && <TableCell className="text-sm">{assignment.quantity}</TableCell>}
-                          {columnVisibility.grade && <TableCell className="text-sm">{assignment.grade || "—"}</TableCell>}
-                          {columnVisibility.status && <TableCell>
+                          </td>
+                          <td className="px-4 py-3 text-sm">—</td>
+                          <td className="px-4 py-3 text-sm">{clientName}</td>
+                          <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
+                          <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
+                          <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
+                          <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
+                          <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
+                          <td className="px-4 py-3">
                             <Badge variant={
                               assignment.status === "dispatched" ? "default" :
                               assignment.status === "in_progress" ? "secondary" : "outline"
                             }>
                               {assignment.status}
                             </Badge>
-                          </TableCell>}
-                          {columnVisibility.dispatchDate && <TableCell className="text-sm">
+                          </td>
+                          <td className="px-4 py-3 text-sm">
                             {assignment.dispatchedAt 
                               ? new Date(assignment.dispatchedAt).toLocaleDateString()
                               : "—"}
-                          </TableCell>}
-                          {columnVisibility.productionMonth && <TableCell className="text-sm">{assignment.productionMonth || "—"}</TableCell>}
-                          {columnVisibility.createdOn && <TableCell className="text-sm">
+                          </td>
+                          <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
+                          <td className="px-4 py-3 text-sm">
                             {new Date(assignment._creationTime).toLocaleDateString()}
-                          </TableCell>}
-                          {columnVisibility.assignmentNotes && <TableCell className="text-sm max-w-[200px] truncate" title={assignment.notes}>
+                          </td>
+                          <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
                             {assignment.notes || "—"}
-                          </TableCell>}
-                          {columnVisibility.packingNotes && <TableCell>
+                          </td>
+                          <td className="px-4 py-3">
                             {editingPackingNotes[assignment._id]?.isEditing ? (
                               <div className="flex gap-2 items-center">
                                 <Input
@@ -848,48 +836,50 @@ export default function Packing() {
                                 </Button>
                               </div>
                             )}
-                          </TableCell>}
-                          {canEdit && <TableCell>
-                            <Select
-                              value={assignment.status || "assigned"}
-                              onValueChange={async (value) => {
-                                if (value === "transferred_to_dispatch") {
-                                  setChecklistDialog({
-                                    open: true,
-                                    assignmentId: assignment._id,
-                                    checklist: {
-                                      kitComponents: false,
-                                      totalCount: false,
-                                      workbook: false,
-                                      worksheet: false,
-                                    },
-                                  });
-                                } else {
-                                  try {
-                                    await updatePackingStatus({
+                          </td>
+                          {canEdit && (
+                            <td className="px-4 py-3">
+                              <Select
+                                value={assignment.status || "assigned"}
+                                onValueChange={async (value) => {
+                                  if (value === "transferred_to_dispatch") {
+                                    setChecklistDialog({
+                                      open: true,
                                       assignmentId: assignment._id,
-                                      packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                      checklist: {
+                                        kitComponents: false,
+                                        totalCount: false,
+                                        workbook: false,
+                                        worksheet: false,
+                                      },
                                     });
-                                    toast.success("Packing status updated successfully");
-                                  } catch (error) {
-                                    toast.error("Failed to update packing status: " + (error as Error).message);
+                                  } else {
+                                    try {
+                                      await updatePackingStatus({
+                                        assignmentId: assignment._id,
+                                        packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                      });
+                                      toast.success("Packing status updated successfully");
+                                    } catch (error) {
+                                      toast.error("Failed to update packing status: " + (error as Error).message);
+                                    }
                                   }
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="assigned">Assigned</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="transferred_to_dispatch">
-                                  Transferred to Dispatch
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>}
-                          <TableCell className="text-right">
+                                }}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="assigned">Assigned</SelectItem>
+                                  <SelectItem value="in_progress">In Progress</SelectItem>
+                                  <SelectItem value="transferred_to_dispatch">
+                                    Transferred to Dispatch
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                          )}
+                          <td className="px-4 py-3">
                             <div className="flex gap-2">
                               <Button
                                 variant="ghost"
@@ -916,7 +906,7 @@ export default function Packing() {
                                 <Download className="h-4 w-4" />
                               </Button>
                             </div>
-                          </TableCell>
+                          </td>
                         </motion.tr>
                       );
                     });
@@ -932,34 +922,34 @@ export default function Packing() {
                         className="border-b bg-muted/20 hover:bg-muted/40 cursor-pointer"
                         onClick={() => toggleBatch(batchKey)}
                       >
-                        <TableCell>
+                        <td className="px-4 py-3">
                           {isExpanded ? (
                             <ChevronDown className="h-4 w-4" />
                           ) : (
                             <ChevronRight className="h-4 w-4" />
                           )}
-                        </TableCell>
-                        {canEdit && <TableCell></TableCell>}
-                        {columnVisibility.customerType && <TableCell>
+                        </td>
+                        {canEdit && <td className="px-4 py-3"></td>}
+                        <td className="px-4 py-3">
                           <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
                             {firstAssignment.clientType?.toUpperCase() || "N/A"}
                           </Badge>
-                        </TableCell>}
-                        {columnVisibility.batch && <TableCell className="text-sm font-semibold">
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold">
                           {batch?.batchId || "Unknown Batch"}
-                        </TableCell>}
-                        {columnVisibility.client && <TableCell className="text-sm">
+                        </td>
+                        <td className="px-4 py-3 text-sm">
                           {firstAssignment.clientType === "b2b" 
                             ? (client as any)?.name || "Unknown"
                             : (client as any)?.buyerName || "Unknown"}
-                        </TableCell>}
-                        {columnVisibility.program && <TableCell className="text-sm" colSpan={2}>
+                        </td>
+                        <td className="px-4 py-3 text-sm" colSpan={2}>
                           {batchAssignments.length} assignment{batchAssignments.length !== 1 ? "s" : ""}
-                        </TableCell>}
-                        {columnVisibility.kit && <TableCell className="text-sm" colSpan={2}>
+                        </td>
+                        <td className="px-4 py-3 text-sm" colSpan={2}>
                           Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
-                        </TableCell>}
-                        {columnVisibility.quantity && <TableCell colSpan={canEdit ? 7 : 6}></TableCell>}
+                        </td>
+                        <td colSpan={canEdit ? 7 : 6}></td>
                       </motion.tr>
                       {isExpanded && batchAssignments.map((assignment, index) => {
                         const kit = kits?.find((k) => k._id === assignment.kitId);
@@ -982,46 +972,48 @@ export default function Packing() {
                             transition={{ delay: index * 0.02 }}
                             className="border-b hover:bg-muted/30 bg-background"
                           >
-                            <TableCell></TableCell>
-                            {canEdit && <TableCell>
-                              <Checkbox
-                                checked={selectedAssignments.has(assignment._id)}
-                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                              />
-                            </TableCell>}
-                            {columnVisibility.customerType && <TableCell>
+                            <td className="px-4 py-3"></td>
+                            {canEdit && (
+                              <td className="px-4 py-3">
+                                <Checkbox
+                                  checked={selectedAssignments.has(assignment._id)}
+                                  onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                />
+                              </td>
+                            )}
+                            <td className="px-4 py-3">
                               <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
                                 {assignment.clientType?.toUpperCase() || "N/A"}
                               </Badge>
-                            </TableCell>}
-                            {columnVisibility.batch && <TableCell className="text-sm">{batch?.batchId || "—"}</TableCell>}
-                            {columnVisibility.client && <TableCell className="text-sm">{clientName}</TableCell>}
-                            {columnVisibility.program && <TableCell className="text-sm">{program?.name || "—"}</TableCell>}
-                            {columnVisibility.kit && <TableCell className="text-sm">{kit?.name || "Unknown Kit"}</TableCell>}
-                            {columnVisibility.kitCategory && <TableCell className="text-sm">{kit?.category || "—"}</TableCell>}
-                            {columnVisibility.quantity && <TableCell className="text-sm">{assignment.quantity}</TableCell>}
-                            {columnVisibility.grade && <TableCell className="text-sm">{assignment.grade || "—"}</TableCell>}
-                            {columnVisibility.status && <TableCell>
+                            </td>
+                            <td className="px-4 py-3 text-sm">{batch?.batchId || "—"}</td>
+                            <td className="px-4 py-3 text-sm">{clientName}</td>
+                            <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
+                            <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
+                            <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
+                            <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
+                            <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
+                            <td className="px-4 py-3">
                               <Badge variant={
                                 assignment.status === "dispatched" ? "default" :
                                 assignment.status === "in_progress" ? "secondary" : "outline"
                               }>
                                 {assignment.status}
                               </Badge>
-                            </TableCell>}
-                            {columnVisibility.dispatchDate && <TableCell className="text-sm">
+                            </td>
+                            <td className="px-4 py-3 text-sm">
                               {assignment.dispatchedAt 
                                 ? new Date(assignment.dispatchedAt).toLocaleDateString()
                                 : "—"}
-                            </TableCell>}
-                            {columnVisibility.productionMonth && <TableCell className="text-sm">{assignment.productionMonth || "—"}</TableCell>}
-                            {columnVisibility.createdOn && <TableCell className="text-sm">
+                            </td>
+                            <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
+                            <td className="px-4 py-3 text-sm">
                               {new Date(assignment._creationTime).toLocaleDateString()}
-                            </TableCell>}
-                          <TableCell className="text-sm max-w-[200px] truncate" title={assignment.notes}>
+                            </td>
+                          <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
                             {assignment.notes || "—"}
-                          </TableCell>
-                          {columnVisibility.packingNotes && <TableCell>
+                          </td>
+                          <td className="px-4 py-3">
                             {editingPackingNotes[assignment._id]?.isEditing ? (
                               <div className="flex gap-2 items-center">
                                 <Input
@@ -1075,85 +1067,87 @@ export default function Packing() {
                                 </Button>
                               </div>
                             )}
-                          </TableCell>}
-                          {canEdit && <TableCell>
-                            <Select
-                              value={assignment.status || "assigned"}
-                              onValueChange={async (value) => {
-                                if (value === "transferred_to_dispatch") {
-                                  setChecklistDialog({
-                                    open: true,
-                                    assignmentId: assignment._id,
-                                    checklist: {
-                                      kitComponents: false,
-                                      totalCount: false,
-                                      workbook: false,
-                                      worksheet: false,
-                                    },
-                                  });
-                                } else {
-                                  try {
-                                    await updatePackingStatus({
-                                      assignmentId: assignment._id,
-                                      packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
-                                    });
-                                    toast.success("Packing status updated successfully");
-                                  } catch (error) {
-                                    toast.error("Failed to update packing status: " + (error as Error).message);
-                                  }
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="assigned">Assigned</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="transferred_to_dispatch">
-                                  Transferred to Dispatch
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>}
-                          <TableCell className="text-right">
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  if (kit) {
-                                    setFileViewerDialog({
-                                      open: true,
-                                      kitId: kit._id,
-                                      kitName: kit.name,
-                                    });
-                                  }
-                                }}
-                                title="View Kit Files"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => kit && handleDownloadKitSheet(kit._id)}
-                                title="Download Kit Sheet"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </motion.tr>
-                      );
-                    })}
+                          </td>
+                          {canEdit && (
+                              <td className="px-4 py-3">
+                                <Select
+                                  value={assignment.status || "assigned"}
+                                  onValueChange={async (value) => {
+                                    if (value === "transferred_to_dispatch") {
+                                      setChecklistDialog({
+                                        open: true,
+                                        assignmentId: assignment._id,
+                                        checklist: {
+                                          kitComponents: false,
+                                          totalCount: false,
+                                          workbook: false,
+                                          worksheet: false,
+                                        },
+                                      });
+                                    } else {
+                                      try {
+                                        await updatePackingStatus({
+                                          assignmentId: assignment._id,
+                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                        });
+                                        toast.success("Packing status updated successfully");
+                                      } catch (error) {
+                                        toast.error("Failed to update packing status: " + (error as Error).message);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[180px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="assigned">Assigned</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="transferred_to_dispatch">
+                                      Transferred to Dispatch
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            )}
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (kit) {
+                                      setFileViewerDialog({
+                                        open: true,
+                                        kitId: kit._id,
+                                        kitName: kit.name,
+                                      });
+                                    }
+                                  }}
+                                  title="View Kit Files"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => kit && handleDownloadKitSheet(kit._id)}
+                                  title="Download Kit Sheet"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        );
+                      })}
                     </>
                   );
                 })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {filteredAssignments.length === 0 && (
           <div className="text-center py-12">
