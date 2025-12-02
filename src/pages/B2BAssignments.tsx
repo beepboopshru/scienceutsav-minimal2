@@ -860,17 +860,17 @@ export default function B2BAssignments() {
             <TableHeader>
               <TableRow>
                 <TableHead>Batch</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>Kit</TableHead>
+                {columnVisibility.program && <TableHead>Program</TableHead>}
+                {columnVisibility.kit && <TableHead>Kit</TableHead>}
                 <TableHead>Category</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Dispatch Date</TableHead>
-                <TableHead>Production Month</TableHead>
+                {columnVisibility.client && <TableHead>Client</TableHead>}
+                {columnVisibility.quantity && <TableHead>Qty</TableHead>}
+                {columnVisibility.grade && <TableHead>Grade</TableHead>}
+                {columnVisibility.status && <TableHead>Status</TableHead>}
+                {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
+                {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
                 <TableHead>Order Created On</TableHead>
-                <TableHead>Notes</TableHead>
+                {columnVisibility.notes && <TableHead>Notes</TableHead>}
                 {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1089,119 +1089,135 @@ export default function B2BAssignments() {
                       <TableCell>
                         <Badge variant="outline">{batch.batchId || "-"}</Badge>
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.program}
-                          onValueChange={(val) => {
-                            handleUpdateBatchRow(batch.id, row.id, "program", val);
-                            handleUpdateBatchRow(batch.id, row.id, "kit", "");
-                          }}
-                          disabled={!batch.client}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Program" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {programs?.map((program) => (
-                              <SelectItem key={program._id} value={program._id}>
-                                {program.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.kit}
-                          onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "kit", val)}
-                          disabled={!row.program || !batch.client}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Kit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {kits
-                              ?.filter((kit) => kit.programId === row.program)
-                              .map((kit) => (
-                                <SelectItem key={kit._id} value={kit._id}>
-                                  {kit.name}
+                      {columnVisibility.program && (
+                        <TableCell>
+                          <Select
+                            value={row.program}
+                            onValueChange={(val) => {
+                              handleUpdateBatchRow(batch.id, row.id, "program", val);
+                              handleUpdateBatchRow(batch.id, row.id, "kit", "");
+                            }}
+                            disabled={!batch.client}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Program" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {programs?.map((program) => (
+                                <SelectItem key={program._id} value={program._id}>
+                                  {program.name}
                                 </SelectItem>
                               ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
+                      {columnVisibility.kit && (
+                        <TableCell>
+                          <Select
+                            value={row.kit}
+                            onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "kit", val)}
+                            disabled={!row.program || !batch.client}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Kit" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {kits
+                                ?.filter((kit) => kit.programId === row.program)
+                                .map((kit) => (
+                                  <SelectItem key={kit._id} value={kit._id}>
+                                    {kit.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
                           {kits?.find((k) => k._id === row.kit)?.category || "-"}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {batch.client
-                            ? clients?.find((c) => c._id === batch.client)?.organization ||
-                              clients?.find((c) => c._id === batch.client)?.name
-                            : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={row.quantity}
-                          onChange={(e) =>
-                            handleUpdateBatchRow(batch.id, row.id, "quantity", e.target.value)
-                          }
-                          className="w-20"
-                          disabled={!batch.client}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.grade}
-                          onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "grade", val)}
-                          disabled={!batch.client}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue placeholder="Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                              <SelectItem key={g} value={g.toString()}>
-                                {g}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">Assigned</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {batch.dispatchDate ? format(batch.dispatchDate, "MMM dd, yyyy") : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {batch.productionMonth
-                            ? format(new Date(batch.productionMonth + "-01"), "MMM yyyy")
-                            : "-"}
-                        </span>
-                      </TableCell>
+                      {columnVisibility.client && (
+                        <TableCell>
+                          <span className="text-sm">
+                            {clients?.find((c) => c._id === batch.client)?.organization || 
+                             clients?.find((c) => c._id === batch.client)?.name || "-"}
+                          </span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.quantity && (
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={row.quantity}
+                            onChange={(e) =>
+                              handleUpdateBatchRow(batch.id, row.id, "quantity", e.target.value)
+                            }
+                            className="w-20"
+                            disabled={!batch.client}
+                          />
+                        </TableCell>
+                      )}
+                      {columnVisibility.grade && (
+                        <TableCell>
+                          <Select
+                            value={row.grade}
+                            onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "grade", val)}
+                            disabled={!batch.client}
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue placeholder="Grade" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
+                                <SelectItem key={g} value={g.toString()}>
+                                  {g}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      )}
+                      {columnVisibility.status && (
+                        <TableCell>
+                          <Badge variant="secondary">Assigned</Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.dispatchDate && (
+                        <TableCell>
+                          <span className="text-sm">
+                            {batch.dispatchDate ? format(batch.dispatchDate, "MMM dd, yyyy") : "-"}
+                          </span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.productionMonth && (
+                        <TableCell>
+                          <span className="text-sm">
+                            {batch.productionMonth
+                              ? format(new Date(batch.productionMonth + "-01"), "MMM yyyy")
+                              : "-"}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span className="text-sm text-muted-foreground">-</span>
                       </TableCell>
-                      <TableCell>
-                        <Input
-                          value={row.notes}
-                          onChange={(e) =>
-                            handleUpdateBatchRow(batch.id, row.id, "notes", e.target.value)
-                          }
-                          placeholder="Notes..."
-                          disabled={!batch.client}
-                        />
-                      </TableCell>
+                      {columnVisibility.notes && (
+                        <TableCell>
+                          <Input
+                            value={row.notes}
+                            onChange={(e) =>
+                              handleUpdateBatchRow(batch.id, row.id, "notes", e.target.value)
+                            }
+                            placeholder="Notes..."
+                            disabled={!batch.client}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <Button
                           size="icon"
