@@ -1,6 +1,8 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
+import { hasPermission } from "./permissions";
 
 export const list = query({
   args: { clientType: v.optional(v.union(v.literal("b2b"), v.literal("b2c"))) },
@@ -63,11 +65,19 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const canCreate = await hasPermission(ctx, userId, "assignments", "create");
+    if (!canCreate) throw new Error("Permission denied");
+
     // Create assignment without deducting kit inventory
     const assignmentId = await ctx.db.insert("assignments", {
       ...args,
       status: "assigned",
       createdBy: userId,
+    });
+
+    // Notify operations users about new assignment
+    await ctx.scheduler.runAfter(0, internal.assignments.notifyOperationsUsers, {
+      assignmentId,
     });
 
     return assignmentId;
@@ -549,5 +559,38 @@ export const updatePackingStatus = mutation({
     }
 
     return args.assignmentId;
+  },
+});
+
+export const notifyOperationsUsers = internalMutation({
+  args: { assignmentId: v.id("assignments") },
+  handler: async (ctx, args) => {
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) return;
+
+    // Get all operations users with notification permission
+    const allUsers = await ctx.db.query("users").collect();
+    const operationsUsers = allUsers.filter((user) => user.role === "operations");
+
+    // Check each operations user's notification permission
+    for (const user of operationsUsers) {
+      const permissions = await ctx.db
+        .query("userPermissions")
+        .withIndex("by_user", (q) => q.eq("userId", user._id))
+        .first();
+
+      const canReceive =
+        (permissions?.permissions as any)?.notifications?.receive ?? true;
+
+      if (canReceive) {
+        await ctx.db.insert("notifications", {
+          userId: user._id,
+          type: "new_assignment",
+          message: `New assignment created`,
+          relatedId: args.assignmentId,
+          read: false,
+        });
+      }
+    }
   },
 });

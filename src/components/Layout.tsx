@@ -45,14 +45,16 @@ import {
   Moon,
   Sun,
   Truck,
+  Bell,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
 import { ReactNode, useState, useEffect, useRef } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface LayoutProps {
   children: ReactNode;
@@ -97,6 +99,13 @@ export function Layout({ children }: LayoutProps) {
     const saved = localStorage.getItem("dark-mode");
     return saved === "true" || document.documentElement.classList.contains("dark");
   });
+
+  const unreadCount = useQuery(api.notifications.getUnreadCount);
+  const notifications = useQuery(api.notifications.list);
+  const markAsRead = useMutation(api.notifications.markAsRead);
+  const markAllAsRead = useMutation(api.notifications.markAllAsRead);
+  
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Apply dark mode on mount and when toggled
   useEffect(() => {
@@ -785,6 +794,22 @@ export function Layout({ children }: LayoutProps) {
           <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur-sm px-6">
             <SidebarTrigger />
             <div className="flex-1" />
+            
+            {/* Notifications */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={() => setNotificationsOpen(true)}
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount && unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </Button>
+            
             <Button
               variant="ghost"
               size="icon"
@@ -801,6 +826,100 @@ export function Layout({ children }: LayoutProps) {
           <main className="flex-1 overflow-auto">{children}</main>
         </div>
         </div>
+
+        {/* Notifications Panel */}
+        {notificationsOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setNotificationsOpen(false)}
+            />
+
+            {/* Notifications Panel */}
+            <div className="fixed right-0 top-0 bottom-0 w-full sm:w-96 bg-background border-l shadow-xl z-50 flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  <h2 className="font-semibold">Notifications</h2>
+                  {unreadCount && unreadCount > 0 && (
+                    <Badge variant="secondary">{unreadCount}</Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {notifications && notifications.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        await markAllAsRead();
+                        toast.success("All notifications marked as read");
+                      }}
+                    >
+                      Mark all read
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setNotificationsOpen(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Notifications List */}
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="p-4 space-y-2">
+                    {!notifications || notifications.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        <Bell className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-sm">No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map((notification: any) => (
+                        <Card
+                          key={notification._id}
+                          className={`cursor-pointer transition-colors hover:bg-accent ${
+                            !notification.read ? "border-primary/50 bg-primary/5" : ""
+                          }`}
+                          onClick={async () => {
+                            if (!notification.read) {
+                              await markAsRead({ notificationId: notification._id });
+                            }
+                            if (notification.relatedId) {
+                              navigate("/b2b-assignments");
+                              setNotificationsOpen(false);
+                            }
+                          }}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1">
+                                <p className="text-sm font-medium">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(notification._creationTime).toLocaleString()}
+                                </p>
+                              </div>
+                              {!notification.read && (
+                                <div className="h-2 w-2 rounded-full bg-primary mt-1" />
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* AI Chat Button */}
         <Button

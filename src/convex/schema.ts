@@ -825,6 +825,17 @@ const schema = defineSchema(
       createdBy: v.id("users"),
       createdByName: v.string(),
     }),
+
+    notifications: defineTable({
+      userId: v.id("users"),
+      type: v.string(), // "new_assignment", etc.
+      message: v.string(),
+      relatedId: v.optional(v.id("assignments")),
+      read: v.boolean(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_user_and_read", ["userId", "read"]),
+
   },
   {
     schemaValidation: false,

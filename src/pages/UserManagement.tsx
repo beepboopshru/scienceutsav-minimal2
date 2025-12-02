@@ -91,6 +91,7 @@ export default function UserManagement() {
         lms: { view: false, edit: false },
         materialRequests: { view: true, create: true, approve: false, reject: false },
         deletionRequests: { view: false, create: false, approve: false, reject: false },
+        notifications: { view: true, receive: false },
       };
 
       if (existingPermissions?.permissions) {

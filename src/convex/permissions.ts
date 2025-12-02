@@ -7,7 +7,7 @@ type PermissionResource =
   | "processingJobs" | "procurementJobs" | "packing" | "dispatch"
   | "discrepancyTickets" | "billTracking" | "vendorImports" 
   | "orderHistory" | "laserFiles" | "reports" | "adminZone" | "userManagement"
-  | "kitStatistics" | "lms" | "deletionRequests" | "materialRequests";
+  | "kitStatistics" | "lms" | "deletionRequests" | "materialRequests" | "notifications";
 
 type PermissionAction = string;
 
@@ -39,6 +39,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: true, edit: true },
     deletionRequests: { view: true, create: true, approve: true, reject: true },
     materialRequests: { view: true, create: true, approve: true, reject: true },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   manager: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -66,6 +67,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: true, edit: true },
     deletionRequests: { view: true, create: true, approve: true, reject: true },
     materialRequests: { view: true, create: true, approve: true, reject: true },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   sales: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -93,6 +95,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: false, edit: false },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: false, reject: false },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   finance: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -120,6 +123,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: false, edit: false },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: false, reject: false },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   laser_operator: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -147,6 +151,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: false, edit: false },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: false, reject: false },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   research_head: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -174,6 +179,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: true, edit: true },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: false, reject: false },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   research_development: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -201,6 +207,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: true, edit: true },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: false, reject: false },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   operations: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -228,6 +235,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: false, edit: false },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: true, reject: true },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   inventory: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -255,6 +263,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: false, edit: false },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: true, reject: true },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
   content: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -282,6 +291,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     lms: { view: false, edit: false },
     deletionRequests: { view: false, create: false, approve: false, reject: false },
     materialRequests: { view: true, create: true, approve: false, reject: false },
+    notifications: { view: true, create: true, edit: true, delete: true, archive: true },
   },
 };
 

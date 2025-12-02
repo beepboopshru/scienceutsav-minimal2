@@ -184,6 +184,10 @@ export const update = mutation({
         approve: v.boolean(),
         reject: v.boolean(),
       })),
+      notifications: v.optional(v.object({
+        view: v.boolean(),
+        receive: v.boolean(),
+      })),
     }),
   },
   handler: async (ctx, args) => {
