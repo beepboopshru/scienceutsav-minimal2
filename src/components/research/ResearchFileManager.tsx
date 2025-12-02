@@ -57,11 +57,41 @@ export function ResearchFileManager({
   };
 
   const fileTypeDescriptions = {
-    kitImage: "Primary visual for the kit (PNG, JPG)",
+    kitImage: "Primary visual for the kit (PNG, JPG, WebP)",
     laser: "DXF, PDF, CDR files for laser cutting and printable materials",
-    component: "Photos of parts and assemblies",
+    component: "Photos of parts and assemblies (auto-converted to WebP)",
     workbook: "Instruction manuals and worksheets",
     misc: "Any other files related to this kit"
+  };
+
+  // Helper function to convert image to WebP
+  const convertToWebP = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to convert image to WebP'));
+            }
+          },
+          'image/webp',
+          0.9 // Quality setting (0-1)
+        );
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,11 +100,23 @@ export function ResearchFileManager({
 
     setUploading(true);
     try {
+      let fileToUpload: File | Blob = file;
+      let contentType = file.type;
+
+      // Convert to WebP if it's an image for kitImage or component types
+      if ((fileType === 'kitImage' || fileType === 'component') && file.type.startsWith('image/')) {
+        if (file.type !== 'image/webp') {
+          toast.info("Converting image to WebP format...");
+          fileToUpload = await convertToWebP(file);
+          contentType = 'image/webp';
+        }
+      }
+
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": contentType },
+        body: fileToUpload,
       });
       
       const { storageId } = await result.json();
@@ -93,9 +135,10 @@ export function ResearchFileManager({
       
       await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });
       
-      toast.success("File uploaded successfully");
+      toast.success(fileType === 'kitImage' || fileType === 'component' ? "Image uploaded and converted to WebP" : "File uploaded successfully");
     } catch (error) {
       toast.error("Failed to upload file");
+      console.error(error);
     } finally {
       setUploading(false);
     }
