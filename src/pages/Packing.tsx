@@ -38,6 +38,7 @@ export default function Packing() {
   const procurementJobs = useQuery(api.procurementJobs.list);
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
+  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
   const createProcurementJob = useMutation(api.procurementJobs.create);
 
@@ -649,7 +650,8 @@ export default function Packing() {
                   <th className="px-4 py-3 text-left text-sm font-medium">Dispatch Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Production Month</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Created On</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Notes</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Assignment Notes</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Packing Notes</th>
                   {canEdit && <th className="px-4 py-3 text-left text-sm font-medium">Packing Status</th>}
                   <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
@@ -726,6 +728,30 @@ export default function Packing() {
                           </td>
                           <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
                             {assignment.notes || "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Input
+                              value={assignment.packingNotes || ""}
+                              onChange={(e) => {
+                                const updatePackingNotesMutation = useMutation(api.assignments.updatePackingNotes);
+                                updatePackingNotesMutation({
+                                  id: assignment._id,
+                                  packingNotes: e.target.value,
+                                });
+                              }}
+                              onBlur={async (e) => {
+                                try {
+                                  await updatePackingNotes({
+                                    id: assignment._id,
+                                    packingNotes: e.target.value,
+                                  });
+                                } catch (error) {
+                                  toast.error("Failed to update packing notes");
+                                }
+                              }}
+                              placeholder="Add packing notes..."
+                              className="h-8 text-sm"
+                            />
                           </td>
                           {canEdit && (
                             <td className="px-4 py-3">
@@ -875,10 +901,28 @@ export default function Packing() {
                             <td className="px-4 py-3 text-sm">
                               {new Date(assignment._creationTime).toLocaleDateString()}
                             </td>
-                            <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
-                              {assignment.notes || "—"}
-                            </td>
-                            {canEdit && (
+                          <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
+                            {assignment.notes || "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Input
+                              defaultValue={assignment.packingNotes || ""}
+                              onBlur={async (e) => {
+                                try {
+                                  await updatePackingNotes({
+                                    id: assignment._id,
+                                    packingNotes: e.target.value,
+                                  });
+                                  toast.success("Packing notes updated");
+                                } catch (error) {
+                                  toast.error("Failed to update packing notes");
+                                }
+                              }}
+                              placeholder="Add packing notes..."
+                              className="h-8 text-sm"
+                            />
+                          </td>
+                          {canEdit && (
                               <td className="px-4 py-3">
                                 <Select
                                   value={assignment.status || "assigned"}
