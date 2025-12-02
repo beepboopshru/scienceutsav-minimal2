@@ -88,3 +88,17 @@ export const create = mutation({
     });
   },
 });
+
+export const deleteNotification = mutation({
+  args: { notificationId: v.id("notifications") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification) throw new Error("Notification not found");
+    if (notification.userId !== userId) throw new Error("Not authorized");
+
+    await ctx.db.delete(args.notificationId);
+  },
+});

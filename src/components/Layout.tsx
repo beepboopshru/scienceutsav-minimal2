@@ -104,6 +104,7 @@ export function Layout({ children }: LayoutProps) {
   const notifications = useQuery(api.notifications.list);
   const markAsRead = useMutation(api.notifications.markAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
+  const deleteNotification = useMutation(api.notifications.deleteNotification);
   
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -883,22 +884,24 @@ export function Layout({ children }: LayoutProps) {
                       notifications.map((notification: any) => (
                         <Card
                           key={notification._id}
-                          className={`cursor-pointer transition-colors hover:bg-accent ${
+                          className={`transition-colors hover:bg-accent ${
                             !notification.read ? "border-primary/50 bg-primary/5" : ""
                           }`}
-                          onClick={async () => {
-                            if (!notification.read) {
-                              await markAsRead({ notificationId: notification._id });
-                            }
-                            if (notification.relatedId) {
-                              navigate("/b2b-assignments");
-                              setNotificationsOpen(false);
-                            }
-                          }}
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start gap-3">
-                              <div className="flex-1">
+                              <div 
+                                className="flex-1 cursor-pointer"
+                                onClick={async () => {
+                                  if (!notification.read) {
+                                    await markAsRead({ notificationId: notification._id });
+                                  }
+                                  if (notification.relatedId) {
+                                    navigate("/b2b-assignments");
+                                    setNotificationsOpen(false);
+                                  }
+                                }}
+                              >
                                 <p className="text-sm font-medium">
                                   {notification.message}
                                 </p>
@@ -906,9 +909,23 @@ export function Layout({ children }: LayoutProps) {
                                   {new Date(notification._creationTime).toLocaleString()}
                                 </p>
                               </div>
-                              {!notification.read && (
-                                <div className="h-2 w-2 rounded-full bg-primary mt-1" />
-                              )}
+                              <div className="flex items-center gap-2">
+                                {!notification.read && (
+                                  <div className="h-2 w-2 rounded-full bg-primary mt-1" />
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    await deleteNotification({ notificationId: notification._id });
+                                    toast.success("Notification deleted");
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
