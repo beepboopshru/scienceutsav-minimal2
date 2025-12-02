@@ -146,6 +146,37 @@ export default function Dispatch() {
   const [customDispatchSearchQuery, setCustomDispatchSearchQuery] = useState("");
   const [customDispatchStatusFilter, setCustomDispatchStatusFilter] = useState<string>("all");
 
+  const [columnVisibility, setColumnVisibility] = useState({
+    customer: true,
+    kit: true,
+    quantity: true,
+    grade: true,
+    status: true,
+    dispatchDate: true,
+    assignmentNotes: true,
+    packingNotes: true,
+    remarks: true,
+  });
+
+  const toggleColumn = (columnId: string) => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [columnId]: !prev[columnId as keyof typeof prev],
+    }));
+  };
+
+  const dispatchColumns = [
+    { id: "customer", label: "Customer", visible: columnVisibility.customer },
+    { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
+    { id: "grade", label: "Grade", visible: columnVisibility.grade },
+    { id: "status", label: "Status", visible: columnVisibility.status },
+    { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
+    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+    { id: "remarks", label: "Remarks", visible: columnVisibility.remarks },
+  ];
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
     if (!isLoading && isAuthenticated && user && !user.isApproved) navigate("/pending-approval");
@@ -892,15 +923,15 @@ export default function Dispatch() {
                           />
                         </th>
                       )}
-                      <th className="text-left p-4 font-semibold">Customer</th>
-                      <th className="text-left p-4 font-semibold">Kit</th>
-                      <th className="text-left p-4 font-semibold">Quantity</th>
-                      <th className="text-left p-4 font-semibold">Grade</th>
-                      <th className="text-left p-4 font-semibold">Status</th>
-                      <th className="text-left p-4 font-semibold">Dispatch Date</th>
-                      <th className="text-left p-4 font-semibold min-w-[200px]">Assignment Notes</th>
-                      <th className="text-left p-4 font-semibold min-w-[200px]">Packing Notes</th>
-                      <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>
+                      {columnVisibility.customer && <th className="text-left p-4 font-semibold">Customer</th>}
+                      {columnVisibility.kit && <th className="text-left p-4 font-semibold">Kit</th>}
+                      {columnVisibility.quantity && <th className="text-left p-4 font-semibold">Quantity</th>}
+                      {columnVisibility.grade && <th className="text-left p-4 font-semibold">Grade</th>}
+                      {columnVisibility.status && <th className="text-left p-4 font-semibold">Status</th>}
+                      {columnVisibility.dispatchDate && <th className="text-left p-4 font-semibold">Dispatch Date</th>}
+                      {columnVisibility.assignmentNotes && <th className="text-left p-4 font-semibold min-w-[200px]">Assignment Notes</th>}
+                      {columnVisibility.packingNotes && <th className="text-left p-4 font-semibold min-w-[200px]">Packing Notes</th>}
+                      {columnVisibility.remarks && <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>}
                       <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
                     </tr>
                   </thead>

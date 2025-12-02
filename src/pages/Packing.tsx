@@ -110,6 +110,35 @@ export default function Packing() {
 
   const [editingPackingNotes, setEditingPackingNotes] = useState<Record<string, { isEditing: boolean; value: string }>>({});
 
+  const [columnVisibility, setColumnVisibility] = useState({
+    client: true,
+    kit: true,
+    quantity: true,
+    grade: true,
+    status: true,
+    dispatchDate: true,
+    assignmentNotes: true,
+    packingNotes: true,
+  });
+
+  const toggleColumn = (columnId: string) => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [columnId]: !prev[columnId as keyof typeof prev],
+    }));
+  };
+
+  const packingColumns = [
+    { id: "client", label: "Client", visible: columnVisibility.client },
+    { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
+    { id: "grade", label: "Grade", visible: columnVisibility.grade },
+    { id: "status", label: "Status", visible: columnVisibility.status },
+    { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
+    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+  ];
+
   const handleSavePackingNotes = async (assignmentId: Id<"assignments">) => {
     const editState = editingPackingNotes[assignmentId];
     if (!editState) return;

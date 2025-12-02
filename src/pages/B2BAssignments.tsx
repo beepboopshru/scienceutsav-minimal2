@@ -69,8 +69,9 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { BatchAssignmentDialog } from "@/components/assignments/BatchAssignmentDialog";
 import { ImportCurriculumDialog } from "@/components/assignments/ImportCurriculumDialog";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
 
-export default function Assignments() {
+export default function B2BAssignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
@@ -192,6 +193,37 @@ export default function Assignments() {
   const [importedMonth, setImportedMonth] = useState<string>("");
   const [importedYear, setImportedYear] = useState<string>("");
   const [importedMonthIndex, setImportedMonthIndex] = useState<number>(0);
+
+  const [columnVisibility, setColumnVisibility] = useState({
+    program: true,
+    kit: true,
+    client: true,
+    quantity: true,
+    grade: true,
+    status: true,
+    dispatchDate: true,
+    productionMonth: true,
+    notes: true,
+  });
+
+  const toggleColumn = (columnId: string) => {
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [columnId]: !prev[columnId as keyof typeof prev],
+    }));
+  };
+
+  const columns = [
+    { id: "program", label: "Program", visible: columnVisibility.program },
+    { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "client", label: "Client", visible: columnVisibility.client },
+    { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
+    { id: "grade", label: "Grade", visible: columnVisibility.grade },
+    { id: "status", label: "Status", visible: columnVisibility.status },
+    { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
+    { id: "notes", label: "Notes", visible: columnVisibility.notes },
+  ];
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -815,6 +847,11 @@ export default function Assignments() {
           onStatusesChange={setSelectedStatuses}
           onProductionMonthsChange={setSelectedProductionMonths}
           onClearAll={handleClearAllFilters}
+        />
+
+        <ColumnVisibility
+          columns={columns}
+          onToggle={toggleColumn}
         />
 
         {/* Assignments Table with Batch Grouping */}
