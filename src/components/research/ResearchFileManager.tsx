@@ -20,7 +20,7 @@ interface FileItem {
 
 interface ResearchFileManagerProps {
   kitId: Id<"kits">;
-  fileType: "kitImage" | "laser" | "component" | "workbook";
+  fileType: "kitImage" | "laser" | "component" | "workbook" | "misc";
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentFiles?: FileItem[];
@@ -42,23 +42,26 @@ export function ResearchFileManager({
 
   const fileTypeLabels = {
     kitImage: "Kit Image",
-    laser: "Laser Files",
+    laser: "Laser Files & Printable",
     component: "Component Pictures",
-    workbook: "Workbooks & Misc"
+    workbook: "Workbook/Sheet",
+    misc: "Miscellaneous"
   };
 
   const fileTypeAccepts = {
     kitImage: "image/*",
     laser: ".dxf,.pdf,.cdr",
     component: "image/*",
-    workbook: ".pdf,.doc,.docx,.xls,.xlsx"
+    workbook: ".pdf,.doc,.docx,.xls,.xlsx",
+    misc: "*"
   };
 
   const fileTypeDescriptions = {
     kitImage: "Primary visual for the kit (PNG, JPG)",
-    laser: "DXF, PDF, CDR files for laser cutting",
+    laser: "DXF, PDF, CDR files for laser cutting and printable materials",
     component: "Photos of parts and assemblies",
-    workbook: "Instruction manuals, BOMs, spec sheets"
+    workbook: "Instruction manuals and worksheets",
+    misc: "Any other files related to this kit"
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +87,8 @@ export function ResearchFileManager({
         kitImage: "kitImageFiles",
         laser: "laserFiles",
         component: "componentFiles",
-        workbook: "workbookFiles"
+        workbook: "workbookFiles",
+        misc: "miscFiles"
       };
       
       await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });
@@ -111,7 +115,8 @@ export function ResearchFileManager({
         kitImage: "kitImageFiles",
         laser: "laserFiles",
         component: "componentFiles",
-        workbook: "workbookFiles"
+        workbook: "workbookFiles",
+        misc: "miscFiles"
       };
       
       await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });
@@ -132,7 +137,8 @@ export function ResearchFileManager({
         kitImage: "kitImageFiles",
         laser: "laserFiles",
         component: "componentFiles",
-        workbook: "workbookFiles"
+        workbook: "workbookFiles",
+        misc: "miscFiles"
       };
       
       await updateKit({ id: kitId, [fieldMap[fileType]]: updatedFiles });

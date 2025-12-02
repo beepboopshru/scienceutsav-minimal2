@@ -185,6 +185,10 @@ export const update = mutation({
       v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
       v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
     ))),
+    miscFiles: v.optional(v.array(v.union(
+      v.object({ type: v.literal("storage"), storageId: v.id("_storage") }),
+      v.object({ type: v.literal("link"), name: v.string(), url: v.string() })
+    ))),
     stockCount: v.optional(v.number()),
     lowStockThreshold: v.optional(v.number()),
     status: v.optional(v.union(

@@ -135,7 +135,7 @@ export default function Research() {
 
   // File manager state
   const [selectedKit, setSelectedKit] = useState<any>(null);
-  const [fileType, setFileType] = useState<"kitImage" | "laser" | "component" | "workbook">("kitImage");
+  const [fileType, setFileType] = useState<"kitImage" | "laser" | "component" | "workbook" | "misc">("kitImage");
   const [isFileManagerOpen, setIsFileManagerOpen] = useState(false);
 
   // Permission checks using centralized hook
@@ -196,7 +196,7 @@ export default function Research() {
   // File manager
   const [fileManager, setFileManager] = useState<{
     kitId: Id<"kits">;
-    fileType: "kitImage" | "laser" | "component" | "workbook";
+    fileType: "kitImage" | "laser" | "component" | "workbook" | "misc";
   } | null>(null);
 
   // Row expand
@@ -1019,7 +1019,15 @@ export default function Research() {
                                       onClick={() => setFileManager({ kitId: kit._id, fileType: "workbook" })}
                                     >
                                       <FileText className="h-4 w-4 mr-2" />
-                                      Workbooks & Misc
+                                      Workbook/Sheet
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      className="w-full justify-start"
+                                      onClick={() => setFileManager({ kitId: kit._id, fileType: "misc" })}
+                                    >
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      Miscellaneous
                                     </Button>
                                   </div>
                                 </DialogContent>
@@ -1217,7 +1225,8 @@ export default function Research() {
           kitImage: kit.kitImageFiles || [],
           laser: kit.laserFiles || [],
           component: kit.componentFiles || [],
-          workbook: kit.workbookFiles || []
+          workbook: kit.workbookFiles || [],
+          misc: kit.miscFiles || []
         };
         
         return (
