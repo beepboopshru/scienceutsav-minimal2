@@ -751,15 +751,40 @@ export default function Packing() {
                             <td className="px-4 py-3">
                               <Select
                                 value={assignment.status || "assigned"}
-                                onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                                onValueChange={async (value) => {
+                                  if (value === "transferred_to_dispatch") {
+                                    setChecklistDialog({
+                                      open: true,
+                                      assignmentId: assignment._id,
+                                      checklist: {
+                                        kitComponents: false,
+                                        totalCount: false,
+                                        workbook: false,
+                                        worksheet: false,
+                                      },
+                                    });
+                                  } else {
+                                    try {
+                                      await updatePackingStatus({
+                                        assignmentId: assignment._id,
+                                        packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                      });
+                                      toast.success("Packing status updated successfully");
+                                    } catch (error) {
+                                      toast.error("Failed to update packing status: " + (error as Error).message);
+                                    }
+                                  }
+                                }}
                               >
-                                <SelectTrigger className="h-8 w-[180px]">
+                                <SelectTrigger className="w-[180px]">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="assigned">Assigned</SelectItem>
                                   <SelectItem value="in_progress">In Progress</SelectItem>
-                                  <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                                  <SelectItem value="transferred_to_dispatch">
+                                    Transferred to Dispatch
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
@@ -920,15 +945,40 @@ export default function Packing() {
                               <td className="px-4 py-3">
                                 <Select
                                   value={assignment.status || "assigned"}
-                                  onValueChange={(value) => handleStatusChange(assignment._id, value)}
+                                  onValueChange={async (value) => {
+                                    if (value === "transferred_to_dispatch") {
+                                      setChecklistDialog({
+                                        open: true,
+                                        assignmentId: assignment._id,
+                                        checklist: {
+                                          kitComponents: false,
+                                          totalCount: false,
+                                          workbook: false,
+                                          worksheet: false,
+                                        },
+                                      });
+                                    } else {
+                                      try {
+                                        await updatePackingStatus({
+                                          assignmentId: assignment._id,
+                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                        });
+                                        toast.success("Packing status updated successfully");
+                                      } catch (error) {
+                                        toast.error("Failed to update packing status: " + (error as Error).message);
+                                      }
+                                    }
+                                  }}
                                 >
-                                  <SelectTrigger className="h-8 w-[180px]">
+                                  <SelectTrigger className="w-[180px]">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="assigned">Assigned</SelectItem>
                                     <SelectItem value="in_progress">In Progress</SelectItem>
-                                    <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                                    <SelectItem value="transferred_to_dispatch">
+                                      Transferred to Dispatch
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                               </td>
