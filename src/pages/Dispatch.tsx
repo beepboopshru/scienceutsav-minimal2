@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/command";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -50,6 +50,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { format } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -146,35 +156,40 @@ export default function Dispatch() {
   const [customDispatchSearchQuery, setCustomDispatchSearchQuery] = useState("");
   const [customDispatchStatusFilter, setCustomDispatchStatusFilter] = useState<string>("all");
 
+  // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
-    customer: true,
+    program: true,
     kit: true,
+    client: true,
     quantity: true,
     grade: true,
     status: true,
     dispatchDate: true,
+    productionMonth: true,
     assignmentNotes: true,
     packingNotes: true,
-    remarks: true,
+    dispatchNotes: true,
   });
 
   const toggleColumn = (columnId: string) => {
     setColumnVisibility((prev) => ({
       ...prev,
-      [columnId]: !prev[columnId as keyof typeof prev],
+      [columnId as keyof typeof prev]: !prev[columnId as keyof typeof prev],
     }));
   };
 
-  const dispatchColumns = [
-    { id: "customer", label: "Customer", visible: columnVisibility.customer },
+  const columns = [
+    { id: "program", label: "Program", visible: columnVisibility.program },
     { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "client", label: "Client", visible: columnVisibility.client },
     { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
     { id: "grade", label: "Grade", visible: columnVisibility.grade },
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
     { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
     { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
-    { id: "remarks", label: "Remarks", visible: columnVisibility.remarks },
+    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
   ];
 
   useEffect(() => {
@@ -852,7 +867,7 @@ export default function Dispatch() {
               <AssignmentFilters
                 programs={programs || []}
                 kits={kits || []}
-                clients={[...(clients || []), ...(b2cClients || [])]}
+                clients={clients || []}
                 assignments={assignments || []}
                 selectedPrograms={selectedPrograms}
                 selectedCategories={selectedKitCategories}
@@ -870,29 +885,7 @@ export default function Dispatch() {
                 onProductionMonthsChange={setSelectedProductionMonths}
                 onClearAll={handleClearAllFilters}
               />
-
-              <Button variant="outline" onClick={handleClearAllFilters}>
-                Clear All Filters
-              </Button>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="default" 
-                  onClick={() => setClientDetailsDialogOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Client Details Generator
-                </Button>
-                <Button 
-                  variant="default" 
-                  onClick={() => setBoxContentDialogOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Box Content Generator
-                </Button>
-              </div>
+              <ColumnVisibility columns={columns} onToggle={toggleColumn} />
             </div>
 
             {/* Assignments Table */}
@@ -906,36 +899,24 @@ export default function Dispatch() {
                   No assignments ready for dispatch.
                 </div>
               ) : (
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr className="border-b">
-                      {canEdit && (
-                        <th className="text-left p-4 font-semibold w-12">
-                          <Checkbox
-                            checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
-                              } else {
-                                setSelectedAssignments(new Set());
-                              }
-                            }}
-                          />
-                        </th>
-                      )}
-                      {columnVisibility.customer && <th className="text-left p-4 font-semibold">Customer</th>}
-                      {columnVisibility.kit && <th className="text-left p-4 font-semibold">Kit</th>}
-                      {columnVisibility.quantity && <th className="text-left p-4 font-semibold">Quantity</th>}
-                      {columnVisibility.grade && <th className="text-left p-4 font-semibold">Grade</th>}
-                      {columnVisibility.status && <th className="text-left p-4 font-semibold">Status</th>}
-                      {columnVisibility.dispatchDate && <th className="text-left p-4 font-semibold">Dispatch Date</th>}
-                      {columnVisibility.assignmentNotes && <th className="text-left p-4 font-semibold min-w-[200px]">Assignment Notes</th>}
-                      {columnVisibility.packingNotes && <th className="text-left p-4 font-semibold min-w-[200px]">Packing Notes</th>}
-                      {columnVisibility.remarks && <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>}
-                      <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {columnVisibility.program && <TableHead>Program</TableHead>}
+                      {columnVisibility.kit && <TableHead>Kit</TableHead>}
+                      {columnVisibility.client && <TableHead>Client</TableHead>}
+                      {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
+                      {columnVisibility.grade && <TableHead>Grade</TableHead>}
+                      {columnVisibility.status && <TableHead>Status</TableHead>}
+                      {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
+                      {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
+                      {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
+                      {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
+                      {columnVisibility.dispatchNotes && <TableHead>Dispatch Notes</TableHead>}
+                      {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
                       const isExpanded = expandedBatches.has(batchKey);
                       const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
@@ -943,16 +924,16 @@ export default function Dispatch() {
 
                       if (batchKey === "standalone") {
                         return batchAssignments.map((assignment) => (
-                          <tr key={assignment._id} className="border-b hover:bg-muted/30">
+                          <TableRow key={assignment._id} className="border-b hover:bg-muted/30">
                             {canEdit && (
-                              <td className="p-4">
+                              <TableCell className="p-4">
                                 <Checkbox
                                   checked={selectedAssignments.has(assignment._id)}
                                   onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
                                 />
-                              </td>
+                              </TableCell>
                             )}
-                            <td className="p-4">
+                            <TableCell className="p-4">
                               <div className="flex flex-col">
                                 <span className="font-medium">
                                   {assignment.clientType === "b2b"
@@ -963,24 +944,24 @@ export default function Dispatch() {
                                   {assignment.clientType?.toUpperCase() || "N/A"}
                                 </Badge>
                               </div>
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
                               <div className="flex flex-col">
                                 <span className="font-medium">{assignment.kit?.name}</span>
                                 {assignment.kit?.category && (
                                   <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
                                 )}
                               </div>
-                            </td>
-                            <td className="p-4">{assignment.quantity}</td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">{assignment.quantity}</TableCell>
+                            <TableCell className="p-4">
                               {assignment.grade ? (
                                 <Badge variant="outline">Grade {assignment.grade}</Badge>
                               ) : (
                                 <span className="text-muted-foreground text-sm">-</span>
                               )}
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
                               <Badge variant={
                                 assignment.status === "dispatched" ? "default" : 
                                 assignment.status === "delivered" ? "default" : 
@@ -988,23 +969,28 @@ export default function Dispatch() {
                               }>
                                 {assignment.status}
                               </Badge>
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
                               {assignment.dispatchedAt
                                 ? new Date(assignment.dispatchedAt).toLocaleDateString()
                                 : "-"}
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
+                              {assignment.productionMonth
+                                ? new Date(assignment.productionMonth).toLocaleDateString()
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="p-4">
                               <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
                                 {assignment.notes || <span className="text-muted-foreground italic">No assignment notes</span>}
                               </div>
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
                               <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
                                 {assignment.packingNotes || <span className="text-muted-foreground italic">No packing notes</span>}
                               </div>
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
                               {editingRemarks[assignment._id] !== undefined ? (
                                 <div className="space-y-2">
                                   <textarea
@@ -1047,8 +1033,8 @@ export default function Dispatch() {
                                   )}
                                 </div>
                               )}
-                            </td>
-                            <td className="p-4">
+                            </TableCell>
+                            <TableCell className="p-4">
                               <div className="flex items-center justify-end gap-2">
                                 <Button
                                   variant="ghost"
@@ -1095,28 +1081,28 @@ export default function Dispatch() {
                                   </DropdownMenu>
                                 )}
                               </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ));
                       }
 
                       return (
                         <>
-                          <tr
+                          <TableRow
                             key={`batch-${batchKey}`}
                             className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
                             onClick={() => toggleBatch(batchKey)}
                           >
                             {canEdit && (
-                              <td className="p-4">
+                              <TableCell className="p-4">
                                 {isExpanded ? (
                                   <ChevronDown className="h-5 w-5" />
                                 ) : (
                                   <ChevronRight className="h-5 w-5" />
                                 )}
-                              </td>
+                              </TableCell>
                             )}
-                            <td colSpan={canEdit ? 10 : 11} className="p-4">
+                            <TableCell colSpan={canEdit ? 11 : 12} className="p-4">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div>
@@ -1127,20 +1113,20 @@ export default function Dispatch() {
                                   </div>
                                 </div>
                               </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                           {isExpanded &&
                             batchAssignments.map((assignment) => (
-                              <tr key={assignment._id} className="border-b hover:bg-muted/30">
+                              <TableRow key={assignment._id} className="border-b hover:bg-muted/30">
                                 {canEdit && (
-                                  <td className="p-4">
+                                  <TableCell className="p-4">
                                     <Checkbox
                                       checked={selectedAssignments.has(assignment._id)}
                                       onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
                                     />
-                                  </td>
+                                  </TableCell>
                                 )}
-                                <td className="p-4 pl-12">
+                                <TableCell className="p-4 pl-12">
                                   <div className="flex flex-col">
                                     <span className="font-medium">
                                       {assignment.clientType === "b2b"
@@ -1151,24 +1137,24 @@ export default function Dispatch() {
                                       {assignment.clientType?.toUpperCase() || "N/A"}
                                     </Badge>
                                   </div>
-                                </td>
-                                <td className="p-4">
+                                </TableCell>
+                                <TableCell className="p-4">
                                   <div className="flex flex-col">
                                     <span className="font-medium">{assignment.kit?.name}</span>
                                     {assignment.kit?.category && (
                                       <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
                                     )}
                                   </div>
-                                </td>
-                                <td className="p-4">{assignment.quantity}</td>
-                                <td className="p-4">
+                                </TableCell>
+                                <TableCell className="p-4">{assignment.quantity}</TableCell>
+                                <TableCell className="p-4">
                                   {assignment.grade ? (
                                     <Badge variant="outline">Grade {assignment.grade}</Badge>
                                   ) : (
                                     <span className="text-muted-foreground text-sm">-</span>
                                   )}
-                                </td>
-                                <td className="p-4">
+                                </TableCell>
+                                <TableCell className="p-4">
                                   <Badge variant={
                                     assignment.status === "dispatched" ? "default" : 
                                     assignment.status === "delivered" ? "default" : 
@@ -1176,13 +1162,18 @@ export default function Dispatch() {
                                   }>
                                     {assignment.status}
                                   </Badge>
-                                </td>
-                                <td className="p-4">
+                                </TableCell>
+                                <TableCell className="p-4">
                                   {assignment.dispatchedAt
                                     ? new Date(assignment.dispatchedAt).toLocaleDateString()
                                     : "-"}
-                                </td>
-                                <td className="p-4">
+                                </TableCell>
+                                <TableCell className="p-4">
+                                  {assignment.productionMonth
+                                    ? new Date(assignment.productionMonth).toLocaleDateString()
+                                    : "-"}
+                                </TableCell>
+                                <TableCell className="p-4">
                                   {editingRemarks[assignment._id] !== undefined ? (
                                     <div className="space-y-2">
                                       <textarea
@@ -1225,8 +1216,8 @@ export default function Dispatch() {
                                       )}
                                     </div>
                                   )}
-                                </td>
-                                <td className="p-4">
+                                </TableCell>
+                                <TableCell className="p-4">
                                   <div className="flex items-center justify-end gap-2">
                                     <Button
                                       variant="ghost"
@@ -1273,14 +1264,14 @@ export default function Dispatch() {
                                       </DropdownMenu>
                                     )}
                                   </div>
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             ))}
                         </>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               )}
             </div>
           </TabsContent>

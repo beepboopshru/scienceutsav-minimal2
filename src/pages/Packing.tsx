@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useAuth } from "@/hooks/use-auth";
+import { Check, X, Pencil } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -18,6 +20,15 @@ import { toast } from "sonner";
 import { Download, Eye, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Packing() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -51,6 +62,17 @@ export default function Packing() {
   // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const handleClearAllFilters = () => {
+    setSelectedPrograms([]);
+    setSelectedCategories([]);
+    setSelectedKits([]);
+    setSelectedClients([]);
+    setSelectedDispatchMonths([]);
+    setSelectedStatuses([]);
+    setSelectedProductionMonths([]);
+    setSelectedBatches([]);
+  };
   const [selectedKits, setSelectedKits] = useState<string[]>([]);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -110,13 +132,16 @@ export default function Packing() {
 
   const [editingPackingNotes, setEditingPackingNotes] = useState<Record<string, { isEditing: boolean; value: string }>>({});
 
+  // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
-    client: true,
+    program: true,
     kit: true,
+    client: true,
     quantity: true,
     grade: true,
     status: true,
     dispatchDate: true,
+    productionMonth: true,
     assignmentNotes: true,
     packingNotes: true,
   });
@@ -124,17 +149,19 @@ export default function Packing() {
   const toggleColumn = (columnId: string) => {
     setColumnVisibility((prev) => ({
       ...prev,
-      [columnId]: !prev[columnId as keyof typeof prev],
+      [columnId as keyof typeof prev]: !prev[columnId as keyof typeof prev],
     }));
   };
 
-  const packingColumns = [
-    { id: "client", label: "Client", visible: columnVisibility.client },
+  const columns = [
+    { id: "program", label: "Program", visible: columnVisibility.program },
     { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "client", label: "Client", visible: columnVisibility.client },
     { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
     { id: "grade", label: "Grade", visible: columnVisibility.grade },
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
     { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
     { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
   ];
@@ -591,8 +618,8 @@ export default function Packing() {
         <AssignmentFilters
           programs={programs || []}
           kits={kits || []}
-          clients={[...(clients || []), ...(b2cClients || [])]}
-          assignments={filteredAssignments}
+          clients={clients || []}
+          assignments={assignments || []}
           selectedPrograms={selectedPrograms}
           selectedCategories={selectedCategories}
           selectedKits={selectedKits}
@@ -607,20 +634,9 @@ export default function Packing() {
           onDispatchMonthsChange={setSelectedDispatchMonths}
           onStatusesChange={setSelectedStatuses}
           onProductionMonthsChange={setSelectedProductionMonths}
-          onClearAll={() => {
-            setSelectedPrograms([]);
-            setSelectedCategories([]);
-            setSelectedKits([]);
-            setSelectedClients([]);
-            setSelectedStatuses([]);
-            setSelectedBatches([]);
-            setSelectedDispatchMonths([]);
-            setSelectedProductionMonths([]);
-            setCustomerTypeFilter("all");
-            setPackingStatusFilter("all");
-            setSearchQuery("");
-          }}
+          onClearAll={handleClearAllFilters}
         />
+        <ColumnVisibility columns={columns} onToggle={toggleColumn} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -674,42 +690,22 @@ export default function Packing() {
         <div className="rounded-md border">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b bg-muted/50">
-                <tr>
-                  {canEdit && (
-                    <th className="px-4 py-3 text-left text-sm font-medium w-10">
-                      <Checkbox
-                        checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
-                          } else {
-                            setSelectedAssignments(new Set());
-                          }
-                        }}
-                      />
-                    </th>
-                  )}
-                  <th className="px-4 py-3 text-left text-sm font-medium w-10"></th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Customer Type</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Batch</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Client</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Program</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Kit</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Kit Category</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Quantity</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Grade</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Dispatch Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Production Month</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Created On</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Assignment Notes</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Packing Notes</th>
-                  {canEdit && <th className="px-4 py-3 text-left text-sm font-medium">Packing Status</th>}
-                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+              <TableHeader>
+                <TableRow>
+                  {columnVisibility.program && <TableHead>Program</TableHead>}
+                  {columnVisibility.kit && <TableHead>Kit</TableHead>}
+                  {columnVisibility.client && <TableHead>Client</TableHead>}
+                  {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
+                  {columnVisibility.grade && <TableHead>Grade</TableHead>}
+                  {columnVisibility.status && <TableHead>Status</TableHead>}
+                  {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
+                  {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
+                  {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
+                  {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
+                  {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
                   const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
                   const isExpanded = expandedBatches.has(batchKey);
@@ -734,111 +730,127 @@ export default function Packing() {
                         : "Unknown";
 
                       return (
-                        <motion.tr
-                          key={assignment._id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: index * 0.02 }}
-                          className="border-b hover:bg-muted/30"
-                        >
-                          {canEdit && (
-                            <td className="px-4 py-3">
-                              <Checkbox
-                                checked={selectedAssignments.has(assignment._id)}
-                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                              />
-                            </td>
+                        <TableRow key={assignment._id}>
+                          {columnVisibility.program && (
+                            <TableCell>
+                              <span className="text-sm">{program?.name || "—"}</span>
+                            </TableCell>
                           )}
-                          <td className="px-4 py-3"></td>
-                          <td className="px-4 py-3">
-                            <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
-                              {assignment.clientType?.toUpperCase() || "N/A"}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-sm">—</td>
-                          <td className="px-4 py-3 text-sm">{clientName}</td>
-                          <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
-                          <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
-                          <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
-                          <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
-                          <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant={
-                              assignment.status === "dispatched" ? "default" :
-                              assignment.status === "in_progress" ? "secondary" : "outline"
-                            }>
-                              {assignment.status}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {assignment.dispatchedAt 
-                              ? new Date(assignment.dispatchedAt).toLocaleDateString()
-                              : "—"}
-                          </td>
-                          <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
-                          <td className="px-4 py-3 text-sm">
-                            {new Date(assignment._creationTime).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
-                            {assignment.notes || "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            {editingPackingNotes[assignment._id]?.isEditing ? (
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  value={editingPackingNotes[assignment._id].value}
-                                  onChange={(e) => {
-                                    setEditingPackingNotes((prev) => ({
-                                      ...prev,
-                                      [assignment._id]: { isEditing: true, value: e.target.value },
-                                    }));
-                                  }}
-                                  placeholder="Add packing notes..."
-                                  className="h-8 text-sm"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSavePackingNotes(assignment._id)}
-                                  className="h-8"
-                                >
-                                  Save
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingPackingNotes((prev) => {
-                                      const newState = { ...prev };
-                                      delete newState[assignment._id];
-                                      return newState;
-                                    });
-                                  }}
-                                  className="h-8"
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 items-center">
-                                <span className="text-sm flex-1">{assignment.packingNotes || "—"}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingPackingNotes((prev) => ({
-                                      ...prev,
-                                      [assignment._id]: { isEditing: true, value: assignment.packingNotes || "" },
-                                    }));
-                                  }}
-                                  className="h-8"
-                                >
-                                  Edit
-                                </Button>
-                              </div>
-                            )}
-                          </td>
+                          {columnVisibility.kit && (
+                            <TableCell>
+                              <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.client && (
+                            <TableCell>
+                              <span className="text-sm">
+                                {assignment.clientType === "b2b"
+                                  ? clients?.find((c) => c._id === assignment.clientId)?.organization ||
+                                    clients?.find((c) => c._id === assignment.clientId)?.name
+                                  : b2cClients?.find((c) => c._id === assignment.clientId)?.buyerName}
+                              </span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.quantity && (
+                            <TableCell>
+                              <span className="text-sm">{assignment.quantity}</span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.grade && (
+                            <TableCell>
+                              <span className="text-sm">{assignment.grade}</span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.status && (
+                            <TableCell>
+                              <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
+                                {assignment.status}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {columnVisibility.dispatchDate && (
+                            <TableCell>
+                              <span className="text-sm">
+                                {assignment.dispatchedAt ? format(new Date(assignment.dispatchedAt), "MMM dd, yyyy") : "-"}
+                              </span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.productionMonth && (
+                            <TableCell>
+                              <span className="text-sm">
+                                {assignment.productionMonth
+                                  ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
+                                  : "-"}
+                              </span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.assignmentNotes && (
+                            <TableCell>
+                              <span className="text-sm text-muted-foreground">{assignment.notes || "-"}</span>
+                            </TableCell>
+                          )}
+                          {columnVisibility.packingNotes && (
+                            <TableCell>
+                              {editingPackingNotes[assignment._id]?.isEditing ? (
+                                <div className="flex gap-2 items-center">
+                                  <Input
+                                    value={editingPackingNotes[assignment._id].value}
+                                    onChange={(e) => {
+                                      setEditingPackingNotes((prev) => ({
+                                        ...prev,
+                                        [assignment._id]: { isEditing: true, value: e.target.value },
+                                      }));
+                                    }}
+                                    placeholder="Add packing notes..."
+                                    className="h-8 text-sm"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleSavePackingNotes(assignment._id)}
+                                    className="h-8"
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingPackingNotes((prev) => {
+                                        const newState = { ...prev };
+                                        delete newState[assignment._id];
+                                        return newState;
+                                      });
+                                    }}
+                                    className="h-8"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-sm flex-1">{assignment.packingNotes || "—"}</span>
+                                  {canEdit && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingPackingNotes((prev) => ({
+                                          ...prev,
+                                          [assignment._id]: { isEditing: true, value: assignment.packingNotes || "" },
+                                        }));
+                                      }}
+                                      className="h-8"
+                                    >
+                                      Edit
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </TableCell>
+                          )}
+
                           {canEdit && (
-                            <td className="px-4 py-3">
+                            <TableCell>
                               <Select
                                 value={assignment.status || "assigned"}
                                 onValueChange={async (value) => {
@@ -877,9 +889,9 @@ export default function Packing() {
                                   </SelectItem>
                                 </SelectContent>
                               </Select>
-                            </td>
+                            </TableCell>
                           )}
-                          <td className="px-4 py-3">
+                          <TableCell>
                             <div className="flex gap-2">
                               <Button
                                 variant="ghost"
@@ -906,8 +918,8 @@ export default function Packing() {
                                 <Download className="h-4 w-4" />
                               </Button>
                             </div>
-                          </td>
-                        </motion.tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     });
                   }
@@ -915,42 +927,36 @@ export default function Packing() {
                   // Render batch header row
                   return (
                     <>
-                      <motion.tr
-                        key={`batch-${batchKey}`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="border-b bg-muted/20 hover:bg-muted/40 cursor-pointer"
-                        onClick={() => toggleBatch(batchKey)}
-                      >
-                        <td className="px-4 py-3">
+                      <TableRow key={`batch-${batchKey}`}>
+                        <TableCell>
                           {isExpanded ? (
                             <ChevronDown className="h-4 w-4" />
                           ) : (
                             <ChevronRight className="h-4 w-4" />
                           )}
-                        </td>
-                        {canEdit && <td className="px-4 py-3"></td>}
-                        <td className="px-4 py-3">
+                        </TableCell>
+                        {canEdit && <TableCell></TableCell>}
+                        <TableCell>
                           <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
                             {firstAssignment.clientType?.toUpperCase() || "N/A"}
                           </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold">
+                        </TableCell>
+                        <TableCell className="text-sm font-semibold">
                           {batch?.batchId || "Unknown Batch"}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
+                        </TableCell>
+                        <TableCell className="text-sm">
                           {firstAssignment.clientType === "b2b" 
                             ? (client as any)?.name || "Unknown"
                             : (client as any)?.buyerName || "Unknown"}
-                        </td>
-                        <td className="px-4 py-3 text-sm" colSpan={2}>
+                        </TableCell>
+                        <TableCell className="text-sm" colSpan={2}>
                           {batchAssignments.length} assignment{batchAssignments.length !== 1 ? "s" : ""}
-                        </td>
-                        <td className="px-4 py-3 text-sm" colSpan={2}>
+                        </TableCell>
+                        <TableCell className="text-sm" colSpan={2}>
                           Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
-                        </td>
-                        <td colSpan={canEdit ? 7 : 6}></td>
-                      </motion.tr>
+                        </TableCell>
+                        <TableCell colSpan={canEdit ? 7 : 6}></TableCell>
+                      </TableRow>
                       {isExpanded && batchAssignments.map((assignment, index) => {
                         const kit = kits?.find((k) => k._id === assignment.kitId);
                         const program = kit ? programs?.find((p) => p._id === kit.programId) : null;
@@ -965,55 +971,49 @@ export default function Packing() {
                           : "Unknown";
 
                         return (
-                          <motion.tr
-                            key={assignment._id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: index * 0.02 }}
-                            className="border-b hover:bg-muted/30 bg-background"
-                          >
-                            <td className="px-4 py-3"></td>
+                          <TableRow key={assignment._id}>
+                            <TableCell></TableCell>
                             {canEdit && (
-                              <td className="px-4 py-3">
+                              <TableCell>
                                 <Checkbox
                                   checked={selectedAssignments.has(assignment._id)}
                                   onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
                                 />
-                              </td>
+                              </TableCell>
                             )}
-                            <td className="px-4 py-3">
+                            <TableCell>
                               <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
                                 {assignment.clientType?.toUpperCase() || "N/A"}
                               </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-sm">{batch?.batchId || "—"}</td>
-                            <td className="px-4 py-3 text-sm">{clientName}</td>
-                            <td className="px-4 py-3 text-sm">{program?.name || "—"}</td>
-                            <td className="px-4 py-3 text-sm">{kit?.name || "Unknown Kit"}</td>
-                            <td className="px-4 py-3 text-sm">{kit?.category || "—"}</td>
-                            <td className="px-4 py-3 text-sm">{assignment.quantity}</td>
-                            <td className="px-4 py-3 text-sm">{assignment.grade || "—"}</td>
-                            <td className="px-4 py-3">
+                            </TableCell>
+                            <TableCell className="text-sm">{batch?.batchId || "—"}</TableCell>
+                            <TableCell className="text-sm">{clientName}</TableCell>
+                            <TableCell className="text-sm">{program?.name || "—"}</TableCell>
+                            <TableCell className="text-sm">{kit?.name || "Unknown Kit"}</TableCell>
+                            <TableCell className="text-sm">{kit?.category || "—"}</TableCell>
+                            <TableCell className="text-sm">{assignment.quantity}</TableCell>
+                            <TableCell className="text-sm">{assignment.grade || "—"}</TableCell>
+                            <TableCell>
                               <Badge variant={
                                 assignment.status === "dispatched" ? "default" :
                                 assignment.status === "in_progress" ? "secondary" : "outline"
                               }>
                                 {assignment.status}
                               </Badge>
-                            </td>
-                            <td className="px-4 py-3 text-sm">
+                            </TableCell>
+                            <TableCell className="text-sm">
                               {assignment.dispatchedAt 
                                 ? new Date(assignment.dispatchedAt).toLocaleDateString()
                                 : "—"}
-                            </td>
-                            <td className="px-4 py-3 text-sm">{assignment.productionMonth || "—"}</td>
-                            <td className="px-4 py-3 text-sm">
+                            </TableCell>
+                            <TableCell className="text-sm">{assignment.productionMonth || "—"}</TableCell>
+                            <TableCell className="text-sm">
                               {new Date(assignment._creationTime).toLocaleDateString()}
-                            </td>
-                          <td className="px-4 py-3 text-sm max-w-[200px] truncate" title={assignment.notes}>
+                            </TableCell>
+                          <TableCell className="text-sm max-w-[200px] truncate" title={assignment.notes}>
                             {assignment.notes || "—"}
-                          </td>
-                          <td className="px-4 py-3">
+                          </TableCell>
+                          <TableCell>
                             {editingPackingNotes[assignment._id]?.isEditing ? (
                               <div className="flex gap-2 items-center">
                                 <Input
@@ -1067,9 +1067,9 @@ export default function Packing() {
                                 </Button>
                               </div>
                             )}
-                          </td>
+                          </TableCell>
                           {canEdit && (
-                              <td className="px-4 py-3">
+                              <TableCell>
                                 <Select
                                   value={assignment.status || "assigned"}
                                   onValueChange={async (value) => {
@@ -1108,9 +1108,9 @@ export default function Packing() {
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
-                              </td>
+                              </TableCell>
                             )}
-                            <td className="px-4 py-3">
+                            <TableCell>
                               <div className="flex gap-2">
                                 <Button
                                   variant="ghost"
@@ -1137,14 +1137,14 @@ export default function Packing() {
                                   <Download className="h-4 w-4" />
                                 </Button>
                               </div>
-                            </td>
-                          </motion.tr>
+                            </TableCell>
+                          </TableRow>
                         );
                       })}
                     </>
                   );
                 })}
-              </tbody>
+              </TableBody>
             </table>
           </div>
         </div>
