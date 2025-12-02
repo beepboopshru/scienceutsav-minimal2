@@ -570,12 +570,25 @@ export const notifyOperationsUsers = internalMutation({
 
     // Fetch kit and client information
     const kit = await ctx.db.get(assignment.kitId);
-    const client = assignment.clientType === "b2c"
-      ? await ctx.db.get(assignment.clientId as any)
-      : await ctx.db.get(assignment.clientId as any);
+    
+    // Query client by clientId string from the appropriate table
+    let client = null;
+    if (assignment.clientType === "b2c") {
+      client = await ctx.db
+        .query("b2cClients")
+        .filter((q) => q.eq(q.field("_id"), assignment.clientId))
+        .first();
+    } else {
+      client = await ctx.db
+        .query("clients")
+        .filter((q) => q.eq(q.field("_id"), assignment.clientId))
+        .first();
+    }
 
     const kitName = kit?.name || "Unknown Kit";
-    const clientName = (client as any)?.name || "Unknown Client";
+    const clientName = assignment.clientType === "b2c"
+      ? (client as any)?.buyerName || "Unknown Client"
+      : (client as any)?.name || (client as any)?.organization || "Unknown Client";
 
     // Get all operations users with notification permission
     const allUsers = await ctx.db.query("users").collect();
