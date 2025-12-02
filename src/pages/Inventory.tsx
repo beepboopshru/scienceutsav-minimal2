@@ -1024,7 +1024,7 @@ export default function Inventory() {
                     <TableHead>Unit</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Vendor Info</TableHead>
+                    {activeTab !== "finished" && <TableHead>Vendor Info</TableHead>}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1104,20 +1104,22 @@ export default function Inventory() {
                           )
                         )}
                       </TableCell>
-                      <TableCell>
-                        {item.type !== "pre_processed" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedItemForVendors(item);
-                              setVendorInfoOpen(true);
-                            }}
-                          >
-                            View
-                          </Button>
-                        )}
-                      </TableCell>
+                      {activeTab !== "finished" && (
+                        <TableCell>
+                          {item.type !== "pre_processed" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedItemForVendors(item);
+                                setVendorInfoOpen(true);
+                              }}
+                            >
+                              View
+                            </Button>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex gap-1">
                             <>
