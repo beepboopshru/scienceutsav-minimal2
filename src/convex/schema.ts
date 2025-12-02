@@ -111,7 +111,7 @@ const schema = defineSchema(
         v.literal("to_be_made")
       )),
       tags: v.optional(v.array(v.string())),
-      notes: v.optional(v.string()),
+      notes: v.optional(v.string()), // Assignment notes
       isStructured: v.optional(v.boolean()),
       packingRequirements: v.optional(v.string()),
       spareKits: v.optional(v.array(v.object({
@@ -295,6 +295,8 @@ const schema = defineSchema(
       v.literal("delivered")
     ),
       notes: v.optional(v.string()),
+      packingNotes: v.optional(v.string()),
+      dispatchNotes: v.optional(v.string()),
       remarks: v.optional(v.string()),
       dispatchedAt: v.optional(v.number()),
       deliveredAt: v.optional(v.number()),
@@ -732,6 +734,8 @@ const schema = defineSchema(
       ),
       deliveredAt: v.optional(v.number()),
       notes: v.optional(v.string()),
+      packingNotes: v.optional(v.string()),
+      dispatchNotes: v.optional(v.string()),
       remarks: v.optional(v.string()),
       originalAssignmentId: v.id("assignments"),
     })

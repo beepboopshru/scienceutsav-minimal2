@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // List all order history records
@@ -83,6 +83,8 @@ export const createFromAssignment = mutation({
       status: assignment.status as "dispatched" | "delivered",
       deliveredAt: assignment.deliveredAt,
       notes: assignment.notes,
+      packingNotes: assignment.packingNotes,
+      dispatchNotes: assignment.dispatchNotes,
       originalAssignmentId: args.assignmentId,
     });
 
@@ -97,6 +99,44 @@ export const createFromAssignment = mutation({
     });
 
     return orderHistoryId;
+  },
+});
+
+export const createOrderHistoryRecord = internalMutation({
+  args: {
+    assignmentId: v.id("assignments"),
+    dispatchedBy: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) {
+      throw new Error("Assignment not found");
+    }
+
+    const kit = await ctx.db.get(assignment.kitId);
+    if (!kit) {
+      throw new Error("Kit not found");
+    }
+
+    await ctx.db.insert("orderHistory", {
+      kitId: assignment.kitId,
+      clientId: assignment.clientId,
+      clientType: assignment.clientType,
+      quantity: assignment.quantity,
+      grade: assignment.grade,
+      productionMonth: assignment.productionMonth,
+      batchId: assignment.batchId,
+      dispatchedAt: Date.now(),
+      dispatchedBy: args.dispatchedBy,
+      status: "dispatched",
+      notes: assignment.notes,
+      packingNotes: assignment.packingNotes,
+      dispatchNotes: assignment.dispatchNotes,
+      remarks: assignment.remarks,
+      originalAssignmentId: args.assignmentId,
+    });
+
+    await ctx.db.delete(args.assignmentId);
   },
 });
 
