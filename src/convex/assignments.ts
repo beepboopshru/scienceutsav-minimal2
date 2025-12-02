@@ -211,6 +211,42 @@ export const updateRemarks = mutation({
   },
 });
 
+export const updatePackingNotes = mutation({
+  args: {
+    id: v.id("assignments"),
+    packingNotes: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const canUpdate = await hasPermission(ctx, userId, "assignments", "updatePackingNotes");
+    if (!canUpdate) throw new Error("Permission denied");
+
+    await ctx.db.patch(args.id, {
+      packingNotes: args.packingNotes,
+    });
+  },
+});
+
+export const updateDispatchNotes = mutation({
+  args: {
+    id: v.id("assignments"),
+    dispatchNotes: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const canUpdate = await hasPermission(ctx, userId, "assignments", "updateDispatchNotes");
+    if (!canUpdate) throw new Error("Permission denied");
+
+    await ctx.db.patch(args.id, {
+      dispatchNotes: args.dispatchNotes,
+    });
+  },
+});
+
 export const deleteAssignment = mutation({
   args: { id: v.id("assignments") },
   handler: async (ctx, args) => {
