@@ -915,12 +915,19 @@ export function Layout({ children }: LayoutProps) {
                                 )}
                                 <Button
                                   variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
+                                  size="sm"
                                   onClick={async (e) => {
                                     e.stopPropagation();
-                                    await deleteNotification({ notificationId: notification._id });
-                                    toast.success("Notification deleted");
+                                    try {
+                                      await deleteNotification({ notificationId: notification._id });
+                                      toast.success("Notification deleted");
+                                    } catch (error) {
+                                      // Silently handle if notification was already deleted
+                                      if (error instanceof Error && error.message.includes("not found")) {
+                                        return;
+                                      }
+                                      toast.error("Failed to delete notification");
+                                    }
                                   }}
                                 >
                                   <Trash2 className="h-4 w-4" />

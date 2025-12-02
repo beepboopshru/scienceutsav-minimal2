@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, Calendar } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -404,14 +404,14 @@ export function AssignmentFilters({
               <Label>Production Month</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between">
+                  <Button variant="outline" className="h-9 justify-start text-left font-normal">
+                    <Calendar className="mr-2 h-4 w-4" />
                     {selectedProductionMonths.length > 0
-                      ? `${selectedProductionMonths.length} selected`
-                      : "Select months"}
-                    <ChevronDown className="ml-2 h-4 w-4" />
+                      ? `${selectedProductionMonths.length} month${selectedProductionMonths.length !== 1 ? "s" : ""}`
+                      : "Production Month"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
+                <PopoverContent className="w-[200px] p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search months..." />
                     <CommandList>
@@ -421,17 +421,18 @@ export function AssignmentFilters({
                           <CommandItem
                             key={month}
                             onSelect={() => {
-                              const newSelection = selectedProductionMonths.includes(month)
-                                ? selectedProductionMonths.filter((m) => m !== month)
-                                : [...selectedProductionMonths, month];
-                              onProductionMonthsChange(newSelection);
+                              onProductionMonthsChange(
+                                selectedProductionMonths.includes(month)
+                                  ? selectedProductionMonths.filter((m) => m !== month)
+                                  : [...selectedProductionMonths, month]
+                              );
                             }}
                           >
                             <Checkbox
                               checked={selectedProductionMonths.includes(month)}
                               className="mr-2"
                             />
-                            {format(new Date(month + "-01"), "MMM yyyy")}
+                            {month}
                           </CommandItem>
                         ))}
                       </CommandGroup>
