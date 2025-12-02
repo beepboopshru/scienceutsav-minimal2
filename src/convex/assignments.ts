@@ -220,7 +220,7 @@ export const updatePackingNotes = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const canUpdate = await hasPermission(ctx, userId, "assignments", "updatePackingNotes");
+    const canUpdate = await hasPermission(ctx, userId, "packing", "edit");
     if (!canUpdate) throw new Error("Permission denied");
 
     await ctx.db.patch(args.id, {
@@ -238,7 +238,7 @@ export const updateDispatchNotes = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const canUpdate = await hasPermission(ctx, userId, "assignments", "updateDispatchNotes");
+    const canUpdate = await hasPermission(ctx, userId, "dispatch", "edit");
     if (!canUpdate) throw new Error("Permission denied");
 
     await ctx.db.patch(args.id, {
