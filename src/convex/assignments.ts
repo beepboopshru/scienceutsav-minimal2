@@ -568,6 +568,15 @@ export const notifyOperationsUsers = internalMutation({
     const assignment = await ctx.db.get(args.assignmentId);
     if (!assignment) return;
 
+    // Fetch kit and client information
+    const kit = await ctx.db.get(assignment.kitId);
+    const client = assignment.clientType === "b2c"
+      ? await ctx.db.get(assignment.clientId as any)
+      : await ctx.db.get(assignment.clientId as any);
+
+    const kitName = kit?.name || "Unknown Kit";
+    const clientName = (client as any)?.name || "Unknown Client";
+
     // Get all operations users with notification permission
     const allUsers = await ctx.db.query("users").collect();
     const operationsUsers = allUsers.filter((user) => user.role === "operations");
@@ -586,7 +595,7 @@ export const notifyOperationsUsers = internalMutation({
         await ctx.db.insert("notifications", {
           userId: user._id,
           type: "new_assignment",
-          message: `New assignment created`,
+          message: `New assignment: ${kitName} for ${clientName}`,
           relatedId: args.assignmentId,
           read: false,
         });
