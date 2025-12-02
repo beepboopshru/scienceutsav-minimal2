@@ -108,6 +108,30 @@ export default function Packing() {
     kitName: "",
   });
 
+  const [editingPackingNotes, setEditingPackingNotes] = useState<Record<string, { isEditing: boolean; value: string }>>({});
+
+  const handleSavePackingNotes = async (assignmentId: Id<"assignments">) => {
+    const editState = editingPackingNotes[assignmentId];
+    if (!editState) return;
+
+    try {
+      await updatePackingNotes({
+        id: assignmentId,
+        packingNotes: editState.value,
+      });
+      toast.success("Packing notes updated successfully");
+      setEditingPackingNotes((prev) => {
+        const newState = { ...prev };
+        delete newState[assignmentId];
+        return newState;
+      });
+    } catch (error) {
+      toast.error("Failed to update packing notes", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
   const { hasPermission } = usePermissions();
   const canView = hasPermission("packing", "view");
   const canEdit = hasPermission("packing", "edit");
@@ -730,22 +754,59 @@ export default function Packing() {
                             {assignment.notes || "—"}
                           </td>
                           <td className="px-4 py-3">
-                            <Input
-                              defaultValue={assignment.packingNotes || ""}
-                              onBlur={async (e) => {
-                                try {
-                                  await updatePackingNotes({
-                                    id: assignment._id,
-                                    packingNotes: e.target.value,
-                                  });
-                                  toast.success("Packing notes updated");
-                                } catch (error) {
-                                  toast.error("Failed to update packing notes");
-                                }
-                              }}
-                              placeholder="Add packing notes..."
-                              className="h-8 text-sm"
-                            />
+                            {editingPackingNotes[assignment._id]?.isEditing ? (
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  value={editingPackingNotes[assignment._id].value}
+                                  onChange={(e) => {
+                                    setEditingPackingNotes((prev) => ({
+                                      ...prev,
+                                      [assignment._id]: { isEditing: true, value: e.target.value },
+                                    }));
+                                  }}
+                                  placeholder="Add packing notes..."
+                                  className="h-8 text-sm"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSavePackingNotes(assignment._id)}
+                                  className="h-8"
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingPackingNotes((prev) => {
+                                      const newState = { ...prev };
+                                      delete newState[assignment._id];
+                                      return newState;
+                                    });
+                                  }}
+                                  className="h-8"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 items-center">
+                                <span className="text-sm flex-1">{assignment.packingNotes || "—"}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingPackingNotes((prev) => ({
+                                      ...prev,
+                                      [assignment._id]: { isEditing: true, value: assignment.packingNotes || "" },
+                                    }));
+                                  }}
+                                  className="h-8"
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                            )}
                           </td>
                           {canEdit && (
                             <td className="px-4 py-3">
@@ -924,22 +985,59 @@ export default function Packing() {
                             {assignment.notes || "—"}
                           </td>
                           <td className="px-4 py-3">
-                            <Input
-                              defaultValue={assignment.packingNotes || ""}
-                              onBlur={async (e) => {
-                                try {
-                                  await updatePackingNotes({
-                                    id: assignment._id,
-                                    packingNotes: e.target.value,
-                                  });
-                                  toast.success("Packing notes updated");
-                                } catch (error) {
-                                  toast.error("Failed to update packing notes");
-                                }
-                              }}
-                              placeholder="Add packing notes..."
-                              className="h-8 text-sm"
-                            />
+                            {editingPackingNotes[assignment._id]?.isEditing ? (
+                              <div className="flex gap-2 items-center">
+                                <Input
+                                  value={editingPackingNotes[assignment._id].value}
+                                  onChange={(e) => {
+                                    setEditingPackingNotes((prev) => ({
+                                      ...prev,
+                                      [assignment._id]: { isEditing: true, value: e.target.value },
+                                    }));
+                                  }}
+                                  placeholder="Add packing notes..."
+                                  className="h-8 text-sm"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSavePackingNotes(assignment._id)}
+                                  className="h-8"
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setEditingPackingNotes((prev) => {
+                                      const newState = { ...prev };
+                                      delete newState[assignment._id];
+                                      return newState;
+                                    });
+                                  }}
+                                  className="h-8"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-2 items-center">
+                                <span className="text-sm flex-1">{assignment.packingNotes || "—"}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingPackingNotes((prev) => ({
+                                      ...prev,
+                                      [assignment._id]: { isEditing: true, value: assignment.packingNotes || "" },
+                                    }));
+                                  }}
+                                  className="h-8"
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                            )}
                           </td>
                           {canEdit && (
                               <td className="px-4 py-3">
