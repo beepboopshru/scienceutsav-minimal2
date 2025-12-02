@@ -808,20 +808,20 @@ export default function Dispatch() {
 
   return (
     <Layout>
-      <div className="flex flex-col h-screen">
-        <div className="p-6 border-b bg-background">
+      <div className="flex flex-col h-[calc(100vh-4rem)]">
+        <div className="flex-shrink-0 p-4 border-b bg-background">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Dispatch Operations</h1>
-              <p className="text-muted-foreground">Manage kit dispatch and delivery</p>
+              <h1 className="text-2xl font-bold">Dispatch Operations</h1>
+              <p className="text-sm text-muted-foreground">Manage kit dispatch and delivery</p>
             </div>
             <ColumnVisibility columns={columns} onToggle={toggleColumn} />
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden px-6 pb-6">
-          <Card className="h-full">
-            <CardContent className="p-0 h-full overflow-auto">
+        <div className="flex-1 overflow-hidden p-4">
+          <Card className="h-full flex flex-col">
+            <CardContent className="p-0 flex-1 overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="text-xs">
