@@ -404,14 +404,14 @@ export function AssignmentFilters({
               <Label>Production Month</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-9 justify-start text-left font-normal">
-                    <Calendar className="mr-2 h-4 w-4" />
+                  <Button variant="outline" className="w-full justify-between">
                     {selectedProductionMonths.length > 0
-                      ? `${selectedProductionMonths.length} month${selectedProductionMonths.length !== 1 ? "s" : ""}`
-                      : "Production Month"}
+                      ? `${selectedProductionMonths.length} selected`
+                      : "Select months"}
+                    <ChevronDown className="ml-2 h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0" align="start">
+                <PopoverContent className="w-[300px] p-0">
                   <Command>
                     <CommandInput placeholder="Search months..." />
                     <CommandList>
@@ -421,11 +421,10 @@ export function AssignmentFilters({
                           <CommandItem
                             key={month}
                             onSelect={() => {
-                              onProductionMonthsChange(
-                                selectedProductionMonths.includes(month)
-                                  ? selectedProductionMonths.filter((m) => m !== month)
-                                  : [...selectedProductionMonths, month]
-                              );
+                              const newSelection = selectedProductionMonths.includes(month)
+                                ? selectedProductionMonths.filter((m) => m !== month)
+                                : [...selectedProductionMonths, month];
+                              onProductionMonthsChange(newSelection);
                             }}
                           >
                             <Checkbox
