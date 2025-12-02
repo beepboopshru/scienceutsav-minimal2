@@ -50,6 +50,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ColumnVisibility } from "@/components/ui/column-visibility";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -146,34 +149,49 @@ export default function Dispatch() {
   const [customDispatchSearchQuery, setCustomDispatchSearchQuery] = useState("");
   const [customDispatchStatusFilter, setCustomDispatchStatusFilter] = useState<string>("all");
 
+  // Add column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
-    customer: true,
+    customerType: true,
+    batch: true,
+    client: true,
+    program: true,
     kit: true,
+    kitCategory: true,
     quantity: true,
     grade: true,
     status: true,
     dispatchDate: true,
+    productionMonth: true,
+    createdOn: true,
     assignmentNotes: true,
     packingNotes: true,
+    dispatchNotes: true,
     remarks: true,
   });
 
   const toggleColumn = (columnId: string) => {
     setColumnVisibility((prev) => ({
       ...prev,
-      [columnId]: !prev[columnId as keyof typeof prev],
+      [columnId as keyof typeof prev]: !prev[columnId as keyof typeof prev],
     }));
   };
 
-  const dispatchColumns = [
-    { id: "customer", label: "Customer", visible: columnVisibility.customer },
+  const columns = [
+    { id: "customerType", label: "Customer Type", visible: columnVisibility.customerType },
+    { id: "batch", label: "Batch", visible: columnVisibility.batch },
+    { id: "client", label: "Client", visible: columnVisibility.client },
+    { id: "program", label: "Program", visible: columnVisibility.program },
     { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "kitCategory", label: "Kit Category", visible: columnVisibility.kitCategory },
     { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
     { id: "grade", label: "Grade", visible: columnVisibility.grade },
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
+    { id: "createdOn", label: "Created On", visible: columnVisibility.createdOn },
     { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
     { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
     { id: "remarks", label: "Remarks", visible: columnVisibility.remarks },
   ];
 
@@ -790,266 +808,430 @@ export default function Dispatch() {
 
   return (
     <Layout>
-      <div className="p-8 max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dispatch Management</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage assignments ready for dispatch
-            </p>
+      <div className="flex flex-col h-screen">
+        <div className="p-6 border-b bg-background">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Dispatch Operations</h1>
+              <p className="text-muted-foreground">Manage kit dispatch and delivery</p>
+            </div>
+            <ColumnVisibility columns={columns} onToggle={toggleColumn} />
           </div>
         </div>
 
-        <Tabs defaultValue="assignments" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="assignments">Assignments</TabsTrigger>
-            <TabsTrigger value="custom">Custom Dispatches</TabsTrigger>
-          </TabsList>
+        <div className="flex-1 overflow-hidden px-6 pb-6">
+          <Card className="h-full">
+            <CardContent className="p-0 h-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="text-xs">
+                    {canEdit && <TableHead className="w-12">Select</TableHead>}
+                    {columnVisibility.customerType && <TableHead>Customer Type</TableHead>}
+                    {columnVisibility.batch && <TableHead>Batch</TableHead>}
+                    {columnVisibility.client && <TableHead>Client</TableHead>}
+                    {columnVisibility.program && <TableHead>Program</TableHead>}
+                    {columnVisibility.kit && <TableHead>Kit</TableHead>}
+                    {columnVisibility.kitCategory && <TableHead>Kit Category</TableHead>}
+                    {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
+                    {columnVisibility.grade && <TableHead>Grade</TableHead>}
+                    {columnVisibility.status && <TableHead>Status</TableHead>}
+                    {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
+                    {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
+                    {columnVisibility.createdOn && <TableHead>Created On</TableHead>}
+                    {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
+                    {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
+                    {columnVisibility.dispatchNotes && <TableHead>Dispatch Notes</TableHead>}
+                    {columnVisibility.remarks && <TableHead>Remarks</TableHead>}
+                    {canEdit && <TableHead>Dispatch Status</TableHead>}
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="text-xs">
+                  {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
+                    const isExpanded = expandedBatches.has(batchKey);
+                    const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
+                    const totalQty = batchAssignments.reduce((sum, a) => sum + a.quantity, 0);
 
-          <TabsContent value="assignments">
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 border rounded-lg bg-card">
-                <div className="text-sm text-muted-foreground mb-1">Total Assignments</div>
-                <div className="text-2xl font-bold">{filteredAssignments.length}</div>
-              </div>
-              <div className="p-4 border rounded-lg bg-card">
-                <div className="text-sm text-muted-foreground mb-1">Total Quantity</div>
-                <div className="text-2xl font-bold">{totalQuantity}</div>
-              </div>
-              <div className="p-4 border rounded-lg bg-card">
-                <div className="text-sm text-muted-foreground mb-1">Selected</div>
-                <div className="text-2xl font-bold">{selectedAssignments.size}</div>
-              </div>
-            </div>
-
-            {/* Filters */}
-            <div className="space-y-4 mb-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by kit name or client name..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-                <Select value={customerTypeFilter} onValueChange={(v: any) => setCustomerTypeFilter(v)}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Customer Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="b2b">B2B</SelectItem>
-                    <SelectItem value="b2c">B2C</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <AssignmentFilters
-                programs={programs || []}
-                kits={kits || []}
-                clients={[...(clients || []), ...(b2cClients || [])]}
-                assignments={assignments || []}
-                selectedPrograms={selectedPrograms}
-                selectedCategories={selectedKitCategories}
-                selectedKits={selectedKits}
-                selectedClients={selectedClients}
-                selectedDispatchMonths={selectedDispatchMonths}
-                selectedStatuses={selectedStatuses}
-                selectedProductionMonths={selectedProductionMonths}
-                onProgramsChange={setSelectedPrograms}
-                onCategoriesChange={setSelectedKitCategories}
-                onKitsChange={setSelectedKits}
-                onClientsChange={setSelectedClients}
-                onDispatchMonthsChange={setSelectedDispatchMonths}
-                onStatusesChange={setSelectedStatuses}
-                onProductionMonthsChange={setSelectedProductionMonths}
-                onClearAll={handleClearAllFilters}
-              />
-
-              <Button variant="outline" onClick={handleClearAllFilters}>
-                Clear All Filters
-              </Button>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="default" 
-                  onClick={() => setClientDetailsDialogOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Client Details Generator
-                </Button>
-                <Button 
-                  variant="default" 
-                  onClick={() => setBoxContentDialogOpen(true)}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-4 w-4" />
-                  Box Content Generator
-                </Button>
-              </div>
-            </div>
-
-            {/* Assignments Table */}
-            <div className="border rounded-lg overflow-x-auto">
-              {!filteredAssignments ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : filteredAssignments.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  No assignments ready for dispatch.
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr className="border-b">
-                      {canEdit && (
-                        <th className="text-left p-4 font-semibold w-12">
-                          <Checkbox
-                            checked={selectedAssignments.size === filteredAssignments.length && filteredAssignments.length > 0}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedAssignments(new Set(filteredAssignments.map((a) => a._id)));
-                              } else {
-                                setSelectedAssignments(new Set());
-                              }
-                            }}
-                          />
-                        </th>
-                      )}
-                      {columnVisibility.customer && <th className="text-left p-4 font-semibold">Customer</th>}
-                      {columnVisibility.kit && <th className="text-left p-4 font-semibold">Kit</th>}
-                      {columnVisibility.quantity && <th className="text-left p-4 font-semibold">Quantity</th>}
-                      {columnVisibility.grade && <th className="text-left p-4 font-semibold">Grade</th>}
-                      {columnVisibility.status && <th className="text-left p-4 font-semibold">Status</th>}
-                      {columnVisibility.dispatchDate && <th className="text-left p-4 font-semibold">Dispatch Date</th>}
-                      {columnVisibility.assignmentNotes && <th className="text-left p-4 font-semibold min-w-[200px]">Assignment Notes</th>}
-                      {columnVisibility.packingNotes && <th className="text-left p-4 font-semibold min-w-[200px]">Packing Notes</th>}
-                      {columnVisibility.remarks && <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>}
-                      <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(groupedAssignments).map(([batchKey, batchAssignments]) => {
-                      const isExpanded = expandedBatches.has(batchKey);
-                      const batch = batchKey !== "standalone" ? batches?.find((b) => b._id === batchKey) : null;
-                      const totalQty = batchAssignments.reduce((sum, a) => sum + a.quantity, 0);
-
-                      if (batchKey === "standalone") {
-                        return batchAssignments.map((assignment) => (
-                          <tr key={assignment._id} className="border-b hover:bg-muted/30">
-                            {canEdit && (
-                              <td className="p-4">
-                                <Checkbox
-                                  checked={selectedAssignments.has(assignment._id)}
-                                  onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                                />
-                              </td>
+                    if (batchKey === "standalone") {
+                      return batchAssignments.map((assignment) => (
+                        <TableRow key={assignment._id} className="border-b hover:bg-muted/30">
+                          {canEdit && (
+                            <TableCell className="p-4">
+                              <Checkbox
+                                checked={selectedAssignments.has(assignment._id)}
+                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                              />
+                            </TableCell>
+                          )}
+                          {columnVisibility.customerType && <TableCell className="p-4">
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {assignment.clientType === "b2b"
+                                  ? (assignment.client as any)?.organization || (assignment.client as any)?.name
+                                  : (assignment.client as any)?.buyerName}
+                              </span>
+                              <Badge variant="outline" className="w-fit mt-1">
+                                {assignment.clientType?.toUpperCase() || "N/A"}
+                              </Badge>
+                            </div>
+                          </TableCell>}
+                          {columnVisibility.batch && <TableCell className="p-4">
+                            {batch?.batchId || "N/A"}
+                          </TableCell>}
+                          {columnVisibility.client && <TableCell className="p-4">
+                            {assignment.clientType === "b2b"
+                              ? (assignment.client as any)?.organization || (assignment.client as any)?.name
+                              : (assignment.client as any)?.buyerName}
+                          </TableCell>}
+                          {columnVisibility.program && <TableCell className="p-4">
+                            {assignment.program?.name || "N/A"}
+                          </TableCell>}
+                          {columnVisibility.kit && <TableCell className="p-4">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{assignment.kit?.name}</span>
+                              {assignment.kit?.category && (
+                                <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
+                              )}
+                            </div>
+                          </TableCell>}
+                          {columnVisibility.kitCategory && <TableCell className="p-4">
+                            {assignment.kit?.category || "N/A"}
+                          </TableCell>}
+                          {columnVisibility.quantity && <TableCell className="p-4">{assignment.quantity}</TableCell>}
+                          {columnVisibility.grade && <TableCell className="p-4">
+                            {assignment.grade ? (
+                              <Badge variant="outline">Grade {assignment.grade}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
                             )}
-                            <td className="p-4">
-                              <div className="flex flex-col">
-                                <span className="font-medium">
-                                  {assignment.clientType === "b2b"
-                                    ? (assignment.client as any)?.organization || (assignment.client as any)?.name
-                                    : (assignment.client as any)?.buyerName}
-                                </span>
-                                <Badge variant="outline" className="w-fit mt-1">
-                                  {assignment.clientType?.toUpperCase() || "N/A"}
-                                </Badge>
+                          </TableCell>}
+                          {columnVisibility.status && <TableCell className="p-4">
+                            <Badge variant={
+                              assignment.status === "dispatched" ? "default" : 
+                              assignment.status === "delivered" ? "default" : 
+                              "secondary"
+                            }>
+                              {assignment.status}
+                            </Badge>
+                          </TableCell>}
+                          {columnVisibility.dispatchDate && <TableCell className="p-4">
+                            {assignment.dispatchedAt
+                              ? new Date(assignment.dispatchedAt).toLocaleDateString()
+                              : "-"}
+                          </TableCell>}
+                          {columnVisibility.productionMonth && <TableCell className="p-4">
+                            {assignment.productionMonth || "N/A"}
+                          </TableCell>}
+                          {columnVisibility.createdOn && <TableCell className="p-4">
+                            {new Date(assignment._creationTime).toLocaleDateString()}
+                          </TableCell>}
+                          {columnVisibility.assignmentNotes && <TableCell className="p-4">
+                            <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                              {assignment.notes || <span className="text-muted-foreground italic">No assignment notes</span>}
+                            </div>
+                          </TableCell>}
+                          {columnVisibility.packingNotes && <TableCell className="p-4">
+                            <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                              {assignment.packingNotes || <span className="text-muted-foreground italic">No packing notes</span>}
+                            </div>
+                          </TableCell>}
+                          {columnVisibility.dispatchNotes && <TableCell className="p-4">
+                            <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                              {assignment.dispatchNotes || <span className="text-muted-foreground italic">No dispatch notes</span>}
+                            </div>
+                          </TableCell>}
+                          {columnVisibility.remarks && <TableCell className="p-4">
+                            {editingRemarks[assignment._id] !== undefined ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                                  rows={2}
+                                  value={editingRemarks[assignment._id]}
+                                  onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
+                                  placeholder="Add remarks..."
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="default"
+                                    onClick={() => handleSaveRemarks(assignment._id)}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleCancelEditingRemarks(assignment._id)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
                               </div>
-                            </td>
-                            <td className="p-4">
-                              <div className="flex flex-col">
-                                <span className="font-medium">{assignment.kit?.name}</span>
-                                {assignment.kit?.category && (
-                                  <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
+                            ) : (
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
+                                  {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
+                                </div>
+                                {canEdit && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
+                                  >
+                                    Edit
+                                  </Button>
                                 )}
                               </div>
-                            </td>
-                            <td className="p-4">{assignment.quantity}</td>
-                            <td className="p-4">
-                              {assignment.grade ? (
-                                <Badge variant="outline">Grade {assignment.grade}</Badge>
+                            )}
+                          </TableCell>}
+                          {canEdit && <TableCell className="p-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  Change Status
+                                  <ChevronDown className="ml-2 h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                  disabled={assignment.status === "transferred_to_dispatch"}
+                                >
+                                  Transferred to Dispatch
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
+                                  disabled={assignment.status === "ready_for_dispatch"}
+                                >
+                                  Ready for Dispatch
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                  disabled={assignment.status === "dispatched"}
+                                >
+                                  Dispatched
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                  disabled={assignment.status === "delivered"}
+                                >
+                                  Delivered
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>}
+                          <TableCell className="p-4 text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewClient(assignment)}
+                              title="View Client Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    }
+
+                    return (
+                      <>
+                        <TableRow
+                          key={`batch-${batchKey}`}
+                          className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
+                          onClick={() => toggleBatch(batchKey)}
+                        >
+                          {canEdit && (
+                            <TableCell className="p-4">
+                              {isExpanded ? (
+                                <ChevronDown className="h-5 w-5" />
                               ) : (
-                                <span className="text-muted-foreground text-sm">-</span>
+                                <ChevronRight className="h-5 w-5" />
                               )}
-                            </td>
-                            <td className="p-4">
-                              <Badge variant={
-                                assignment.status === "dispatched" ? "default" : 
-                                assignment.status === "delivered" ? "default" : 
-                                "secondary"
-                              }>
-                                {assignment.status}
-                              </Badge>
-                            </td>
-                            <td className="p-4">
-                              {assignment.dispatchedAt
-                                ? new Date(assignment.dispatchedAt).toLocaleDateString()
-                                : "-"}
-                            </td>
-                            <td className="p-4">
-                              <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
-                                {assignment.notes || <span className="text-muted-foreground italic">No assignment notes</span>}
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
-                                {assignment.packingNotes || <span className="text-muted-foreground italic">No packing notes</span>}
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              {editingRemarks[assignment._id] !== undefined ? (
-                                <div className="space-y-2">
-                                  <textarea
-                                    className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                                    rows={2}
-                                    value={editingRemarks[assignment._id]}
-                                    onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
-                                    placeholder="Add remarks..."
-                                  />
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleSaveRemarks(assignment._id)}
-                                    >
-                                      Save
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleCancelEditingRemarks(assignment._id)}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
+                            </TableCell>
+                          )}
+                          <TableCell colSpan={canEdit ? 10 : 11} className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <span className="font-semibold">Batch: {batch?.batchId || batchKey}</span>
+                                  <span className="text-sm text-muted-foreground ml-4">
+                                    {batchAssignments.length} assignments • {totalQty} total quantity
+                                  </span>
                                 </div>
-                              ) : (
-                                <div className="flex items-start gap-2">
-                                  <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
-                                    {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
-                                  </div>
-                                  {canEdit && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
-                                    >
-                                      Edit
-                                    </Button>
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded &&
+                          batchAssignments.map((assignment) => (
+                            <TableRow key={assignment._id} className="border-b hover:bg-muted/30">
+                              {canEdit && (
+                                <TableCell className="p-4">
+                                  <Checkbox
+                                    checked={selectedAssignments.has(assignment._id)}
+                                    onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                  />
+                                </TableCell>
+                              )}
+                              {columnVisibility.customerType && <TableCell className="p-4 pl-12">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {assignment.clientType === "b2b"
+                                      ? (assignment.client as any)?.organization || (assignment.client as any)?.name
+                                      : (assignment.client as any)?.buyerName}
+                                  </span>
+                                  <Badge variant="outline" className="w-fit mt-1">
+                                    {assignment.clientType?.toUpperCase() || "N/A"}
+                                  </Badge>
+                                </div>
+                              </TableCell>}
+                              {columnVisibility.batch && <TableCell className="p-4">
+                                {batch?.batchId || "N/A"}
+                              </TableCell>}
+                              {columnVisibility.client && <TableCell className="p-4">
+                                {assignment.clientType === "b2b"
+                                  ? (assignment.client as any)?.organization || (assignment.client as any)?.name
+                                  : (assignment.client as any)?.buyerName}
+                              </TableCell>}
+                              {columnVisibility.program && <TableCell className="p-4">
+                                {assignment.program?.name || "N/A"}
+                              </TableCell>}
+                              {columnVisibility.kit && <TableCell className="p-4">
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{assignment.kit?.name}</span>
+                                  {assignment.kit?.category && (
+                                    <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
                                   )}
                                 </div>
-                              )}
-                            </td>
-                            <td className="p-4">
-                              <div className="flex items-center justify-end gap-2">
+                              </TableCell>}
+                              {columnVisibility.kitCategory && <TableCell className="p-4">
+                                {assignment.kit?.category || "N/A"}
+                              </TableCell>}
+                              {columnVisibility.quantity && <TableCell className="p-4">{assignment.quantity}</TableCell>}
+                              {columnVisibility.grade && <TableCell className="p-4">
+                                {assignment.grade ? (
+                                  <Badge variant="outline">Grade {assignment.grade}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </TableCell>}
+                              {columnVisibility.status && <TableCell className="p-4">
+                                <Badge variant={
+                                  assignment.status === "dispatched" ? "default" : 
+                                  assignment.status === "delivered" ? "default" : 
+                                  "secondary"
+                                }>
+                                  {assignment.status}
+                                </Badge>
+                              </TableCell>}
+                              {columnVisibility.dispatchDate && <TableCell className="p-4">
+                                {assignment.dispatchedAt
+                                  ? new Date(assignment.dispatchedAt).toLocaleDateString()
+                                  : "-"}
+                              </TableCell>}
+                              {columnVisibility.productionMonth && <TableCell className="p-4">
+                                {assignment.productionMonth || "N/A"}
+                              </TableCell>}
+                              {columnVisibility.createdOn && <TableCell className="p-4">
+                                {new Date(assignment._creationTime).toLocaleDateString()}
+                              </TableCell>}
+                              {columnVisibility.assignmentNotes && <TableCell className="p-4">
+                                <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                                  {assignment.notes || <span className="text-muted-foreground italic">No assignment notes</span>}
+                                </div>
+                              </TableCell>}
+                              {columnVisibility.packingNotes && <TableCell className="p-4">
+                                <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                                  {assignment.packingNotes || <span className="text-muted-foreground italic">No packing notes</span>}
+                                </div>
+                              </TableCell>}
+                              {columnVisibility.dispatchNotes && <TableCell className="p-4">
+                                <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                                  {assignment.dispatchNotes || <span className="text-muted-foreground italic">No dispatch notes</span>}
+                                </div>
+                              </TableCell>}
+                              {columnVisibility.remarks && <TableCell className="p-4">
+                                {editingRemarks[assignment._id] !== undefined ? (
+                                  <div className="space-y-2">
+                                    <textarea
+                                      className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
+                                      rows={2}
+                                      value={editingRemarks[assignment._id]}
+                                      onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
+                                      placeholder="Add remarks..."
+                                    />
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => handleSaveRemarks(assignment._id)}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleCancelEditingRemarks(assignment._id)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-2">
+                                    <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
+                                      {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
+                                    </div>
+                                    {canEdit && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
+                                      >
+                                        Edit
+                                      </Button>
+                                    )}
+                                  </div>
+                                )}
+                              </TableCell>}
+                              {canEdit && <TableCell className="p-4">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="sm">
+                                      Change Status
+                                      <ChevronDown className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
+                                      disabled={assignment.status === "transferred_to_dispatch"}
+                                    >
+                                      Transferred to Dispatch
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
+                                      disabled={assignment.status === "ready_for_dispatch"}
+                                    >
+                                      Ready for Dispatch
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "dispatched")}
+                                      disabled={assignment.status === "dispatched"}
+                                    >
+                                      Dispatched
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => handleStatusChange(assignment._id, "delivered")}
+                                      disabled={assignment.status === "delivered"}
+                                    >
+                                      Delivered
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>}
+                              <TableCell className="p-4 text-right">
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1058,1331 +1240,17 @@ export default function Dispatch() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {canEdit && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm">
-                                        Change Status
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                        disabled={assignment.status === "transferred_to_dispatch"}
-                                      >
-                                        Transferred to Dispatch
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
-                                        disabled={assignment.status === "ready_for_dispatch"}
-                                      >
-                                        Ready for Dispatch
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                        disabled={assignment.status === "dispatched"}
-                                      >
-                                        Dispatched
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                        disabled={assignment.status === "delivered"}
-                                      >
-                                        Delivered
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ));
-                      }
-
-                      return (
-                        <>
-                          <tr
-                            key={`batch-${batchKey}`}
-                            className="bg-muted/20 border-b cursor-pointer hover:bg-muted/40"
-                            onClick={() => toggleBatch(batchKey)}
-                          >
-                            {canEdit && (
-                              <td className="p-4">
-                                {isExpanded ? (
-                                  <ChevronDown className="h-5 w-5" />
-                                ) : (
-                                  <ChevronRight className="h-5 w-5" />
-                                )}
-                              </td>
-                            )}
-                            <td colSpan={canEdit ? 10 : 11} className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div>
-                                    <span className="font-semibold">Batch: {batch?.batchId || batchKey}</span>
-                                    <span className="text-sm text-muted-foreground ml-4">
-                                      {batchAssignments.length} assignments • {totalQty} total quantity
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                          {isExpanded &&
-                            batchAssignments.map((assignment) => (
-                              <tr key={assignment._id} className="border-b hover:bg-muted/30">
-                                {canEdit && (
-                                  <td className="p-4">
-                                    <Checkbox
-                                      checked={selectedAssignments.has(assignment._id)}
-                                      onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                                    />
-                                  </td>
-                                )}
-                                <td className="p-4 pl-12">
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">
-                                      {assignment.clientType === "b2b"
-                                        ? (assignment.client as any)?.organization || (assignment.client as any)?.name
-                                        : (assignment.client as any)?.buyerName}
-                                    </span>
-                                    <Badge variant="outline" className="w-fit mt-1">
-                                      {assignment.clientType?.toUpperCase() || "N/A"}
-                                    </Badge>
-                                  </div>
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{assignment.kit?.name}</span>
-                                    {assignment.kit?.category && (
-                                      <span className="text-xs text-muted-foreground">{assignment.kit.category}</span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="p-4">{assignment.quantity}</td>
-                                <td className="p-4">
-                                  {assignment.grade ? (
-                                    <Badge variant="outline">Grade {assignment.grade}</Badge>
-                                  ) : (
-                                    <span className="text-muted-foreground text-sm">-</span>
-                                  )}
-                                </td>
-                                <td className="p-4">
-                                  <Badge variant={
-                                    assignment.status === "dispatched" ? "default" : 
-                                    assignment.status === "delivered" ? "default" : 
-                                    "secondary"
-                                  }>
-                                    {assignment.status}
-                                  </Badge>
-                                </td>
-                                <td className="p-4">
-                                  {assignment.dispatchedAt
-                                    ? new Date(assignment.dispatchedAt).toLocaleDateString()
-                                    : "-"}
-                                </td>
-                                <td className="p-4">
-                                  {editingRemarks[assignment._id] !== undefined ? (
-                                    <div className="space-y-2">
-                                      <textarea
-                                        className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                                        rows={2}
-                                        value={editingRemarks[assignment._id]}
-                                        onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
-                                        placeholder="Add remarks..."
-                                      />
-                                      <div className="flex gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="default"
-                                          onClick={() => handleSaveRemarks(assignment._id)}
-                                        >
-                                          Save
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleCancelEditingRemarks(assignment._id)}
-                                        >
-                                          Cancel
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-start gap-2">
-                                      <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
-                                        {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
-                                      </div>
-                                      {canEdit && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
-                                        >
-                                          Edit
-                                        </Button>
-                                      )}
-                                    </div>
-                                  )}
-                                </td>
-                                <td className="p-4">
-                                  <div className="flex items-center justify-end gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => handleViewClient(assignment)}
-                                      title="View Client Details"
-                                    >
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    {canEdit && (
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                          <Button variant="outline" size="sm">
-                                            Change Status
-                                            <ChevronDown className="ml-2 h-4 w-4" />
-                                          </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem
-                                            onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                            disabled={assignment.status === "transferred_to_dispatch"}
-                                          >
-                                            Transferred to Dispatch
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
-                                            disabled={assignment.status === "ready_for_dispatch"}
-                                          >
-                                            Ready for Dispatch
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                            disabled={assignment.status === "dispatched"}
-                                          >
-                                            Dispatched
-                                          </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                            disabled={assignment.status === "delivered"}
-                                          >
-                                            Delivered
-                                          </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                        </>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="custom">
-            {/* Create Custom Dispatch Form */}
-            <div className="border rounded-lg p-6 mb-6 bg-card">
-              <h2 className="text-xl font-semibold mb-4">Create Custom Dispatch</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="custom-description">Description *</Label>
-                  <Input
-                    id="custom-description"
-                    placeholder="Enter dispatch description..."
-                    value={customDispatchDescription}
-                    onChange={(e) => setCustomDispatchDescription(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="custom-recipient">Recipient Name</Label>
-                  <Input
-                    id="custom-recipient"
-                    placeholder="Enter recipient name..."
-                    value={customDispatchRecipientName}
-                    onChange={(e) => setCustomDispatchRecipientName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="custom-tracking">Tracking Number</Label>
-                  <Input
-                    id="custom-tracking"
-                    placeholder="Enter tracking number..."
-                    value={customDispatchTrackingNumber}
-                    onChange={(e) => setCustomDispatchTrackingNumber(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="custom-status">Status</Label>
-                  <Select value={customDispatchStatus} onValueChange={(v: any) => setCustomDispatchStatus(v)}>
-                    <SelectTrigger id="custom-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="dispatched">Dispatched</SelectItem>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="custom-remarks">Remarks</Label>
-                  <Input
-                    id="custom-remarks"
-                    placeholder="Enter remarks..."
-                    value={customDispatchRemarks}
-                    onChange={(e) => setCustomDispatchRemarks(e.target.value)}
-                  />
-                </div>
-              </div>
-              <Button onClick={() => createCustomDispatch({
-                description: customDispatchDescription,
-                status: customDispatchStatus,
-                recipientName: customDispatchRecipientName || undefined,
-                trackingNumber: customDispatchTrackingNumber || undefined,
-                remarks: customDispatchRemarks || undefined,
-              })} className="mt-4" disabled={!canEdit}>
-                Create Custom Dispatch
-              </Button>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by description, recipient, or tracking number..."
-                    value={customDispatchSearchQuery}
-                    onChange={(e) => setCustomDispatchSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-              </div>
-              <Select value={customDispatchStatusFilter} onValueChange={setCustomDispatchStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="dispatched">Dispatched</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Dispatches Table */}
-            <div className="border rounded-lg overflow-x-auto">
-              {!customDispatches ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : customDispatches.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  No custom dispatches found.
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr className="border-b">
-                      <th className="text-left p-4 font-semibold">Date</th>
-                      <th className="text-left p-4 font-semibold">Description</th>
-                      <th className="text-left p-4 font-semibold">Recipient</th>
-                      <th className="text-left p-4 font-semibold">Tracking Number</th>
-                      <th className="text-left p-4 font-semibold">Status</th>
-                      <th className="text-left p-4 font-semibold">Created By</th>
-                      <th className="text-left p-4 font-semibold">Remarks</th>
-                      {canEdit && <th className="text-right p-4 font-semibold">Actions</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customDispatches.map((dispatch: any) => (
-                      <tr key={dispatch._id} className="border-b hover:bg-muted/30">
-                        <td className="p-4">
-                          {new Date(dispatch._creationTime).toLocaleDateString()}
-                        </td>
-                        <td className="p-4">{dispatch.description}</td>
-                        <td className="p-4">{dispatch.recipientName || "-"}</td>
-                        <td className="p-4">{dispatch.trackingNumber || "-"}</td>
-                        <td className="p-4">
-                          {canEdit ? (
-                            <Select
-                              value={dispatch.status}
-                              onValueChange={(v: any) => updateCustomDispatchStatus({
-                                id: dispatch._id,
-                                status: v as "pending" | "dispatched" | "delivered"
-                              })}
-                            >
-                              <SelectTrigger className="w-[140px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="dispatched">Dispatched</SelectItem>
-                                <SelectItem value="delivered">Delivered</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge
-                              variant={
-                                dispatch.status === "delivered"
-                                  ? "default"
-                                  : dispatch.status === "dispatched"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                            >
-                              {dispatch.status}
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="p-4">{dispatch.createdByName}</td>
-                        <td className="p-4">{dispatch.remarks || "-"}</td>
-                        {canEdit && (
-                          <td className="p-4 text-right">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => deleteCustomDispatch({ id: dispatch._id })}
-                              disabled={!canEdit}
-                            >
-                              Delete
-                            </Button>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        {/* View Client Dialog */}
-        <Dialog open={viewClientDialogOpen} onOpenChange={setViewClientDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Dispatch & Client Details</DialogTitle>
-              <DialogDescription>
-                {selectedClientForView?.organization || selectedClientForView?.buyerName || selectedClientForView?.name}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-6">
-              {/* Dispatch Information Section */}
-              {selectedClientForView && (
-                  <div className="border rounded-lg p-4 bg-muted/30">
-                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Dispatch Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(selectedClientForView as any).ewayNumber && (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground">E-Way Number</span>
-                          <div className="text-base">{(selectedClientForView as any).ewayNumber}</div>
-                        </div>
-                      )}
-                      {(selectedClientForView as any).dispatchNumber && (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground">Dispatch Number</span>
-                          <div className="text-base">{(selectedClientForView as any).dispatchNumber}</div>
-                        </div>
-                      )}
-                      {(selectedClientForView as any).ewayDocumentId && ewayDocUrl && (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground">E-Way Document</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(ewayDocUrl, '_blank')}
-                            className="mt-1"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Document
-                          </Button>
-                        </div>
-                      )}
-                      {(selectedClientForView as any).dispatchDocumentId && dispatchDocUrl && (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground">Dispatch Document</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(dispatchDocUrl, '_blank')}
-                            className="mt-1"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Document
-                          </Button>
-                        </div>
-                      )}
-                      {(selectedClientForView as any).trackingLink && (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground">Tracking Link</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open((selectedClientForView as any).trackingLink, '_blank')}
-                            className="mt-1"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Track Shipment
-                          </Button>
-                        </div>
-                      )}
-                      {(selectedClientForView as any).proofPhotoId && proofPhotoUrl && (
-                        <div className="space-y-1">
-                          <span className="text-sm font-medium text-muted-foreground">Proof Photo</span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(proofPhotoUrl, '_blank')}
-                            className="mt-1"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            View Photo
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    {!(selectedClientForView as any).ewayNumber && 
-                     !(selectedClientForView as any).dispatchNumber && 
-                     !(selectedClientForView as any).ewayDocumentId && 
-                     !(selectedClientForView as any).dispatchDocumentId && (
-                      <p className="text-sm text-muted-foreground italic">No dispatch information available yet</p>
-                    )}
-                  </div>
-              )}
-
-              {/* Client Information Section */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Client Information
-                </h3>
-                <div className="space-y-3">
-                  {selectedClientForView?.organization && (
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Organization:</span>
-                      <span>{selectedClientForView.organization}</span>
-                    </div>
-                  )}
-                  {selectedClientForView?.contact && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Phone:</span>
-                      <span>{selectedClientForView.contact}</span>
-                    </div>
-                  )}
-                  {selectedClientForView?.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Phone:</span>
-                      <span>{selectedClientForView.phone}</span>
-                    </div>
-                  )}
-                  {selectedClientForView?.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Email:</span>
-                      <span>{selectedClientForView.email}</span>
-                    </div>
-                  )}
-                  {selectedClientForView?.address && (
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <span className="font-medium">Address:</span>
-                        <div className="text-sm mt-1">
-                          <div>{selectedClientForView.address.line1}</div>
-                          {selectedClientForView.address.line2 && <div>{selectedClientForView.address.line2}</div>}
-                          {selectedClientForView.address.line3 && <div>{selectedClientForView.address.line3}</div>}
-                          <div>{selectedClientForView.address.state} - {selectedClientForView.address.pincode}</div>
-                          <div>{selectedClientForView.address.country}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {selectedClientForView?.salesPerson && (
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Sales Person:</span>
-                      <span>{selectedClientForView.salesPerson}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setViewClientDialogOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Dispatch Checklist Dialog */}
-        <Dialog open={checklistDialogOpen} onOpenChange={setChecklistDialogOpen}>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Ready for Dispatch Checklist</DialogTitle>
-              <DialogDescription>
-                Please verify all items before marking as ready for dispatch
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="kitCount"
-                  checked={checklistItems.kitCount}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, kitCount: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="kitCount" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Kit count verified
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="bulkMaterials"
-                  checked={checklistItems.bulkMaterials}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, bulkMaterials: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="bulkMaterials" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Bulk materials included
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="workbookWorksheetConceptMap"
-                  checked={checklistItems.workbookWorksheetConceptMap}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, workbookWorksheetConceptMap: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="workbookWorksheetConceptMap" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Workbook, worksheet, concept map included
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="spareKitsTools"
-                  checked={checklistItems.spareKitsTools}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, spareKitsTools: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="spareKitsTools" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Spare kits and tools included
-                </Label>
-              </div>
-
-              <div className="space-y-2 pt-4 border-t">
-                <Label htmlFor="ewayNumber">E-Way Number *</Label>
-                <Input
-                  id="ewayNumber"
-                  placeholder="Enter e-way number..."
-                  value={ewayNumber}
-                  onChange={(e) => setEwayNumber(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="ewayDocument">E-Way Document (PNG/JPEG/WEBP) *</Label>
-                <Input
-                  id="ewayDocument"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-                      if (!validTypes.includes(file.type)) {
-                        toast.error('Please upload a PNG, JPEG, or WEBP file');
-                        e.target.value = '';
-                        return;
-                      }
-                      setEwayDocument(file);
-                    }
-                  }}
-                />
-                {ewayDocument && (
-                  <p className="text-xs text-muted-foreground">
-                    Selected: {ewayDocument.name} (will be converted to WebP)
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dispatchNumber">Dispatch Number *</Label>
-                <Input
-                  id="dispatchNumber"
-                  placeholder="Enter dispatch number..."
-                  value={dispatchNumber}
-                  onChange={(e) => setDispatchNumber(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dispatchDocument">Dispatch Document (PNG/JPEG/WEBP) *</Label>
-                <Input
-                  id="dispatchDocument"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-                      if (!validTypes.includes(file.type)) {
-                        toast.error('Please upload a PNG, JPEG, or WEBP file');
-                        e.target.value = '';
-                        return;
-                      }
-                      setDispatchDocument(file);
-                    }
-                  }}
-                />
-                {dispatchDocument && (
-                  <p className="text-xs text-muted-foreground">
-                    Selected: {dispatchDocument.name} (will be converted to WebP)
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="trackingLink">Tracking Link (Optional)</Label>
-                <Input
-                  id="trackingLink"
-                  type="url"
-                  placeholder="Enter tracking URL..."
-                  value={trackingLink}
-                  onChange={(e) => setTrackingLink(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setChecklistDialogOpen(false);
-                setEwayNumber("");
-                setEwayDocument(null);
-                setDispatchNumber("");
-                setDispatchDocument(null);
-                setTrackingLink("");
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={handleConfirmDispatch} disabled={isUploadingDocument}>
-                {isUploadingDocument ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  "Confirm Ready for Dispatch"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Box Content Generator Dialog */}
-        <Dialog open={boxContentDialogOpen} onOpenChange={setBoxContentDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Generate Box Content Labels</DialogTitle>
-              <DialogDescription>
-                Add kit details to generate printable box content labels (max 2 kits per page)
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              {boxKits.map((kit, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">Kit {index + 1}</h4>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const newKits = boxKits.filter((_, i) => i !== index);
-                        setBoxKits(newKits);
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Kit Name Combobox */}
-                    <div className="space-y-2">
-                      <Label>Kit Name</Label>
-                      <Popover 
-                        open={kitComboboxOpen[index]} 
-                        onOpenChange={(open) => setKitComboboxOpen({ ...kitComboboxOpen, [index]: open })}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                          >
-                            {kit.kitId ? kits?.find((k) => k._id === kit.kitId)?.name || "Select kit..." : "Select kit..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search kits..." />
-                            <CommandList>
-                              <CommandEmpty>No kit found.</CommandEmpty>
-                              <CommandGroup>
-                                {(kits || []).map((k) => (
-                                  <CommandItem
-                                    key={k._id}
-                                    value={k.name}
-                                    onSelect={() => {
-                                      const newKits = [...boxKits];
-                                      newKits[index].kitId = k._id;
-                                      setBoxKits(newKits);
-                                      setKitComboboxOpen({ ...kitComboboxOpen, [index]: false });
-                                    }}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        kit.kitId === k._id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    {k.name}
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Client Name Combobox */}
-                    <div className="space-y-2">
-                      <Label>Client Name</Label>
-                      <Popover 
-                        open={clientComboboxOpenBox[index]} 
-                        onOpenChange={(open) => setClientComboboxOpenBox({ ...clientComboboxOpenBox, [index]: open })}
-                      >
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between"
-                          >
-                            {kit.clientId ? (() => {
-                              const allClients = [...(clients || []), ...(b2cClients || [])];
-                              const client = allClients.find((c) => c._id === kit.clientId);
-                              return client ? ((client as any).organization || (client as any).buyerName || (client as any).name) : "Select client...";
-                            })() : "Select client..."}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search clients..." />
-                            <CommandList>
-                              <CommandEmpty>No client found.</CommandEmpty>
-                              <CommandGroup>
-                                {[...(clients || []), ...(b2cClients || [])].map((c) => {
-                                  const clientName = (c as any).organization || (c as any).buyerName || (c as any).name || "";
-                                  return (
-                                    <CommandItem
-                                      key={c._id}
-                                      value={clientName}
-                                      onSelect={() => {
-                                        const newKits = [...boxKits];
-                                        newKits[index].clientId = c._id;
-                                        setBoxKits(newKits);
-                                        setClientComboboxOpenBox({ ...clientComboboxOpenBox, [index]: false });
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          kit.clientId === c._id ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {clientName}
-                                    </CommandItem>
-                                  );
-                                })}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    {/* Phase */}
-                    <div className="space-y-2">
-                      <Label>Phase</Label>
-                      <Input
-                        value={kit.phase}
-                        onChange={(e) => {
-                          const newKits = [...boxKits];
-                          newKits[index].phase = e.target.value;
-                          setBoxKits(newKits);
-                        }}
-                        placeholder="Enter phase..."
-                      />
-                    </div>
-
-                    {/* Class */}
-                    <div className="space-y-2">
-                      <Label>Class</Label>
-                      <Input
-                        value={kit.class}
-                        onChange={(e) => {
-                          const newKits = [...boxKits];
-                          newKits[index].class = e.target.value;
-                          setBoxKits(newKits);
-                        }}
-                        placeholder="Enter class..."
-                      />
-                    </div>
-
-                    {/* Section */}
-                    <div className="space-y-2">
-                      <Label>Section</Label>
-                      <Input
-                        value={kit.section}
-                        onChange={(e) => {
-                          const newKits = [...boxKits];
-                          newKits[index].section = e.target.value;
-                          setBoxKits(newKits);
-                        }}
-                        placeholder="Enter section..."
-                      />
-                    </div>
-
-                    {/* Quantity */}
-                    <div className="space-y-2">
-                      <Label>Quantity</Label>
-                      <Input
-                        type="number"
-                        value={kit.quantity}
-                        onChange={(e) => {
-                          const newKits = [...boxKits];
-                          newKits[index].quantity = parseInt(e.target.value) || 0;
-                          setBoxKits(newKits);
-                        }}
-                        placeholder="Enter quantity..."
-                      />
-                    </div>
-
-                    {/* Remarks */}
-                    <div className="space-y-2 col-span-2">
-                      <Label>Remarks</Label>
-                      <Input
-                        value={kit.remarks}
-                        onChange={(e) => {
-                          const newKits = [...boxKits];
-                          newKits[index].remarks = e.target.value;
-                          setBoxKits(newKits);
-                        }}
-                        placeholder="Enter remarks..."
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (boxKits.length >= 2) {
-                    toast.error("Maximum 2 kits allowed per box content generator");
-                    return;
-                  }
-                  setBoxKits([...boxKits, {
-                    kitId: "",
-                    clientId: "",
-                    phase: "",
-                    class: "",
-                    section: "",
-                    quantity: 0,
-                    remarks: ""
-                  }]);
-                }}
-                className="w-full"
-                disabled={boxKits.length >= 2}
-              >
-                Add Kit {boxKits.length >= 2 ? "(Maximum reached)" : ""}
-              </Button>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setBoxContentDialogOpen(false);
-                setBoxKits([]);
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                if (boxKits.length === 0) {
-                  toast.error("Please add at least one kit");
-                  return;
-                }
-
-                // Generate HTML pages (2 kits per page)
-                const pages: string[] = [];
-                for (let i = 0; i < boxKits.length; i += 2) {
-                  const kitsOnPage = boxKits.slice(i, i + 2);
-                  
-                const pageHtml = `
-                  <!DOCTYPE html>
-                  <html>
-                    <head>
-                      <meta charset="UTF-8">
-                      <title>Box Content - Page ${Math.floor(i / 2) + 1}</title>
-                      <style>
-                        @page {
-                          size: A4 portrait;
-                          margin: 0;
-                        }
-                        * {
-                          margin: 0;
-                          padding: 0;
-                          box-sizing: border-box;
-                        }
-                        body {
-                          font-family: Arial, sans-serif;
-                          width: 210mm;
-                          height: 297mm;
-                          padding: 15mm;
-                          display: flex;
-                          flex-direction: column;
-                        }
-                        .page-header {
-                          text-align: center;
-                          margin-bottom: 20px;
-                        }
-                        .page-header img {
-                          max-width: 200px;
-                          height: auto;
-                        }
-                        .kits-container {
-                          flex: 1;
-                          display: flex;
-                          flex-direction: column;
-                          gap: 20px;
-                        }
-                        .kit-box {
-                          border: 3px solid #000;
-                          padding: 15px;
-                          flex: 1;
-                          display: flex;
-                          flex-direction: column;
-                          gap: 12px;
-                        }
-                        .field-row {
-                          display: flex;
-                          gap: 10px;
-                        }
-                        .field {
-                          border: 2px solid #333;
-                          padding: 10px;
-                          flex: 1;
-                        }
-                        .field-label {
-                          font-weight: bold;
-                          font-size: 24px;
-                          color: #666;
-                          margin-bottom: 5px;
-                        }
-                        .field-value {
-                          font-size: 28px;
-                          min-height: 20px;
-                        }
-                        @media print {
-                          body {
-                            print-color-adjust: exact;
-                            -webkit-print-color-adjust: exact;
-                          }
-                        }
-                      </style>
-                    </head>
-                    <body>
-                      <div class="page-header">
-                        <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
-                      </div>
-                      
-                      <div class="kits-container">
-                        ${kitsOnPage.map((kit, idx) => {
-                          const kitData = kits?.find((k) => k._id === kit.kitId);
-                          const allClients = [...(clients || []), ...(b2cClients || [])];
-                          const clientData = allClients.find((c) => c._id === kit.clientId);
-                          const clientName = clientData ? ((clientData as any).organization || (clientData as any).buyerName || (clientData as any).name) : "";
-                          
-                          return `
-                            <div class="kit-box">
-                              <div class="field-row">
-                                <div class="field">
-                                  <div class="field-label">Kit Name</div>
-                                  <div class="field-value">${kitData?.name || ""}</div>
-                                </div>
-                                <div class="field">
-                                  <div class="field-label">Client Name</div>
-                                  <div class="field-value">${clientName}</div>
-                                </div>
-                              </div>
-                              
-                              <div class="field-row">
-                                <div class="field">
-                                  <div class="field-label">Phase</div>
-                                  <div class="field-value">${kit.phase}</div>
-                                </div>
-                                <div class="field">
-                                  <div class="field-label">Class</div>
-                                  <div class="field-value">${kit.class}</div>
-                                </div>
-                                <div class="field">
-                                  <div class="field-label">Section</div>
-                                  <div class="field-value">${kit.section}</div>
-                                </div>
-                              </div>
-                              
-                              <div class="field-row">
-                                <div class="field">
-                                  <div class="field-label">Quantity</div>
-                                  <div class="field-value">${kit.quantity}</div>
-                                </div>
-                              </div>
-                              
-                              <div class="field">
-                                <div class="field-label">Remarks</div>
-                                <div class="field-value">${kit.remarks}</div>
-                              </div>
-                            </div>
-                          `;
-                        }).join('')}
-                      </div>
-                    </body>
-                  </html>
-                  `;
-                  
-                  pages.push(pageHtml);
-                }
-
-                // Open all pages in new windows
-                pages.forEach((pageHtml, index) => {
-                  const printWindow = window.open('', '_blank');
-                  if (printWindow) {
-                    printWindow.document.write(pageHtml);
-                    printWindow.document.close();
-                    printWindow.focus();
-                    setTimeout(() => {
-                      printWindow.print();
-                    }, 250 * (index + 1));
-                  }
-                });
-
-                toast.success(`Generated ${pages.length} page(s) for ${boxKits.length} kit(s)`);
-                setBoxContentDialogOpen(false);
-                setBoxKits([]);
-              }}>
-                Generate & Print
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Proof Photo Dialog */}
-        <Dialog open={proofPhotoDialogOpen} onOpenChange={setProofPhotoDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Upload Proof Photo</DialogTitle>
-              <DialogDescription>
-                Please upload a proof photo before marking as dispatched
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="proofPhoto">Proof Photo (PNG/JPEG/WEBP) *</Label>
-                <Input
-                  id="proofPhoto"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-                      if (!validTypes.includes(file.type)) {
-                        toast.error('Please upload a PNG, JPEG, or WEBP file');
-                        e.target.value = '';
-                        return;
-                      }
-                      setProofPhoto(file);
-                    }
-                  }}
-                />
-                {proofPhoto && (
-                  <p className="text-xs text-muted-foreground">
-                    Selected: {proofPhoto.name} (will be converted to WebP)
-                  </p>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setProofPhotoDialogOpen(false);
-                setProofPhoto(null);
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={handleConfirmProofPhoto} disabled={isUploadingProof}>
-                {isUploadingProof ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  "Confirm Dispatched"
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Client Details Generator Dialog */}
-        <Dialog open={clientDetailsDialogOpen} onOpenChange={setClientDetailsDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Generate Client Address Label</DialogTitle>
-              <DialogDescription>
-                Select a client and point of contact to generate an A5 address label
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="client-select">Select Client</Label>
-                <Popover open={clientComboboxOpen} onOpenChange={setClientComboboxOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={clientComboboxOpen}
-                      className="w-full justify-between"
-                    >
-                      {selectedClientForLabel ? (() => {
-                        const allClients = [...(clients || []), ...(b2cClients || [])];
-                        const client = allClients.find((c) => c._id === selectedClientForLabel);
-                        if (!client) return "Select client...";
-                        const clientName = (client as any).organization || (client as any).buyerName || (client as any).name || "";
-                        const clientType = clients?.some((c) => c._id === selectedClientForLabel) ? "B2B" : "B2C";
-                        return `${clientName} (${clientType})`;
-                      })() : "Select client..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search clients..." />
-                      <CommandList>
-                        <CommandEmpty>No client found.</CommandEmpty>
-                        <CommandGroup>
-                          {[...(clients || []), ...(b2cClients || [])].map((client) => {
-                            const clientName = (client as any).organization || (client as any).buyerName || (client as any).name || "";
-                            const clientType = clients?.some((c) => c._id === client._id) ? "B2B" : "B2C";
-                            return (
-                              <CommandItem
-                                key={client._id}
-                                value={`${clientName} ${clientType}`}
-                                onSelect={() => {
-                                  setSelectedClientForLabel(client._id);
-                                  setSelectedPOC("");
-                                  setClientComboboxOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedClientForLabel === client._id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span>{clientName}</span>
-                                  <span className="text-xs text-muted-foreground">{clientType}</span>
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {selectedClientForLabel && (() => {
-                const allClients = [...(clients || []), ...(b2cClients || [])];
-                const client = allClients.find((c) => c._id === selectedClientForLabel);
-                const pocs = client?.pointsOfContact || [];
-                
-                return pocs.length > 0 ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="poc-select">Select Point of Contact</Label>
-                    <Select value={selectedPOC} onValueChange={setSelectedPOC}>
-                      <SelectTrigger id="poc-select">
-                        <SelectValue placeholder="Choose a POC..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {pocs.map((poc: any, index: number) => (
-                          <SelectItem key={index} value={poc.name}>
-                            {poc.name}{poc.designation ? ` - ${poc.designation}` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded">
-                    This client has no points of contact configured.
-                  </div>
-                );
-              })()}
-
-              <div className="space-y-2">
-                <Label htmlFor="customer-id">Customer ID (Optional)</Label>
-                <Input
-                  id="customer-id"
-                  placeholder="Enter customer ID..."
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setClientDetailsDialogOpen(false);
-                setSelectedClientForLabel("");
-                setSelectedPOC("");
-                setCustomerId("");
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={handleGenerateClientLabel}>
-                Generate Label
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );
