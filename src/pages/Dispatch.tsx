@@ -898,6 +898,8 @@ export default function Dispatch() {
                       <th className="text-left p-4 font-semibold">Grade</th>
                       <th className="text-left p-4 font-semibold">Status</th>
                       <th className="text-left p-4 font-semibold">Dispatch Date</th>
+                      <th className="text-left p-4 font-semibold min-w-[200px]">Assignment Notes</th>
+                      <th className="text-left p-4 font-semibold min-w-[200px]">Packing Notes</th>
                       <th className="text-left p-4 font-semibold min-w-[250px]">Remarks</th>
                       <th className="text-right p-4 font-semibold min-w-[200px]">Actions</th>
                     </tr>
@@ -960,6 +962,16 @@ export default function Dispatch() {
                               {assignment.dispatchedAt
                                 ? new Date(assignment.dispatchedAt).toLocaleDateString()
                                 : "-"}
+                            </td>
+                            <td className="p-4">
+                              <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                                {assignment.notes || <span className="text-muted-foreground italic">No assignment notes</span>}
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
+                                {assignment.packingNotes || <span className="text-muted-foreground italic">No packing notes</span>}
+                              </div>
                             </td>
                             <td className="p-4">
                               {editingRemarks[assignment._id] !== undefined ? (
@@ -1073,7 +1085,7 @@ export default function Dispatch() {
                                 )}
                               </td>
                             )}
-                            <td colSpan={canEdit ? 8 : 9} className="p-4">
+                            <td colSpan={canEdit ? 10 : 11} className="p-4">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                   <div>
