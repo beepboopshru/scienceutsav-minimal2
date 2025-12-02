@@ -731,20 +731,14 @@ export default function Packing() {
                           </td>
                           <td className="px-4 py-3">
                             <Input
-                              value={assignment.packingNotes || ""}
-                              onChange={(e) => {
-                                const updatePackingNotesMutation = useMutation(api.assignments.updatePackingNotes);
-                                updatePackingNotesMutation({
-                                  id: assignment._id,
-                                  packingNotes: e.target.value,
-                                });
-                              }}
+                              defaultValue={assignment.packingNotes || ""}
                               onBlur={async (e) => {
                                 try {
                                   await updatePackingNotes({
                                     id: assignment._id,
                                     packingNotes: e.target.value,
                                   });
+                                  toast.success("Packing notes updated");
                                 } catch (error) {
                                   toast.error("Failed to update packing notes");
                                 }
