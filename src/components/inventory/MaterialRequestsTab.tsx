@@ -10,13 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Trash2, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Plus, Search, Trash2, CheckCircle, XCircle, Clock, Package } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/hooks/use-permissions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export function MaterialRequestsTab() {
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [isCreateItemDialogOpen, setIsCreateItemDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<Array<{
     inventoryId: Id<"inventory">;
@@ -27,11 +31,29 @@ export function MaterialRequestsTab() {
   }>>([]);
   const [purpose, setPurpose] = useState("");
 
+  // Create Item Form State
+  const [itemForm, setItemForm] = useState({
+    name: "",
+    description: "",
+    type: "raw" as "raw" | "pre_processed" | "finished" | "sealed_packet",
+    quantity: 0,
+    unit: "",
+    minStockLevel: 0,
+    location: "",
+    notes: "",
+    subcategory: "",
+    vendorId: "" as Id<"vendors"> | "",
+  });
+  const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+
   const inventory = useQuery(api.inventory.list);
   const requestsData = useQuery(api.materialRequests.list);
   const createRequest = useMutation(api.materialRequests.create);
   const approveRequest = useMutation(api.materialRequests.approve);
   const rejectRequest = useMutation(api.materialRequests.reject);
+  const createItem = useMutation(api.inventory.create);
+  const categories = useQuery(api.inventoryCategories.list, {});
+  const vendors = useQuery(api.vendors.list);
   const { hasPermission } = usePermissions();
 
   const filteredInventory = inventory?.filter(item => 
@@ -95,6 +117,51 @@ export function MaterialRequestsTab() {
     }
   };
 
+  const handleCreateItem = async () => {
+    if (!itemForm.name.trim()) {
+      toast.error("Please enter an item name");
+      return;
+    }
+    if (!itemForm.unit.trim()) {
+      toast.error("Please enter a unit");
+      return;
+    }
+
+    try {
+      const dataToSubmit: any = {
+        name: itemForm.name,
+        description: itemForm.description || undefined,
+        type: itemForm.type,
+        quantity: itemForm.quantity,
+        unit: itemForm.unit,
+        minStockLevel: itemForm.minStockLevel || undefined,
+        location: itemForm.location || undefined,
+        notes: itemForm.notes || undefined,
+        subcategory: itemForm.subcategory || undefined,
+        vendorId: itemForm.vendorId || undefined,
+      };
+
+      await createItem(dataToSubmit);
+      toast.success("Item created successfully");
+      setIsCreateItemDialogOpen(false);
+      setItemForm({
+        name: "",
+        description: "",
+        type: "raw",
+        quantity: 0,
+        unit: "",
+        minStockLevel: 0,
+        location: "",
+        notes: "",
+        subcategory: "",
+        vendorId: "",
+      });
+    } catch (error) {
+      toast.error("Failed to create item");
+      console.error(error);
+    }
+  };
+
   const handleApprove = async (requestId: Id<"materialRequests">) => {
     try {
       await approveRequest({ requestId });
@@ -119,6 +186,7 @@ export function MaterialRequestsTab() {
   const canCreate = hasPermission("materialRequests", "create");
   const canApprove = hasPermission("materialRequests", "approve");
   const canReject = hasPermission("materialRequests", "reject");
+  const canCreateInventory = hasPermission("inventory", "create");
 
   return (
     <div className="space-y-6">
@@ -127,109 +195,276 @@ export function MaterialRequestsTab() {
           <h2 className="text-2xl font-bold tracking-tight">Material Requests</h2>
           <p className="text-muted-foreground">Request items from inventory for projects or usage.</p>
         </div>
-        {canCreate && (
-          <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                New Request
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>New Material Request</DialogTitle>
-                <DialogDescription>Select items from inventory to request.</DialogDescription>
-              </DialogHeader>
-              
-              <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search inventory..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-8"
+        <div className="flex gap-2">
+          {canCreateInventory && (
+            <Dialog open={isCreateItemDialogOpen} onOpenChange={setIsCreateItemDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Package className="mr-2 h-4 w-4" />
+                  Create Item
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create New Inventory Item</DialogTitle>
+                  <DialogDescription>Add a new item to the inventory system.</DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Item Name *</Label>
+                      <Input
+                        value={itemForm.name}
+                        onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
+                        placeholder="Enter item name"
+                      />
+                    </div>
+                    <div>
+                      <Label>Type *</Label>
+                      <Select
+                        value={itemForm.type}
+                        onValueChange={(value: any) => setItemForm({ ...itemForm, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="raw">Raw Material</SelectItem>
+                          <SelectItem value="pre_processed">Pre-Processed</SelectItem>
+                          <SelectItem value="finished">Finished</SelectItem>
+                          <SelectItem value="sealed_packet">Sealed Packet</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={itemForm.description}
+                      onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
+                      placeholder="Enter description"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label>Quantity *</Label>
+                      <Input
+                        type="number"
+                        value={itemForm.quantity}
+                        onChange={(e) => setItemForm({ ...itemForm, quantity: parseFloat(e.target.value) || 0 })}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <Label>Unit *</Label>
+                      <Input
+                        value={itemForm.unit}
+                        onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
+                        placeholder="e.g., kg, pcs"
+                      />
+                    </div>
+                    <div>
+                      <Label>Min Stock Level</Label>
+                      <Input
+                        type="number"
+                        value={itemForm.minStockLevel}
+                        onChange={(e) => setItemForm({ ...itemForm, minStockLevel: parseFloat(e.target.value) || 0 })}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Subcategory</Label>
+                      <Popover open={categoryPopoverOpen} onOpenChange={setCategoryPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {itemForm.subcategory || "Select category"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Search category..." />
+                            <CommandEmpty>No category found.</CommandEmpty>
+                            <CommandGroup>
+                              {categories?.map((cat) => (
+                                <CommandItem
+                                  key={cat._id}
+                                  value={cat.name}
+                                  onSelect={() => {
+                                    setItemForm({ ...itemForm, subcategory: cat.name });
+                                    setCategoryPopoverOpen(false);
+                                  }}
+                                >
+                                  {cat.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div>
+                      <Label>Location</Label>
+                      <Input
+                        value={itemForm.location}
+                        onChange={(e) => setItemForm({ ...itemForm, location: e.target.value })}
+                        placeholder="Storage location"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>Vendor</Label>
+                    <Select
+                      value={itemForm.vendorId}
+                      onValueChange={(value) => setItemForm({ ...itemForm, vendorId: value as Id<"vendors"> })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select vendor (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {vendors?.map((vendor) => (
+                          <SelectItem key={vendor._id} value={vendor._id}>
+                            {vendor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Notes</Label>
+                    <Textarea
+                      value={itemForm.notes}
+                      onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
+                      placeholder="Additional notes"
+                      rows={2}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
-                  <Card className="flex flex-col min-h-0">
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-sm">Available Items</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-y-auto p-0">
-                      <div className="divide-y">
-                        {filteredInventory.map((item) => (
-                          <div key={item._id} className="p-3 flex justify-between items-center hover:bg-muted/50">
-                            <div className="overflow-hidden">
-                              <p className="font-medium truncate">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Stock: {item.quantity} {item.unit}
-                              </p>
-                            </div>
-                            <Button size="sm" variant="ghost" onClick={() => handleAddItem(item)}>
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsCreateItemDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCreateItem}>Create Item</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+          {canCreate && (
+            <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Request
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>New Material Request</DialogTitle>
+                  <DialogDescription>Select items from inventory to request.</DialogDescription>
+                </DialogHeader>
+                
+                <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search inventory..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                  </div>
 
-                  <Card className="flex flex-col min-h-0">
-                    <CardHeader className="py-3 px-4">
-                      <CardTitle className="text-sm">Selected Items</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
-                      {selectedItems.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No items selected</p>
-                      ) : (
-                        selectedItems.map((item, idx) => (
-                          <div key={idx} className="flex flex-col gap-2 p-3 border rounded-md bg-card">
-                            <div className="flex justify-between items-start">
-                              <span className="font-medium text-sm">{item.name}</span>
-                              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveItem(idx)}>
-                                <Trash2 className="h-3 w-3 text-destructive" />
+                  <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
+                    <Card className="flex flex-col min-h-0">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-sm">Available Items</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-1 overflow-y-auto p-0">
+                        <div className="divide-y">
+                          {filteredInventory.map((item) => (
+                            <div key={item._id} className="p-3 flex justify-between items-center hover:bg-muted/50">
+                              <div className="overflow-hidden">
+                                <p className="font-medium truncate">{item.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Stock: {item.quantity} {item.unit}
+                                </p>
+                              </div>
+                              <Button size="sm" variant="ghost" onClick={() => handleAddItem(item)}>
+                                <Plus className="h-4 w-4" />
                               </Button>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min="0.1"
-                                step="0.1"
-                                value={item.quantity}
-                                onChange={(e) => handleQuantityChange(idx, parseFloat(e.target.value))}
-                                className="h-8 w-24"
-                              />
-                              <span className="text-xs text-muted-foreground">{item.unit}</span>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="flex flex-col min-h-0">
+                      <CardHeader className="py-3 px-4">
+                        <CardTitle className="text-sm">Selected Items</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {selectedItems.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">No items selected</p>
+                        ) : (
+                          selectedItems.map((item, idx) => (
+                            <div key={idx} className="flex flex-col gap-2 p-3 border rounded-md bg-card">
+                              <div className="flex justify-between items-start">
+                                <span className="font-medium text-sm">{item.name}</span>
+                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => handleRemoveItem(idx)}>
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                </Button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  type="number"
+                                  min="0.1"
+                                  step="0.1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleQuantityChange(idx, parseFloat(e.target.value))}
+                                  className="h-8 w-24"
+                                />
+                                <span className="text-xs text-muted-foreground">{item.unit}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
+                          ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div>
+                    <Label>Purpose / Note</Label>
+                    <Textarea 
+                      placeholder="Why do you need these materials?"
+                      value={purpose}
+                      onChange={(e) => setPurpose(e.target.value)}
+                      className="mt-1.5"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <Label>Purpose / Note</Label>
-                  <Textarea 
-                    placeholder="Why do you need these materials?"
-                    value={purpose}
-                    onChange={(e) => setPurpose(e.target.value)}
-                    className="mt-1.5"
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleSubmitRequest}>Submit Request</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleSubmitRequest}>Submit Request</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       <Card>
