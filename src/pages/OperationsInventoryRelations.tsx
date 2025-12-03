@@ -623,7 +623,7 @@ export default function OperationsInventoryRelations() {
                             />
                           </TableHead>
                         )}
-                        <TableHead>Job ID</TableHead>
+                        <TableHead>Job Name</TableHead>
                         <TableHead>Created By</TableHead>
                         <TableHead>Created On</TableHead>
                         <TableHead>Assignments</TableHead>
@@ -650,7 +650,12 @@ export default function OperationsInventoryRelations() {
                               />
                             </TableCell>
                           )}
-                          <TableCell className="font-medium">{job.jobId}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span>{job.name || `Procurement Job ${job.jobId}`}</span>
+                              <span className="text-xs text-muted-foreground">{job.jobId}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>{job.creatorEmail}</TableCell>
                           <TableCell>
                             {new Date(job._creationTime).toLocaleDateString()}
