@@ -159,6 +159,7 @@ export default function Packing() {
     productionMonth: true,
     assignmentNotes: true,
     packingNotes: true,
+    dispatchNotes: true,
   });
 
   const toggleColumn = (columnId: string) => {
@@ -177,8 +178,9 @@ export default function Packing() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "assignmentNotes", label: "Notes", visible: columnVisibility.assignmentNotes },
-    { id: "packingNotes", label: "Notes", visible: columnVisibility.packingNotes },
+    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
+    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
   ];
 
   const handleSavePackingNotes = async (assignmentId: Id<"assignments">) => {
@@ -750,7 +752,9 @@ export default function Packing() {
                   {columnVisibility.status && <TableHead>Status</TableHead>}
                   {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                   {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
-                  {columnVisibility.assignmentNotes && <TableHead className="text-center">Notes</TableHead>}
+                  {columnVisibility.assignmentNotes && <TableHead className="text-center">Assignment Notes</TableHead>}
+                  {columnVisibility.packingNotes && <TableHead className="text-center">Packing Notes</TableHead>}
+                  {columnVisibility.dispatchNotes && <TableHead className="text-center">Dispatch Notes</TableHead>}
                   {canEdit && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -835,35 +839,41 @@ export default function Packing() {
                           )}
                           {columnVisibility.assignmentNotes && (
                             <TableCell className="text-center">
-                              <div className="flex gap-1 justify-center">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
-                                  title="Assignment Notes"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <FileText className="h-4 w-4 text-blue-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
-                                  title="Packing Notes"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <MessageSquare className="h-4 w-4 text-green-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
-                                  title="Dispatch Notes"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Truck className="h-4 w-4 text-orange-600" />
-                                </Button>
-                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
+                                title="Assignment Notes"
+                                className="h-8 w-8 p-0"
+                              >
+                                <FileText className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            </TableCell>
+                          )}
+                          {columnVisibility.packingNotes && (
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
+                                title="Packing Notes"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MessageSquare className="h-4 w-4 text-green-600" />
+                              </Button>
+                            </TableCell>
+                          )}
+                          {columnVisibility.dispatchNotes && (
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
+                                title="Dispatch Notes"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Truck className="h-4 w-4 text-orange-600" />
+                              </Button>
                             </TableCell>
                           )}
 
@@ -1028,8 +1038,8 @@ export default function Packing() {
                             <TableCell className="text-sm">
                               {new Date(assignment._creationTime).toLocaleDateString()}
                             </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex gap-1 justify-center">
+                          {columnVisibility.assignmentNotes && (
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1039,6 +1049,10 @@ export default function Packing() {
                               >
                                 <FileText className="h-4 w-4 text-blue-600" />
                               </Button>
+                            </TableCell>
+                          )}
+                          {columnVisibility.packingNotes && (
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1048,6 +1062,10 @@ export default function Packing() {
                               >
                                 <MessageSquare className="h-4 w-4 text-green-600" />
                               </Button>
+                            </TableCell>
+                          )}
+                          {columnVisibility.dispatchNotes && (
+                            <TableCell className="text-center">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1057,8 +1075,8 @@ export default function Packing() {
                               >
                                 <Truck className="h-4 w-4 text-orange-600" />
                               </Button>
-                            </div>
-                          </TableCell>
+                            </TableCell>
+                          )}
                           {canEdit && (
                               <TableCell>
                                 <Select
