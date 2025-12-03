@@ -84,6 +84,8 @@ export default function Assignments() {
   const createAssignment = useMutation(api.assignments.create);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const updateNotes = useMutation(api.assignments.updateNotes);
+  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
+  const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
   const deleteAssignment = useMutation(api.assignments.deleteAssignment);
   const createBatch = useMutation(api.batches.create);
   const deleteBatch = useMutation(api.batches.deleteBatch);
@@ -194,7 +196,9 @@ export default function Assignments() {
     status: true,
     dispatchDate: true,
     productionMonth: true,
-    notes: true,
+    assignmentNotes: true,
+    packingNotes: true,
+    dispatchNotes: true,
   });
 
   // Notes dialog state
@@ -226,7 +230,9 @@ export default function Assignments() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "notes", label: "Notes", visible: columnVisibility.notes },
+    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
+    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
   ];
 
   useEffect(() => {
@@ -834,7 +840,9 @@ export default function Assignments() {
                 {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                 {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
                 <TableHead>Order Created On</TableHead>
-                {columnVisibility.notes && <TableHead>Notes</TableHead>}
+                {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
+                {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
+                {columnVisibility.dispatchNotes && <TableHead>Dispatch Notes</TableHead>}
                 {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1457,7 +1465,7 @@ export default function Assignments() {
                                   {format(assignment._creationTime, "MMM dd, yyyy")}
                                 </span>
                               </TableCell>
-                              {columnVisibility.notes && (
+                              {columnVisibility.assignmentNotes && (
                                 <TableCell>
                                   {editingNotes === assignment._id ? (
                                     <div className="flex gap-2">
@@ -1584,7 +1592,7 @@ export default function Assignments() {
                           {format(assignment._creationTime, "MMM dd, yyyy")}
                         </span>
                       </TableCell>
-                      {columnVisibility.notes && (
+                      {columnVisibility.assignmentNotes && (
                         <TableCell>
                           {editingNotes === assignment._id ? (
                             <div className="flex gap-2">
