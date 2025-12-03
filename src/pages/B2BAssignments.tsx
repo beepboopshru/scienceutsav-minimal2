@@ -2492,6 +2492,38 @@ export default function B2BAssignments() {
           kits={kits}
           onCreateBatch={handleCreateBatch}
         />
+
+        {/* Notes Dialog */}
+        <Dialog open={notesDialog.open} onOpenChange={(open) => setNotesDialog({ ...notesDialog, open })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {notesDialog.type === "assignment" && "Assignment Notes"}
+                {notesDialog.type === "packing" && "Packing Notes"}
+                {notesDialog.type === "dispatch" && "Dispatch Notes"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                value={notesDialog.value}
+                onChange={(e) => setNotesDialog({ ...notesDialog, value: e.target.value })}
+                placeholder="Enter notes..."
+                rows={6}
+                disabled={!notesDialog.canEdit}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}>
+                Close
+              </Button>
+              {notesDialog.canEdit && (
+                <Button onClick={handleSaveNotesDialog}>
+                  Save Notes
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
