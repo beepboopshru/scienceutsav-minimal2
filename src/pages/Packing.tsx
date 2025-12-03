@@ -82,6 +82,7 @@ export default function Packing() {
 
   // Procurement dialog state
   const [procurementDialog, setProcurementDialog] = useState(false);
+  const [procurementJobName, setProcurementJobName] = useState("");
   const [procurementPriority, setProcurementPriority] = useState<"low" | "medium" | "high">("medium");
   const [procurementNotes, setProcurementNotes] = useState("");
   const [procurementRemarks, setProcurementRemarks] = useState("");
@@ -485,6 +486,7 @@ export default function Packing() {
       toast.success("Inventory request created successfully");
       setSelectedAssignments(new Set());
       setProcurementDialog(false);
+      setProcurementJobName("");
       setProcurementNotes("");
       setProcurementRemarks("");
       setProcurementPriority("medium");
@@ -1420,6 +1422,15 @@ export default function Packing() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            <div>
+              <Label>Job Name</Label>
+              <Input
+                placeholder="Enter job name for this procurement request..."
+                value={procurementJobName}
+                onChange={(e) => setProcurementJobName(e.target.value)}
+              />
             </div>
 
             <div>
