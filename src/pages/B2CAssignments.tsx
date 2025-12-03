@@ -197,6 +197,19 @@ export default function Assignments() {
     notes: true,
   });
 
+  // Notes dialog state
+  const [notesDialog, setNotesDialog] = useState<{
+    open: boolean;
+    assignmentId: Id<"assignments"> | null;
+    currentNotes: string;
+    type: "assignment";
+  }>({
+    open: false,
+    assignmentId: null,
+    currentNotes: "",
+    type: "assignment",
+  });
+
   const toggleColumn = (columnId: string) => {
     setColumnVisibility((prev) => ({
       ...prev,
