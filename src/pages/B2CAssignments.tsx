@@ -57,9 +57,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save, Pencil } from "lucide-react";
+import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save, Pencil, FileText, MessageSquare, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -196,22 +202,22 @@ export default function Assignments() {
     status: true,
     dispatchDate: true,
     productionMonth: true,
-    assignmentNotes: true,
-    packingNotes: true,
-    dispatchNotes: true,
+    notes: true,
   });
 
   // Notes dialog state
   const [notesDialog, setNotesDialog] = useState<{
     open: boolean;
     assignmentId: Id<"assignments"> | null;
-    currentNotes: string;
-    type: "assignment";
+    type: "assignment" | "packing" | "dispatch";
+    value: string;
+    canEdit: boolean;
   }>({
     open: false,
     assignmentId: null,
-    currentNotes: "",
     type: "assignment",
+    value: "",
+    canEdit: false,
   });
 
   const toggleColumn = (columnId: string) => {
@@ -230,9 +236,7 @@ export default function Assignments() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
-    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
-    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
+    { id: "notes", label: "Notes", visible: columnVisibility.notes },
   ];
 
   useEffect(() => {
@@ -434,28 +438,47 @@ export default function Assignments() {
     }
   };
 
-  const handleStartEditNotes = (assignmentId: string, currentNotes: string) => {
-    setEditingNotes(assignmentId);
-    setEditNotesValue(currentNotes || "");
+  const handleOpenNotesDialog = (
+    assignmentId: Id<"assignments">,
+    type: "assignment" | "packing" | "dispatch",
+    value: string,
+    canEdit: boolean
+  ) => {
+    setNotesDialog({
+      open: true,
+      assignmentId,
+      type,
+      value,
+      canEdit,
+    });
   };
 
-  const handleSaveNotes = async (assignmentId: Id<"assignments">) => {
+  const handleSaveNotesDialog = async () => {
+    if (!notesDialog.assignmentId) return;
+
     try {
-      await updateNotes({
-        id: assignmentId,
-        notes: editNotesValue,
-      });
-      setEditingNotes(null);
+      if (notesDialog.type === "assignment") {
+        await updateNotes({
+          id: notesDialog.assignmentId,
+          notes: notesDialog.value,
+        });
+      } else if (notesDialog.type === "packing") {
+        await updatePackingNotes({
+          id: notesDialog.assignmentId,
+          packingNotes: notesDialog.value,
+        });
+      } else if (notesDialog.type === "dispatch") {
+        await updateDispatchNotes({
+          id: notesDialog.assignmentId,
+          dispatchNotes: notesDialog.value,
+        });
+      }
       toast.success("Notes updated");
+      setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false });
     } catch (error) {
       toast.error("Failed to update notes");
       console.error(error);
     }
-  };
-
-  const handleCancelEditNotes = () => {
-    setEditingNotes(null);
-    setEditNotesValue("");
   };
 
   const handleAddNewRow = () => {
@@ -840,9 +863,7 @@ export default function Assignments() {
                 {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                 {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
                 <TableHead>Order Created On</TableHead>
-                {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
-                {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
-                {columnVisibility.dispatchNotes && <TableHead>Dispatch Notes</TableHead>}
+                {columnVisibility.notes && <TableHead className="text-center">Notes</TableHead>}
                 {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1465,38 +1486,76 @@ export default function Assignments() {
                                   {format(assignment._creationTime, "MMM dd, yyyy")}
                                 </span>
                               </TableCell>
-                              {columnVisibility.assignmentNotes && (
-                                <TableCell>
-                                  {editingNotes === assignment._id ? (
-                                    <div className="flex gap-2">
-                                      <Textarea
-                                        value={editNotesValue}
-                                        onChange={(e) => setEditNotesValue(e.target.value)}
-                                        className="min-h-[60px]"
-                                      />
-                                      <div className="flex flex-col gap-1">
-                                        <Button size="sm" onClick={() => handleSaveNotes(assignment._id)}>
-                                          <Check className="h-4 w-4" />
-                                        </Button>
-                                        <Button size="sm" variant="ghost" onClick={handleCancelEditNotes}>
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm">{assignment.notes || "-"}</span>
-                                      {canEdit && (
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() => handleStartEditNotes(assignment._id, assignment.notes || "")}
-                                        >
-                                          <Pencil className="h-4 w-4" />
-                                        </Button>
-                                      )}
-                                    </div>
-                                  )}
+                              {columnVisibility.notes && (
+                                <TableCell className="text-center">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() =>
+                                              handleOpenNotesDialog(
+                                                assignment._id,
+                                                "assignment",
+                                                assignment.notes || "",
+                                                canEdit
+                                              )
+                                            }
+                                            className="h-8 w-8"
+                                          >
+                                            <FileText className="h-4 w-4 text-blue-500" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Assignment Notes</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() =>
+                                              handleOpenNotesDialog(
+                                                assignment._id,
+                                                "packing",
+                                                assignment.packingNotes || "",
+                                                false
+                                              )
+                                            }
+                                            className="h-8 w-8"
+                                          >
+                                            <MessageSquare className="h-4 w-4 text-green-500" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Packing Notes</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() =>
+                                              handleOpenNotesDialog(
+                                                assignment._id,
+                                                "dispatch",
+                                                assignment.dispatchNotes || "",
+                                                false
+                                              )
+                                            }
+                                            className="h-8 w-8"
+                                          >
+                                            <Truck className="h-4 w-4 text-orange-500" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Dispatch Notes</TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </div>
                                 </TableCell>
                               )}
                               <TableCell className="text-right">
@@ -1592,38 +1651,76 @@ export default function Assignments() {
                           {format(assignment._creationTime, "MMM dd, yyyy")}
                         </span>
                       </TableCell>
-                      {columnVisibility.assignmentNotes && (
-                        <TableCell>
-                          {editingNotes === assignment._id ? (
-                            <div className="flex gap-2">
-                              <Textarea
-                                value={editNotesValue}
-                                onChange={(e) => setEditNotesValue(e.target.value)}
-                                className="min-h-[60px]"
-                              />
-                              <div className="flex flex-col gap-1">
-                                <Button size="sm" onClick={() => handleSaveNotes(assignment._id)}>
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={handleCancelEditNotes}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm">{assignment.notes || "-"}</span>
-                              {canEdit && (
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleStartEditNotes(assignment._id, assignment.notes || "")}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                      {columnVisibility.notes && (
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleOpenNotesDialog(
+                                        assignment._id,
+                                        "assignment",
+                                        assignment.notes || "",
+                                        canEdit
+                                      )
+                                    }
+                                    className="h-8 w-8"
+                                  >
+                                    <FileText className="h-4 w-4 text-blue-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Assignment Notes</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleOpenNotesDialog(
+                                        assignment._id,
+                                        "packing",
+                                        assignment.packingNotes || "",
+                                        false
+                                      )
+                                    }
+                                    className="h-8 w-8"
+                                  >
+                                    <MessageSquare className="h-4 w-4 text-green-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Packing Notes</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() =>
+                                      handleOpenNotesDialog(
+                                        assignment._id,
+                                        "dispatch",
+                                        assignment.dispatchNotes || "",
+                                        false
+                                      )
+                                    }
+                                    className="h-8 w-8"
+                                  >
+                                    <Truck className="h-4 w-4 text-orange-500" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Dispatch Notes</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                         </TableCell>
                       )}
                       <TableCell className="text-right">
@@ -1914,6 +2011,39 @@ export default function Assignments() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Notes Dialog */}
+        <Dialog open={notesDialog.open} onOpenChange={(open) => setNotesDialog({ ...notesDialog, open })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {notesDialog.type === "assignment" && "Assignment Notes"}
+                {notesDialog.type === "packing" && "Packing Notes"}
+                {notesDialog.type === "dispatch" && "Dispatch Notes"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                value={notesDialog.value}
+                onChange={(e) => setNotesDialog({ ...notesDialog, value: e.target.value })}
+                placeholder="Enter notes..."
+                rows={6}
+                disabled={!notesDialog.canEdit}
+              />
+            </div>
+            <DialogFooter>
+              {notesDialog.canEdit && (
+                <Button onClick={handleSaveNotesDialog}>Save Notes</Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Batch Assignment Dialog */}
         <BatchAssignmentDialog
