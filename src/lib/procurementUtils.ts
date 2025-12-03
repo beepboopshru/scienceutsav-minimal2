@@ -240,8 +240,12 @@ export function aggregateMaterials(
       if (materialMap.has(key)) {
         const existing = materialMap.get(key)!;
         existing.required += item.required;
-        if (assignment.kit?.name) existing.kits.push(assignment.kit.name);
-        if (assignment.program?.name) existing.programs.push(assignment.program.name);
+        if (assignment.kit?.name && !existing.kits.includes(assignment.kit.name)) {
+          existing.kits.push(assignment.kit.name);
+        }
+        if (assignment.program?.name && !existing.programs.includes(assignment.program.name)) {
+          existing.programs.push(assignment.program.name);
+        }
       } else {
         const invItem = inventoryByName.get(item.name.toLowerCase());
         const vendorPrice = getVendorPrice(invItem?._id, vendors);
