@@ -47,6 +47,7 @@ export default function Packing() {
   const programs = useQuery(api.programs.list, {});
   const inventory = useQuery(api.inventory.list, {});
   const procurementJobs = useQuery(api.procurementJobs.list);
+  const checklistItems = useQuery(api.dispatchChecklist.list, {});
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
@@ -103,21 +104,11 @@ export default function Packing() {
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
     assignmentId: Id<"assignments"> | null;
-    checklist: {
-      kitComponents: boolean;
-      totalCount: boolean;
-      workbook: boolean;
-      worksheet: boolean;
-    };
+    checklist: Record<string, boolean>;
   }>({
     open: false,
     assignmentId: null,
-    checklist: {
-      kitComponents: false,
-      totalCount: false,
-      workbook: false,
-      worksheet: false,
-    },
+    checklist: {},
   });
 
   const [fileViewerDialog, setFileViewerDialog] = useState<{
@@ -565,15 +556,16 @@ export default function Packing() {
 
   const handleStatusChange = async (assignmentId: Id<"assignments">, newStatus: string) => {
     if (newStatus === "transferred_to_dispatch") {
+      // Initialize checklist with all items unchecked
+      const initialChecklist: Record<string, boolean> = {};
+      checklistItems?.forEach(item => {
+        initialChecklist[item.name] = false;
+      });
+      
       setChecklistDialog({
         open: true,
         assignmentId,
-        checklist: {
-          kitComponents: false,
-          totalCount: false,
-          workbook: false,
-          worksheet: false,
-        },
+        checklist: initialChecklist,
       });
     } else {
       try {
@@ -588,9 +580,10 @@ export default function Packing() {
   };
 
   const handleChecklistSubmit = async () => {
-    const { kitComponents, totalCount, workbook, worksheet } = checklistDialog.checklist;
+    // Check if all checklist items are checked
+    const allChecked = Object.values(checklistDialog.checklist).every(value => value === true);
     
-    if (!kitComponents || !totalCount || !workbook || !worksheet) {
+    if (!allChecked) {
       toast.error("Please complete all checklist items");
       return;
     }
@@ -606,12 +599,7 @@ export default function Packing() {
       setChecklistDialog({
         open: false,
         assignmentId: null,
-        checklist: {
-          kitComponents: false,
-          totalCount: false,
-          workbook: false,
-          worksheet: false,
-        },
+        checklist: {},
       });
     } catch (error) {
       toast.error("Failed to transfer to dispatch", {
@@ -884,18 +872,18 @@ export default function Packing() {
                             <TableCell>
                               <Select
                                 value={assignment.status || "assigned"}
-                                onValueChange={async (value) => {
-                                  if (value === "transferred_to_dispatch") {
-                                    setChecklistDialog({
-                                      open: true,
-                                      assignmentId: assignment._id,
-                                      checklist: {
-                                        kitComponents: false,
-                                        totalCount: false,
-                                        workbook: false,
-                                        worksheet: false,
-                                      },
-                                    });
+                                  onValueChange={async (value) => {
+                                    if (value === "transferred_to_dispatch") {
+                                      const initialChecklist: Record<string, boolean> = {};
+                                      checklistItems?.forEach(item => {
+                                        initialChecklist[item.name] = false;
+                                      });
+                                      
+                                      setChecklistDialog({
+                                        open: true,
+                                        assignmentId: assignment._id,
+                                        checklist: initialChecklist,
+                                      });
                                   } else {
                                     try {
                                       await updatePackingStatus({
@@ -1080,15 +1068,15 @@ export default function Packing() {
                                   value={assignment.status || "assigned"}
                                   onValueChange={async (value) => {
                                     if (value === "transferred_to_dispatch") {
+                                      const initialChecklist: Record<string, boolean> = {};
+                                      checklistItems?.forEach(item => {
+                                        initialChecklist[item.name] = false;
+                                      });
+                                      
                                       setChecklistDialog({
                                         open: true,
                                         assignmentId: assignment._id,
-                                        checklist: {
-                                          kitComponents: false,
-                                          totalCount: false,
-                                          workbook: false,
-                                          worksheet: false,
-                                        },
+                                        checklist: initialChecklist,
                                       });
                                     } else {
                                       try {
@@ -1189,58 +1177,21 @@ export default function Packing() {
               Please verify all packing items before transferring to dispatch:
             </p>
             <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="kitComponents"
-                  checked={checklistDialog.checklist.kitComponents}
-                  onCheckedChange={(checked) =>
-                    setChecklistDialog({
-                      ...checklistDialog,
-                      checklist: { ...checklistDialog.checklist, kitComponents: checked as boolean },
-                    })
-                  }
-                />
-                <Label htmlFor="kitComponents" className="cursor-pointer">Kit Components</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="totalCount"
-                  checked={checklistDialog.checklist.totalCount}
-                  onCheckedChange={(checked) =>
-                    setChecklistDialog({
-                      ...checklistDialog,
-                      checklist: { ...checklistDialog.checklist, totalCount: checked as boolean },
-                    })
-                  }
-                />
-                <Label htmlFor="totalCount" className="cursor-pointer">Total Count</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="workbook"
-                  checked={checklistDialog.checklist.workbook}
-                  onCheckedChange={(checked) =>
-                    setChecklistDialog({
-                      ...checklistDialog,
-                      checklist: { ...checklistDialog.checklist, workbook: checked as boolean },
-                    })
-                  }
-                />
-                <Label htmlFor="workbook" className="cursor-pointer">Workbook</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="worksheet"
-                  checked={checklistDialog.checklist.worksheet}
-                  onCheckedChange={(checked) =>
-                    setChecklistDialog({
-                      ...checklistDialog,
-                      checklist: { ...checklistDialog.checklist, worksheet: checked as boolean },
-                    })
-                  }
-                />
-                <Label htmlFor="worksheet" className="cursor-pointer">Worksheet</Label>
-              </div>
+              {checklistItems?.map((item) => (
+                <div key={item._id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={item.name}
+                    checked={checklistDialog.checklist[item.name] || false}
+                    onCheckedChange={(checked) =>
+                      setChecklistDialog({
+                        ...checklistDialog,
+                        checklist: { ...checklistDialog.checklist, [item.name]: checked as boolean },
+                      })
+                    }
+                  />
+                  <Label htmlFor={item.name} className="cursor-pointer">{item.label}</Label>
+                </div>
+              ))}
             </div>
             <div className="flex justify-end space-x-2 pt-4">
               <Button variant="outline" onClick={() => setChecklistDialog({ ...checklistDialog, open: false })}>
