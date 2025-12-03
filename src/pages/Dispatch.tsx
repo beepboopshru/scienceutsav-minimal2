@@ -41,8 +41,8 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
-import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil, MessageSquare, Truck } from "lucide-react";
+import { useQuery, useMutation, useAction } from "convex/react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil, MessageSquare, Truck, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -88,6 +88,7 @@ export default function Dispatch() {
   const updateNotes = useMutation(api.assignments.updateNotes);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
+  const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
@@ -250,6 +251,30 @@ export default function Dispatch() {
     } catch (error) {
       toast.error("Failed to update notes");
       console.error(error);
+    }
+  };
+
+  // Handler for downloading kit sheet
+  const handleDownloadKitSheet = async (kitId: Id<"kits">) => {
+    try {
+      toast.info("Generating kit sheet...");
+      const result = await downloadKitSheet({ kitId });
+      
+      const blob = new Blob([result.html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Kit sheet downloaded");
+    } catch (error) {
+      toast.error("Failed to generate kit sheet", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   };
 
@@ -1115,6 +1140,24 @@ export default function Dispatch() {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>Dispatch Notes</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() => {
+                                            const kit = kits?.find(k => k._id === assignment.kitId);
+                                            if (kit) handleDownloadKitSheet(kit._id);
+                                          }}
+                                          className="h-8 w-8"
+                                        >
+                                          <Download className="h-4 w-4 text-purple-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Download Kit Sheet</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 </div>
