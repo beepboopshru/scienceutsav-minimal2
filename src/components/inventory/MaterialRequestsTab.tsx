@@ -520,7 +520,7 @@ export function MaterialRequestsTab() {
                     {req.purpose?.startsWith("PROC-") ? (
                       <div className="flex flex-col gap-1">
                         <span className="text-sm font-medium">
-                          {procurementJobs?.find((job: any) => job.jobId === req.purpose)?.name || `Procurement Job ${req.purpose}`}
+                          {procurementJobs?.find((job: any) => job.jobId === req.purpose)?.name || "Procurement Job"}
                         </span>
                         <span className="text-xs text-muted-foreground">{req.purpose}</span>
                       </div>
