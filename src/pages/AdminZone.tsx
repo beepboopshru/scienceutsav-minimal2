@@ -234,11 +234,11 @@ export default function AdminZone() {
             </AlertDescription>
           </Alert>
 
-          {/* Dispatch Checklist Management */}
+          {/* Packing Checklist Management */}
           <Card>
             <CardHeader>
-              <CardTitle>Dispatch Checklist Configuration</CardTitle>
-              <CardDescription>Manage checklist items for dispatch transfers (minimum 1 item required)</CardDescription>
+              <CardTitle>Packing Checklist Configuration</CardTitle>
+              <CardDescription>Manage checklist items for packing transfers to dispatch (minimum 1 item required)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Button onClick={() => setChecklistDialog({ open: true, mode: "create", name: "", label: "" })}>
@@ -465,10 +465,10 @@ export default function AdminZone() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {checklistDialog.mode === "create" ? "Create Checklist Item" : "Edit Checklist Item"}
+              {checklistDialog.mode === "create" ? "Create Packing Checklist Item" : "Edit Packing Checklist Item"}
             </DialogTitle>
             <DialogDescription>
-              Configure a checklist item for dispatch transfers
+              Configure a checklist item for packing transfers to dispatch
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

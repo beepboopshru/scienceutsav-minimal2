@@ -1182,11 +1182,11 @@ export default function Packing() {
       <Dialog open={checklistDialog.open} onOpenChange={(open) => !open && setChecklistDialog({ ...checklistDialog, open: false })}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Dispatch Checklist</DialogTitle>
+            <DialogTitle>Packing Checklist</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Please verify all items before transferring to dispatch:
+              Please verify all packing items before transferring to dispatch:
             </p>
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
