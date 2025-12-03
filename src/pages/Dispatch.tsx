@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/command";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation, useAction } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil, MessageSquare, Truck, Download } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil, MessageSquare, Truck, Download, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -910,6 +910,22 @@ export default function Dispatch() {
             <p className="text-muted-foreground mt-2">
               Manage assignments ready for dispatch
             </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setBoxContentDialogOpen(true)}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Box Content
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setClientDetailsDialogOpen(true)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Client Details
+            </Button>
           </div>
         </div>
 
