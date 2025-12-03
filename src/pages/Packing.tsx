@@ -746,6 +746,7 @@ export default function Packing() {
             <table className="w-full">
               <TableHeader>
                 <TableRow>
+                  {canEdit && <TableHead className="w-12"></TableHead>}
                   {columnVisibility.program && <TableHead>Program</TableHead>}
                   {columnVisibility.kit && <TableHead>Kit</TableHead>}
                   {columnVisibility.client && <TableHead>Client</TableHead>}
@@ -784,6 +785,14 @@ export default function Packing() {
 
                       return (
                         <TableRow key={assignment._id}>
+                          {canEdit && (
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedAssignments.has(assignment._id)}
+                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                              />
+                            </TableCell>
+                          )}
                           {columnVisibility.program && (
                             <TableCell>
                               <span className="text-sm">{program?.name || "—"}</span>
@@ -949,7 +958,8 @@ export default function Packing() {
                   // Render batch header row
                   return (
                     <>
-                      <TableRow key={`batch-${batchKey}`}>
+                      <TableRow key={`batch-${batchKey}`} className="cursor-pointer hover:bg-muted/50" onClick={() => toggleBatch(batchKey)}>
+                        {canEdit && <TableCell></TableCell>}
                         <TableCell>
                           {isExpanded ? (
                             <ChevronDown className="h-4 w-4" />
@@ -957,7 +967,6 @@ export default function Packing() {
                             <ChevronRight className="h-4 w-4" />
                           )}
                         </TableCell>
-                        {canEdit && <TableCell></TableCell>}
                         <TableCell>
                           <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
                             {firstAssignment.clientType?.toUpperCase() || "N/A"}
