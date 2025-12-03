@@ -157,9 +157,7 @@ export default function Packing() {
     status: true,
     dispatchDate: true,
     productionMonth: true,
-    assignmentNotes: true,
-    packingNotes: true,
-    dispatchNotes: true,
+    notes: true,
   });
 
   const toggleColumn = (columnId: string) => {
@@ -178,9 +176,7 @@ export default function Packing() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
-    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
-    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
+    { id: "notes", label: "Notes", visible: columnVisibility.notes },
   ];
 
   const handleSavePackingNotes = async (assignmentId: Id<"assignments">) => {
@@ -758,9 +754,7 @@ export default function Packing() {
                   {columnVisibility.status && <TableHead>Status</TableHead>}
                   {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                   {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
-                  {columnVisibility.assignmentNotes && <TableHead className="text-center">Assignment Notes</TableHead>}
-                  {columnVisibility.packingNotes && <TableHead className="text-center">Packing Notes</TableHead>}
-                  {columnVisibility.dispatchNotes && <TableHead className="text-center">Dispatch Notes</TableHead>}
+                  {columnVisibility.notes && <TableHead className="text-center">Notes</TableHead>}
                   {canEdit && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -843,43 +837,37 @@ export default function Packing() {
                               </span>
                             </TableCell>
                           )}
-                          {columnVisibility.assignmentNotes && (
+                          {columnVisibility.notes && (
                             <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
-                                title="Assignment Notes"
-                                className="h-8 w-8 p-0"
-                              >
-                                <FileText className="h-4 w-4 text-blue-600" />
-                              </Button>
-                            </TableCell>
-                          )}
-                          {columnVisibility.packingNotes && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
-                                title="Packing Notes"
-                                className="h-8 w-8 p-0"
-                              >
-                                <MessageSquare className="h-4 w-4 text-green-600" />
-                              </Button>
-                            </TableCell>
-                          )}
-                          {columnVisibility.dispatchNotes && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
-                                title="Dispatch Notes"
-                                className="h-8 w-8 p-0"
-                              >
-                                <Truck className="h-4 w-4 text-orange-600" />
-                              </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
+                                  title="Assignment Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <FileText className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
+                                  title="Packing Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <MessageSquare className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
+                                  title="Dispatch Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Truck className="h-4 w-4 text-orange-600" />
+                                </Button>
+                              </div>
                             </TableCell>
                           )}
 
@@ -1044,43 +1032,37 @@ export default function Packing() {
                             <TableCell className="text-sm">
                               {new Date(assignment._creationTime).toLocaleDateString()}
                             </TableCell>
-                          {columnVisibility.assignmentNotes && (
+                          {columnVisibility.notes && (
                             <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
-                                title="Assignment Notes"
-                                className="h-8 w-8 p-0"
-                              >
-                                <FileText className="h-4 w-4 text-blue-600" />
-                              </Button>
-                            </TableCell>
-                          )}
-                          {columnVisibility.packingNotes && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
-                                title="Packing Notes"
-                                className="h-8 w-8 p-0"
-                              >
-                                <MessageSquare className="h-4 w-4 text-green-600" />
-                              </Button>
-                            </TableCell>
-                          )}
-                          {columnVisibility.dispatchNotes && (
-                            <TableCell className="text-center">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
-                                title="Dispatch Notes"
-                                className="h-8 w-8 p-0"
-                              >
-                                <Truck className="h-4 w-4 text-orange-600" />
-                              </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
+                                  title="Assignment Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <FileText className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
+                                  title="Packing Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <MessageSquare className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
+                                  title="Dispatch Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Truck className="h-4 w-4 text-orange-600" />
+                                </Button>
+                              </div>
                             </TableCell>
                           )}
                           {canEdit && (
