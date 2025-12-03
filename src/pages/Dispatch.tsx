@@ -1057,15 +1057,34 @@ export default function Dispatch() {
                                 <span className="text-muted-foreground text-sm">-</span>
                               )}
                             </TableCell>
-                            <TableCell className="p-4">
-                              <Badge variant={
-                                assignment.status === "dispatched" ? "default" : 
-                                assignment.status === "delivered" ? "default" : 
-                                "secondary"
-                              }>
-                                {assignment.status}
-                              </Badge>
-                            </TableCell>
+                            {columnVisibility.status && (
+                              <TableCell className="p-4">
+                                {canEdit ? (
+                                  <Select
+                                    value={assignment.status}
+                                    onValueChange={(value) => handleStatusChange(assignment._id, value as any)}
+                                  >
+                                    <SelectTrigger className="w-[180px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="transferred_to_dispatch">Transferred to Dispatch</SelectItem>
+                                      <SelectItem value="ready_for_dispatch">Ready for Dispatch</SelectItem>
+                                      <SelectItem value="dispatched">Dispatched</SelectItem>
+                                      <SelectItem value="delivered">Delivered</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge variant={
+                                    assignment.status === "dispatched" ? "default" : 
+                                    assignment.status === "delivered" ? "default" : 
+                                    "secondary"
+                                  }>
+                                    {assignment.status}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            )}
                             <TableCell className="p-4">
                               {assignment.dispatchedAt
                                 ? new Date(assignment.dispatchedAt).toLocaleDateString()
@@ -1142,24 +1161,6 @@ export default function Dispatch() {
                                       <TooltipContent>Dispatch Notes</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() => {
-                                            const kit = kits?.find(k => k._id === assignment.kitId);
-                                            if (kit) handleDownloadKitSheet(kit._id);
-                                          }}
-                                          className="h-8 w-8"
-                                        >
-                                          <Download className="h-4 w-4 text-purple-500" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Download Kit Sheet</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
                                 </div>
                               </TableCell>
                             )}
@@ -1207,54 +1208,43 @@ export default function Dispatch() {
                                 </div>
                               )}
                             </TableCell>
-                            <TableCell className="p-4">
-                              <div className="flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleViewClient(assignment)}
-                                  title="View Client Details"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                {canEdit && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="outline" size="sm">
-                                        Change Status
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "transferred_to_dispatch")}
-                                        disabled={assignment.status === "transferred_to_dispatch"}
-                                      >
-                                        Transferred to Dispatch
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "ready_for_dispatch")}
-                                        disabled={assignment.status === "ready_for_dispatch"}
-                                      >
-                                        Ready for Dispatch
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "dispatched")}
-                                        disabled={assignment.status === "dispatched"}
-                                      >
-                                        Dispatched
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleStatusChange(assignment._id, "delivered")}
-                                        disabled={assignment.status === "delivered"}
-                                      >
-                                        Delivered
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
-                              </div>
-                            </TableCell>
+                            {canEdit && (
+                              <TableCell className="p-4">
+                                <div className="flex items-center justify-end gap-2">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleViewClient(assignment)}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>View Client Details</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => {
+                                            const kit = kits?.find(k => k._id === assignment.kitId);
+                                            if (kit) handleDownloadKitSheet(kit._id);
+                                          }}
+                                        >
+                                          <Download className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Download Kit Sheet</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              </TableCell>
+                            )}
                           </TableRow>
                         ));
                       }
