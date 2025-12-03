@@ -58,7 +58,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save } from "lucide-react";
+import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save, FileText, MessageSquare, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -1820,46 +1820,63 @@ export default function B2BAssignments() {
                                   <TableCell>
                                     {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
                                   </TableCell>
-                                  <TableCell>
-                                    {editingNotes === assignment._id ? (
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          value={editNotesValue}
-                                          onChange={(e) => setEditNotesValue(e.target.value)}
-                                          onKeyDown={(e) => {
-                                            if (e.key === "Enter") handleSaveNotes(assignment._id);
-                                            if (e.key === "Escape") handleCancelEditNotes();
-                                          }}
-                                          className="h-8"
-                                          autoFocus
-                                        />
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="h-8 w-8"
-                                          onClick={() => handleSaveNotes(assignment._id)}
-                                        >
-                                          <Check className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="h-8 w-8"
-                                          onClick={handleCancelEditNotes}
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    ) : (
-                                      <div
-                                        className="flex items-center gap-2 cursor-pointer group"
-                                        onClick={() => handleStartEditNotes(assignment._id, assignment.notes || "")}
+                                  {columnVisibility.assignmentNotes && (
+                                    <TableCell className="text-center">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleOpenNotesDialog(
+                                            assignment._id,
+                                            "assignment",
+                                            assignment.notes || "",
+                                            canEdit
+                                          )
+                                        }
+                                        className="h-8 w-8"
                                       >
-                                        <span className="text-sm">{assignment.notes || "Add notes..."}</span>
-                                        <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                      </div>
-                                    )}
-                                  </TableCell>
+                                        <FileText className="h-4 w-4 text-blue-500" />
+                                      </Button>
+                                    </TableCell>
+                                  )}
+                                  {columnVisibility.packingNotes && (
+                                    <TableCell className="text-center">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleOpenNotesDialog(
+                                            assignment._id,
+                                            "packing",
+                                            assignment.packingNotes || "",
+                                            false
+                                          )
+                                        }
+                                        className="h-8 w-8"
+                                      >
+                                        <MessageSquare className="h-4 w-4 text-green-500" />
+                                      </Button>
+                                    </TableCell>
+                                  )}
+                                  {columnVisibility.dispatchNotes && (
+                                    <TableCell className="text-center">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleOpenNotesDialog(
+                                            assignment._id,
+                                            "dispatch",
+                                            assignment.dispatchNotes || "",
+                                            false
+                                          )
+                                        }
+                                        className="h-8 w-8"
+                                      >
+                                        <Truck className="h-4 w-4 text-orange-500" />
+                                      </Button>
+                                    </TableCell>
+                                  )}
                                   <TableCell className="text-right">
                                     <div className="flex items-center justify-end gap-2">
                                       {canEdit && (
@@ -2068,46 +2085,63 @@ export default function B2BAssignments() {
                           <TableCell>
                             {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
                           </TableCell>
-                          <TableCell>
-                            {editingNotes === assignment._id ? (
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  value={editNotesValue}
-                                  onChange={(e) => setEditNotesValue(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") handleSaveNotes(assignment._id);
-                                    if (e.key === "Escape") handleCancelEditNotes();
-                                  }}
-                                  className="h-8"
-                                  autoFocus
-                                />
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={() => handleSaveNotes(assignment._id)}
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  onClick={handleCancelEditNotes}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <div
-                                className="flex items-center gap-2 cursor-pointer group"
-                                onClick={() => handleStartEditNotes(assignment._id, assignment.notes || "")}
+                          {columnVisibility.assignmentNotes && (
+                            <TableCell className="text-center">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() =>
+                                  handleOpenNotesDialog(
+                                    assignment._id,
+                                    "assignment",
+                                    assignment.notes || "",
+                                    canEdit
+                                  )
+                                }
+                                className="h-8 w-8"
                               >
-                                <span className="text-sm">{assignment.notes || "Add notes..."}</span>
-                                <Edit2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
-                            )}
-                          </TableCell>
+                                <FileText className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            </TableCell>
+                          )}
+                          {columnVisibility.packingNotes && (
+                            <TableCell className="text-center">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() =>
+                                  handleOpenNotesDialog(
+                                    assignment._id,
+                                    "packing",
+                                    assignment.packingNotes || "",
+                                    false
+                                  )
+                                }
+                                className="h-8 w-8"
+                              >
+                                <MessageSquare className="h-4 w-4 text-green-500" />
+                              </Button>
+                            </TableCell>
+                          )}
+                          {columnVisibility.dispatchNotes && (
+                            <TableCell className="text-center">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() =>
+                                  handleOpenNotesDialog(
+                                    assignment._id,
+                                    "dispatch",
+                                    assignment.dispatchNotes || "",
+                                    false
+                                  )
+                                }
+                                className="h-8 w-8"
+                              >
+                                <Truck className="h-4 w-4 text-orange-500" />
+                              </Button>
+                            </TableCell>
+                          )}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
                               {canEdit && (
