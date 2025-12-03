@@ -5,7 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Download, Package, RefreshCw } from "lucide-react";
+import { Download, Package, RefreshCw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { exportProcurementPDF } from "@/lib/procurementExport";
 import { aggregateMaterials, type MaterialShortage } from "@/lib/procurementUtils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function Procurement() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -475,7 +476,7 @@ export default function Procurement() {
                             <TableHead>Shortage (Procurement)</TableHead>
                             <TableHead>Purchasing Qty</TableHead>
                             <TableHead>Est. Cost</TableHead>
-                            <TableHead>Used In (Kits)</TableHead>
+                            <TableHead className="w-[80px]">Kits</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -530,8 +531,30 @@ export default function Procurement() {
                                     <span className="text-muted-foreground text-xs">No price</span>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                  {item.kits.join(", ")}
+                                <TableCell>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                        <Info className="h-4 w-4" />
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                      <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Used in Kits</h4>
+                                        <div className="text-sm text-muted-foreground max-h-[200px] overflow-y-auto">
+                                          {item.kits.length > 0 ? (
+                                            <ul className="list-disc list-inside space-y-1">
+                                              {item.kits.map((kit, idx) => (
+                                                <li key={idx}>{kit}</li>
+                                              ))}
+                                            </ul>
+                                          ) : (
+                                            <p>No kits found</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
                                 </TableCell>
                               </TableRow>
                             );
