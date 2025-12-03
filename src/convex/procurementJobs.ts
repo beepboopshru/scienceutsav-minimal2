@@ -62,6 +62,7 @@ export const create = mutation({
     ),
     notes: v.optional(v.string()),
     remarks: v.optional(v.string()),
+    name: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -74,6 +75,7 @@ export const create = mutation({
 
     const jobData = {
       jobId,
+      name: args.name || `Procurement Job ${jobId}`,
       createdBy: userId,
       assignmentIds: args.assignmentIds,
       materialShortages: args.materialShortages,

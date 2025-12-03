@@ -669,6 +669,7 @@ const schema = defineSchema(
     // Procurement jobs for tracking material shortage requests
     procurementJobs: defineTable({
       jobId: v.string(),
+      name: v.optional(v.string()),
       createdBy: v.id("users"),
       assignmentIds: v.array(v.id("assignments")),
       materialShortages: v.array(
