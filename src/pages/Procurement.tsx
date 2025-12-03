@@ -44,6 +44,7 @@ export default function Procurement() {
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [purchasingQuantities, setPurchasingQuantities] = useState<Map<string, number>>(new Map());
+  const [selectedVendors, setSelectedVendors] = useState<Map<string, string>>(new Map());
   
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -227,10 +228,15 @@ export default function Procurement() {
 
   const handleExport = () => {
     const attachPurchasingQty = (materials: MaterialShortage[]) => {
-      return materials.map((mat) => ({
-        ...mat,
-        purchasingQty: purchasingQuantities.get(mat.name.toLowerCase()) || mat.shortage,
-      }));
+      return materials.map((mat) => {
+        const materialKey = mat.name.toLowerCase();
+        const selectedVendor = selectedVendors.get(materialKey);
+        return {
+          ...mat,
+          purchasingQty: purchasingQuantities.get(materialKey) || mat.shortage,
+          vendorName: selectedVendor || mat.vendorName,
+        };
+      });
     };
 
     if (activeTab === "summary") {
@@ -279,6 +285,15 @@ export default function Procurement() {
     }
   };
 
+  const handleVendorChange = (materialName: string, vendorName: string) => {
+    const materialKey = materialName.toLowerCase();
+    setSelectedVendors((prev) => {
+      const updated = new Map(prev);
+      updated.set(materialKey, vendorName);
+      return updated;
+    });
+  };
+
   // Permission check
   if (!canView) {
     return (
@@ -315,6 +330,7 @@ export default function Procurement() {
           <TableHead>Min. Stock</TableHead>
           <TableHead>Shortage (Procurement)</TableHead>
           <TableHead>Purchasing Qty</TableHead>
+          <TableHead>Vendor</TableHead>
           <TableHead>Est. Cost</TableHead>
         </TableRow>
       </TableHeader>
@@ -322,6 +338,13 @@ export default function Procurement() {
         {materials.map((mat, idx) => {
           const materialKey = mat.name.toLowerCase();
           const purchasingQty = purchasingQuantities.get(materialKey) ?? mat.shortage;
+          const selectedVendor = selectedVendors.get(materialKey) || mat.vendorName;
+          
+          // Get vendors for this material
+          const materialVendors = vendors?.filter(v => 
+            v.inventoryItems?.includes(mat.inventoryId as any)
+          ) || [];
+          
           const estimatedCost = mat.vendorPrice
             ? (purchasingQty * mat.vendorPrice).toFixed(2)
             : null;
@@ -363,6 +386,29 @@ export default function Procurement() {
                   className="w-24"
                   placeholder="0"
                 />
+              </TableCell>
+              <TableCell>
+                <Select
+                  value={selectedVendor || ""}
+                  onValueChange={(value) => handleVendorChange(mat.name, value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select vendor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materialVendors.length > 0 ? (
+                      materialVendors.map((vendor) => (
+                        <SelectItem key={vendor._id} value={vendor.name}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-vendor" disabled>
+                        No vendors available
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </TableCell>
               <TableCell>
                 {estimatedCost ? (
@@ -475,6 +521,7 @@ export default function Procurement() {
                             <TableHead>Min. Stock</TableHead>
                             <TableHead>Shortage (Procurement)</TableHead>
                             <TableHead>Purchasing Qty</TableHead>
+                            <TableHead>Vendor</TableHead>
                             <TableHead>Est. Cost</TableHead>
                             <TableHead className="w-[80px]">Kits</TableHead>
                           </TableRow>
@@ -484,6 +531,13 @@ export default function Procurement() {
                             const materialKey = item.name.toLowerCase();
                             const purchasingQty =
                               purchasingQuantities.get(materialKey) ?? item.shortage;
+                            const selectedVendor = selectedVendors.get(materialKey) || item.vendorName;
+                            
+                            // Get vendors for this material
+                            const materialVendors = vendors?.filter(v => 
+                              v.inventoryItems?.includes(item.inventoryId as any)
+                            ) || [];
+                            
                             const estimatedCost = item.vendorPrice
                               ? (purchasingQty * item.vendorPrice).toFixed(2)
                               : null;
@@ -523,6 +577,29 @@ export default function Procurement() {
                                     className="w-24"
                                     placeholder="0"
                                   />
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={selectedVendor || ""}
+                                    onValueChange={(value) => handleVendorChange(item.name, value)}
+                                  >
+                                    <SelectTrigger className="w-[180px]">
+                                      <SelectValue placeholder="Select vendor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {materialVendors.length > 0 ? (
+                                        materialVendors.map((vendor) => (
+                                          <SelectItem key={vendor._id} value={vendor.name}>
+                                            {vendor.name}
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <SelectItem value="no-vendor" disabled>
+                                          No vendors available
+                                        </SelectItem>
+                                      )}
+                                    </SelectContent>
+                                  </Select>
                                 </TableCell>
                                 <TableCell>
                                   {estimatedCost ? (
