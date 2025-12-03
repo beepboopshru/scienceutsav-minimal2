@@ -465,7 +465,7 @@ export default function Packing() {
     }
 
     try {
-      await createProcurementJob({
+      const procJobId = await createProcurementJob({
         assignmentIds: Array.from(selectedAssignments),
         materialShortages: materials,
         priority: procurementPriority,
