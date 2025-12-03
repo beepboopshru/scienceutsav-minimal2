@@ -85,6 +85,8 @@ export default function B2BAssignments() {
   const createAssignment = useMutation(api.assignments.create);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const updateNotes = useMutation(api.assignments.updateNotes);
+  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
+  const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
   const deleteAssignment = useMutation(api.assignments.deleteAssignment);
   const createBatch = useMutation(api.batches.create);
   const deleteBatch = useMutation(api.batches.deleteBatch);
@@ -96,6 +98,19 @@ export default function B2BAssignments() {
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [packingDialogOpen, setPackingDialogOpen] = useState(false);
+  const [notesDialog, setNotesDialog] = useState<{
+    open: boolean;
+    assignmentId: Id<"assignments"> | null;
+    type: "assignment" | "packing" | "dispatch";
+    value: string;
+    canEdit: boolean;
+  }>({
+    open: false,
+    assignmentId: null,
+    type: "assignment",
+    value: "",
+    canEdit: false,
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
@@ -686,6 +701,52 @@ export default function B2BAssignments() {
     setEditRowDispatchDate(assignment.dispatchedAt ? new Date(assignment.dispatchedAt) : undefined);
     setEditRowNotes(assignment.notes || "");
     setEditRowProductionMonth(assignment.productionMonth || "");
+  };
+
+  const handleOpenNotesDialog = (
+    assignmentId: Id<"assignments">,
+    type: "assignment" | "packing" | "dispatch",
+    value: string,
+    canEdit: boolean
+  ) => {
+    setNotesDialog({
+      open: true,
+      assignmentId,
+      type,
+      value: value || "",
+      canEdit,
+    });
+  };
+
+  const handleSaveNotesDialog = async () => {
+    if (!notesDialog.assignmentId) return;
+
+    try {
+      if (notesDialog.type === "assignment") {
+        await updateNotes({
+          id: notesDialog.assignmentId,
+          notes: notesDialog.value,
+        });
+        toast.success("Assignment notes updated successfully");
+      } else if (notesDialog.type === "packing") {
+        await updatePackingNotes({
+          id: notesDialog.assignmentId,
+          packingNotes: notesDialog.value,
+        });
+        toast.success("Packing notes updated successfully");
+      } else if (notesDialog.type === "dispatch") {
+        await updateDispatchNotes({
+          id: notesDialog.assignmentId,
+          dispatchNotes: notesDialog.value,
+        });
+        toast.success("Dispatch notes updated successfully");
+      }
+      setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false });
+    } catch (error) {
+      toast.error("Failed to update notes", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   };
 
   const handleSaveEditRow = async (assignmentId: Id<"assignments">) => {
