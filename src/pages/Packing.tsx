@@ -813,9 +813,50 @@ export default function Packing() {
                           )}
                           {columnVisibility.status && (
                             <TableCell>
-                              <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                {assignment.status}
-                              </Badge>
+                              {canEdit ? (
+                                <Select
+                                  value={assignment.status || "assigned"}
+                                  onValueChange={async (value) => {
+                                    if (value === "transferred_to_dispatch") {
+                                      const initialChecklist: Record<string, boolean> = {};
+                                      checklistItems?.forEach(item => {
+                                        initialChecklist[item.name] = false;
+                                      });
+                                      
+                                      setChecklistDialog({
+                                        open: true,
+                                        assignmentId: assignment._id,
+                                        checklist: initialChecklist,
+                                      });
+                                    } else {
+                                      try {
+                                        await updatePackingStatus({
+                                          assignmentId: assignment._id,
+                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                        });
+                                        toast.success("Packing status updated successfully");
+                                      } catch (error) {
+                                        toast.error("Failed to update packing status: " + (error as Error).message);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[180px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="assigned">Assigned</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="transferred_to_dispatch">
+                                      Transferred to Dispatch
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
+                                  {assignment.status}
+                                </Badge>
+                              )}
                             </TableCell>
                           )}
                           {columnVisibility.dispatchDate && (
@@ -868,48 +909,6 @@ export default function Packing() {
                             </TableCell>
                           )}
 
-                          {canEdit && (
-                            <TableCell>
-                              <Select
-                                value={assignment.status || "assigned"}
-                                  onValueChange={async (value) => {
-                                    if (value === "transferred_to_dispatch") {
-                                      const initialChecklist: Record<string, boolean> = {};
-                                      checklistItems?.forEach(item => {
-                                        initialChecklist[item.name] = false;
-                                      });
-                                      
-                                      setChecklistDialog({
-                                        open: true,
-                                        assignmentId: assignment._id,
-                                        checklist: initialChecklist,
-                                      });
-                                  } else {
-                                    try {
-                                      await updatePackingStatus({
-                                        assignmentId: assignment._id,
-                                        packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
-                                      });
-                                      toast.success("Packing status updated successfully");
-                                    } catch (error) {
-                                      toast.error("Failed to update packing status: " + (error as Error).message);
-                                    }
-                                  }
-                                }}
-                              >
-                                <SelectTrigger className="w-[180px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="assigned">Assigned</SelectItem>
-                                  <SelectItem value="in_progress">In Progress</SelectItem>
-                                  <SelectItem value="transferred_to_dispatch">
-                                    Transferred to Dispatch
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          )}
                           <TableCell>
                             <div className="flex gap-2">
                               <Button
@@ -1013,12 +1012,53 @@ export default function Packing() {
                             <TableCell className="text-sm">{assignment.quantity}</TableCell>
                             <TableCell className="text-sm">{assignment.grade || "—"}</TableCell>
                             <TableCell>
-                              <Badge variant={
-                                assignment.status === "dispatched" ? "default" :
-                                assignment.status === "in_progress" ? "secondary" : "outline"
-                              }>
-                                {assignment.status}
-                              </Badge>
+                              {canEdit ? (
+                                <Select
+                                  value={assignment.status || "assigned"}
+                                  onValueChange={async (value) => {
+                                    if (value === "transferred_to_dispatch") {
+                                      const initialChecklist: Record<string, boolean> = {};
+                                      checklistItems?.forEach(item => {
+                                        initialChecklist[item.name] = false;
+                                      });
+                                      
+                                      setChecklistDialog({
+                                        open: true,
+                                        assignmentId: assignment._id,
+                                        checklist: initialChecklist,
+                                      });
+                                    } else {
+                                      try {
+                                        await updatePackingStatus({
+                                          assignmentId: assignment._id,
+                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                        });
+                                        toast.success("Packing status updated successfully");
+                                      } catch (error) {
+                                        toast.error("Failed to update packing status: " + (error as Error).message);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[180px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="assigned">Assigned</SelectItem>
+                                    <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="transferred_to_dispatch">
+                                      Transferred to Dispatch
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge variant={
+                                  assignment.status === "dispatched" ? "default" :
+                                  assignment.status === "in_progress" ? "secondary" : "outline"
+                                }>
+                                  {assignment.status}
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm">
                               {assignment.dispatchedAt 
@@ -1062,48 +1102,6 @@ export default function Packing() {
                               </div>
                             </TableCell>
                           )}
-                          {canEdit && (
-                              <TableCell>
-                                <Select
-                                  value={assignment.status || "assigned"}
-                                  onValueChange={async (value) => {
-                                    if (value === "transferred_to_dispatch") {
-                                      const initialChecklist: Record<string, boolean> = {};
-                                      checklistItems?.forEach(item => {
-                                        initialChecklist[item.name] = false;
-                                      });
-                                      
-                                      setChecklistDialog({
-                                        open: true,
-                                        assignmentId: assignment._id,
-                                        checklist: initialChecklist,
-                                      });
-                                    } else {
-                                      try {
-                                        await updatePackingStatus({
-                                          assignmentId: assignment._id,
-                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
-                                        });
-                                        toast.success("Packing status updated successfully");
-                                      } catch (error) {
-                                        toast.error("Failed to update packing status: " + (error as Error).message);
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="w-[180px]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="assigned">Assigned</SelectItem>
-                                    <SelectItem value="in_progress">In Progress</SelectItem>
-                                    <SelectItem value="transferred_to_dispatch">
-                                      Transferred to Dispatch
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                            )}
                             <TableCell>
                               <div className="flex gap-2">
                                 <Button
