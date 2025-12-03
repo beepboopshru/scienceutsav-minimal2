@@ -84,11 +84,39 @@ export default function Dispatch() {
   const deleteCustomDispatch = useMutation(api.customDispatches.deleteCustomDispatch);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
-  const updateRemarks = useMutation(api.assignments.updateRemarks);
   const updateNotes = useMutation(api.assignments.updateNotes);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
-  const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
+
+  // Helper function to convert images to WebP format
+  const convertToWebP = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to convert image to WebP'));
+            }
+          },
+          'image/webp',
+          0.9 // Quality setting (0-1)
+        );
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
@@ -154,10 +182,6 @@ export default function Dispatch() {
   const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
   const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
   
-  // Remarks editing state
-  const [editingRemarks, setEditingRemarks] = useState<Record<string, string>>({});
-  const [originalRemarks, setOriginalRemarks] = useState<Record<string, string>>({});
-
   // Custom Dispatches state
   const [customDispatchDescription, setCustomDispatchDescription] = useState("");
   const [customDispatchStatus, setCustomDispatchStatus] = useState<"pending" | "dispatched" | "delivered">("pending");
@@ -251,30 +275,6 @@ export default function Dispatch() {
     } catch (error) {
       toast.error("Failed to update notes");
       console.error(error);
-    }
-  };
-
-  // Handler for downloading kit sheet
-  const handleDownloadKitSheet = async (kitId: Id<"kits">) => {
-    try {
-      toast.info("Generating kit sheet...");
-      const result = await downloadKitSheet({ kitId });
-      
-      const blob = new Blob([result.html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${result.kitName.replace(/\s+/g, "-")}-sheet.html`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast.success("Kit sheet downloaded");
-    } catch (error) {
-      toast.error("Failed to generate kit sheet", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
     }
   };
 
@@ -498,50 +498,6 @@ export default function Dispatch() {
     }
   };
 
-  const handleStartEditingRemarks = (assignmentId: Id<"assignments">, currentRemarks: string) => {
-    setEditingRemarks(prev => ({ ...prev, [assignmentId]: currentRemarks || "" }));
-    setOriginalRemarks(prev => ({ ...prev, [assignmentId]: currentRemarks || "" }));
-  };
-
-  const handleCancelEditingRemarks = (assignmentId: Id<"assignments">) => {
-    const newEditingRemarks = { ...editingRemarks };
-    delete newEditingRemarks[assignmentId];
-    setEditingRemarks(newEditingRemarks);
-    
-    const newOriginalRemarks = { ...originalRemarks };
-    delete newOriginalRemarks[assignmentId];
-    setOriginalRemarks(newOriginalRemarks);
-  };
-
-  const handleSaveRemarks = async (assignmentId: Id<"assignments">) => {
-    if (!hasPermission("dispatch", "edit")) {
-      toast.error("You don't have permission to edit remarks");
-      return;
-    }
-    
-    const newRemarks = editingRemarks[assignmentId] || "";
-    
-    try {
-      await updateRemarks({ id: assignmentId, remarks: newRemarks });
-      toast.success("Remarks saved successfully");
-      
-      // Clear editing state
-      const newEditingRemarks = { ...editingRemarks };
-      delete newEditingRemarks[assignmentId];
-      setEditingRemarks(newEditingRemarks);
-      
-      const newOriginalRemarks = { ...originalRemarks };
-      delete newOriginalRemarks[assignmentId];
-      setOriginalRemarks(newOriginalRemarks);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save remarks");
-    }
-  };
-
-  const handleRemarksInputChange = (assignmentId: Id<"assignments">, value: string) => {
-    setEditingRemarks(prev => ({ ...prev, [assignmentId]: value }));
-  };
-
   const handleConfirmProofPhoto = async () => {
     if (!proofPhoto) {
       toast.error("Please upload a proof photo");
@@ -553,50 +509,23 @@ export default function Dispatch() {
     try {
       setIsUploadingProof(true);
 
-      // Helper function to convert image to WebP
-      const convertToWebP = async (file: File): Promise<Blob> => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = URL.createObjectURL(file);
-        });
-
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx?.drawImage(img, 0, 0);
-
-        return new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
-        });
-      };
-
-      // Convert and upload proof photo
-      const proofWebpBlob = await convertToWebP(proofPhoto);
-      const proofUploadUrl = await generateUploadUrl();
-      const proofUploadResponse = await fetch(proofUploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/webp' },
-        body: proofWebpBlob,
+      // Convert proof photo to WebP
+      const webpBlob = await convertToWebP(proofPhoto);
+      const proofPhotoId = await generateUploadUrl();
+      await fetch(proofPhotoId, {
+        method: "POST",
+        headers: { "Content-Type": "image/webp" },
+        body: webpBlob,
       });
+      const { storageId: proofStorageId } = await fetch(proofPhotoId).then((r) => r.json());
 
-      if (!proofUploadResponse.ok) {
-        throw new Error('Failed to upload proof photo');
-      }
-
-      const { storageId: proofStorageId } = await proofUploadResponse.json();
-
-      // Update assignment with proof photo
-      await updateStatus({ 
-        id: selectedAssignmentForProof, 
+      await updateStatus({
+        id: selectedAssignmentForProof,
         status: "dispatched",
         proofPhotoId: proofStorageId,
       });
 
-      toast.success("Status updated to Dispatched with proof photo");
+      toast.success("Assignment marked as dispatched with proof photo");
       setProofPhotoDialogOpen(false);
       setSelectedAssignmentForProof(null);
       setProofPhoto(null);
@@ -621,7 +550,7 @@ export default function Dispatch() {
     }
 
     if (!ewayDocument) {
-      toast.error("Please upload an e-way document");
+      toast.error("Please upload the e-way document");
       return;
     }
 
@@ -631,7 +560,7 @@ export default function Dispatch() {
     }
 
     if (!dispatchDocument) {
-      toast.error("Please upload a dispatch document");
+      toast.error("Please upload the dispatch document");
       return;
     }
 
@@ -640,60 +569,31 @@ export default function Dispatch() {
     try {
       setIsUploadingDocument(true);
 
-      // Helper function to convert image to WebP
-      const convertToWebP = async (file: File): Promise<Blob> => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = URL.createObjectURL(file);
-        });
-
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx?.drawImage(img, 0, 0);
-
-        return new Promise<Blob>((resolve) => {
-          canvas.toBlob((blob) => resolve(blob!), 'image/webp', 0.9);
-        });
-      };
-
-      // Convert and upload e-way document
+      // Convert documents to WebP
       const ewayWebpBlob = await convertToWebP(ewayDocument);
+      const dispatchWebpBlob = await convertToWebP(dispatchDocument);
+
+      // Upload e-way document
       const ewayUploadUrl = await generateUploadUrl();
-      const ewayUploadResponse = await fetch(ewayUploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/webp' },
+      await fetch(ewayUploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": "image/webp" },
         body: ewayWebpBlob,
       });
+      const { storageId: ewayStorageId } = await fetch(ewayUploadUrl).then((r) => r.json());
 
-      if (!ewayUploadResponse.ok) {
-        throw new Error('Failed to upload e-way document');
-      }
-
-      const { storageId: ewayStorageId } = await ewayUploadResponse.json();
-
-      // Convert and upload dispatch document
-      const dispatchWebpBlob = await convertToWebP(dispatchDocument);
+      // Upload dispatch document
       const dispatchUploadUrl = await generateUploadUrl();
-      const dispatchUploadResponse = await fetch(dispatchUploadUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'image/webp' },
+      await fetch(dispatchUploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": "image/webp" },
         body: dispatchWebpBlob,
       });
+      const { storageId: dispatchStorageId } = await fetch(dispatchUploadUrl).then((r) => r.json());
 
-      if (!dispatchUploadResponse.ok) {
-        throw new Error('Failed to upload dispatch document');
-      }
-
-      const { storageId: dispatchStorageId } = await dispatchUploadResponse.json();
-
-      // Update assignment with all dispatch details
-      await updateStatus({ 
-        id: selectedAssignmentForDispatch, 
+      // Update assignment status with all information
+      await updateStatus({
+        id: selectedAssignmentForDispatch,
         status: "ready_for_dispatch",
         ewayNumber: ewayNumber.trim(),
         ewayDocumentId: ewayStorageId,
@@ -702,9 +602,15 @@ export default function Dispatch() {
         trackingLink: trackingLink.trim() || undefined,
       });
 
-      toast.success("Status updated to Ready for Dispatch");
+      toast.success("Assignment marked as ready for dispatch");
       setChecklistDialogOpen(false);
       setSelectedAssignmentForDispatch(null);
+      setChecklistItems({
+        kitCount: false,
+        bulkMaterials: false,
+        workbookWorksheetConceptMap: false,
+        spareKitsTools: false,
+      });
       setEwayNumber("");
       setEwayDocument(null);
       setDispatchNumber("");
@@ -1180,50 +1086,6 @@ export default function Dispatch() {
                                 </div>
                               </TableCell>
                             )}
-                            <TableCell className="p-4">
-                              {editingRemarks[assignment._id] !== undefined ? (
-                                <div className="space-y-2">
-                                  <textarea
-                                    className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                                    rows={2}
-                                    value={editingRemarks[assignment._id]}
-                                    onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
-                                    placeholder="Add remarks..."
-                                  />
-                                  <div className="flex gap-2">
-                                    <Button
-                                      size="sm"
-                                      variant="default"
-                                      onClick={() => handleSaveRemarks(assignment._id)}
-                                    >
-                                      Save
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleCancelEditingRemarks(assignment._id)}
-                                    >
-                                      Cancel
-                                    </Button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="flex items-start gap-2">
-                                  <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
-                                    {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
-                                  </div>
-                                  {canEdit && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
-                                    >
-                                      Edit
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
-                            </TableCell>
                             {canEdit && (
                               <TableCell className="p-4">
                                 <div className="flex items-center justify-end gap-2">
@@ -1239,23 +1101,6 @@ export default function Dispatch() {
                                         </Button>
                                       </TooltipTrigger>
                                       <TooltipContent>View Client Details</TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          onClick={() => {
-                                            const kit = kits?.find(k => k._id === assignment.kitId);
-                                            if (kit) handleDownloadKitSheet(kit._id);
-                                          }}
-                                        >
-                                          <Download className="h-4 w-4" />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>Download Kit Sheet</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 </div>
@@ -1353,48 +1198,7 @@ export default function Dispatch() {
                                     : "-"}
                                 </TableCell>
                                 <TableCell className="p-4">
-                                  {editingRemarks[assignment._id] !== undefined ? (
-                                    <div className="space-y-2">
-                                      <textarea
-                                        className="w-full min-w-[200px] p-2 border rounded text-sm resize-none"
-                                        rows={2}
-                                        value={editingRemarks[assignment._id]}
-                                        onChange={(e) => handleRemarksInputChange(assignment._id, e.target.value)}
-                                        placeholder="Add remarks..."
-                                      />
-                                      <div className="flex gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="default"
-                                          onClick={() => handleSaveRemarks(assignment._id)}
-                                        >
-                                          Save
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => handleCancelEditingRemarks(assignment._id)}
-                                        >
-                                          Cancel
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-start gap-2">
-                                      <div className="flex-1 min-w-[200px] p-2 border rounded text-sm bg-muted/30">
-                                        {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
-                                      </div>
-                                      {canEdit && (
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => handleStartEditingRemarks(assignment._id, assignment.remarks || "")}
-                                        >
-                                          Edit
-                                        </Button>
-                                      )}
-                                    </div>
-                                  )}
+                                  {assignment.remarks || <span className="text-muted-foreground italic">No remarks</span>}
                                 </TableCell>
                                 <TableCell className="p-4">
                                   <div className="flex items-center justify-end gap-2">
