@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/command";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil } from "lucide-react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil, MessageSquare, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -60,6 +60,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Dispatch() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -78,6 +85,9 @@ export default function Dispatch() {
   const updateStatus = useMutation(api.assignments.updateStatus);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
   const updateRemarks = useMutation(api.assignments.updateRemarks);
+  const updateNotes = useMutation(api.assignments.updateNotes);
+  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
+  const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
@@ -166,9 +176,22 @@ export default function Dispatch() {
     status: true,
     dispatchDate: true,
     productionMonth: true,
-    assignmentNotes: true,
-    packingNotes: true,
-    dispatchNotes: true,
+    notes: true,
+  });
+
+  // Notes dialog state
+  const [notesDialog, setNotesDialog] = useState<{
+    open: boolean;
+    assignmentId: Id<"assignments"> | null;
+    type: "assignment" | "packing" | "dispatch";
+    value: string;
+    canEdit: boolean;
+  }>({
+    open: false,
+    assignmentId: null,
+    type: "assignment",
+    value: "",
+    canEdit: false,
   });
 
   const toggleColumn = (columnId: string) => {
@@ -176,6 +199,58 @@ export default function Dispatch() {
       ...prev,
       [columnId as keyof typeof prev]: !prev[columnId as keyof typeof prev],
     }));
+  };
+
+  // Handler for opening notes dialog
+  const handleOpenNotesDialog = (
+    assignmentId: Id<"assignments">,
+    type: "assignment" | "packing" | "dispatch",
+    value: string
+  ) => {
+    const editPermission = type === "assignment" 
+      ? hasPermission("assignments", "edit")
+      : type === "packing"
+      ? hasPermission("packing", "edit")
+      : hasPermission("dispatch", "edit");
+
+    setNotesDialog({
+      open: true,
+      assignmentId,
+      type,
+      value,
+      canEdit: editPermission,
+    });
+  };
+
+  // Handler for saving notes
+  const handleSaveNotesDialog = async () => {
+    if (!notesDialog.assignmentId) return;
+
+    try {
+      if (notesDialog.type === "assignment") {
+        await updateNotes({
+          id: notesDialog.assignmentId,
+          notes: notesDialog.value,
+        });
+        toast.success("Assignment notes updated");
+      } else if (notesDialog.type === "packing") {
+        await updatePackingNotes({
+          id: notesDialog.assignmentId,
+          packingNotes: notesDialog.value,
+        });
+        toast.success("Packing notes updated");
+      } else if (notesDialog.type === "dispatch") {
+        await updateDispatchNotes({
+          id: notesDialog.assignmentId,
+          dispatchNotes: notesDialog.value,
+        });
+        toast.success("Dispatch notes updated");
+      }
+      setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false });
+    } catch (error) {
+      toast.error("Failed to update notes");
+      console.error(error);
+    }
   };
 
   const columns = [
@@ -187,9 +262,7 @@ export default function Dispatch() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
-    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
-    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
+    { id: "notes", label: "Notes", visible: columnVisibility.notes },
   ];
 
   useEffect(() => {
@@ -910,9 +983,7 @@ export default function Dispatch() {
                       {columnVisibility.status && <TableHead>Status</TableHead>}
                       {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                       {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
-                      {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
-                      {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
-                      {columnVisibility.dispatchNotes && <TableHead>Dispatch Notes</TableHead>}
+                      {columnVisibility.notes && <TableHead className="text-center">Notes</TableHead>}
                       {canEdit && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -980,16 +1051,75 @@ export default function Dispatch() {
                                 ? new Date(assignment.productionMonth).toLocaleDateString()
                                 : "-"}
                             </TableCell>
-                            <TableCell className="p-4">
-                              <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
-                                {assignment.notes || <span className="text-muted-foreground italic">No assignment notes</span>}
-                              </div>
-                            </TableCell>
-                            <TableCell className="p-4">
-                              <div className="min-w-[200px] p-2 border rounded text-sm bg-muted/30 max-h-24 overflow-y-auto">
-                                {assignment.packingNotes || <span className="text-muted-foreground italic">No packing notes</span>}
-                              </div>
-                            </TableCell>
+                            {columnVisibility.notes && (
+                              <TableCell className="p-4 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleOpenNotesDialog(
+                                              assignment._id,
+                                              "assignment",
+                                              assignment.notes || ""
+                                            )
+                                          }
+                                          className="h-8 w-8"
+                                        >
+                                          <FileText className="h-4 w-4 text-blue-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Assignment Notes</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleOpenNotesDialog(
+                                              assignment._id,
+                                              "packing",
+                                              assignment.packingNotes || ""
+                                            )
+                                          }
+                                          className="h-8 w-8"
+                                        >
+                                          <MessageSquare className="h-4 w-4 text-green-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Packing Notes</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleOpenNotesDialog(
+                                              assignment._id,
+                                              "dispatch",
+                                              assignment.remarks || ""
+                                            )
+                                          }
+                                          className="h-8 w-8"
+                                        >
+                                          <Truck className="h-4 w-4 text-orange-500" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Dispatch Notes</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                              </TableCell>
+                            )}
                             <TableCell className="p-4">
                               {editingRemarks[assignment._id] !== undefined ? (
                                 <div className="space-y-2">
@@ -2370,6 +2500,38 @@ export default function Dispatch() {
               </Button>
               <Button onClick={handleGenerateClientLabel}>
                 Generate Label
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {/* Notes Dialog */}
+        <Dialog open={notesDialog.open} onOpenChange={(open) => setNotesDialog({ ...notesDialog, open })}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {notesDialog.type === "assignment" && "Assignment Notes"}
+                {notesDialog.type === "packing" && "Packing Notes"}
+                {notesDialog.type === "dispatch" && "Dispatch Notes"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Textarea
+                value={notesDialog.value}
+                onChange={(e) => setNotesDialog({ ...notesDialog, value: e.target.value })}
+                placeholder="Enter notes..."
+                rows={6}
+                disabled={!notesDialog.canEdit}
+              />
+            </div>
+            <DialogFooter>
+              {notesDialog.canEdit && (
+                <Button onClick={handleSaveNotesDialog}>Save Notes</Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}
+              >
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
