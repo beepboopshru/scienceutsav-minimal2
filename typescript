@@ -1,7 +1,1 @@
-const fileTypeAccepts = {
-  kitImage: "image/*",
-  laser: ".dxf,.pdf,.cdr",
-  component: "image/*",
-  workbook: ".pdf,.doc,.docx,.xls,.xlsx",
-  misc: "*"
-};
+const canEdit = hasPermission("packing", "edit");

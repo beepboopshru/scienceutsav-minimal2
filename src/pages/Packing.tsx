@@ -223,6 +223,12 @@ export default function Packing() {
   const handleSaveNotesDialog = async () => {
     if (!notesDialog.assignmentId) return;
 
+    // Verify user has edit permission before attempting to save
+    if (!notesDialog.canEdit) {
+      toast.error("You do not have permission to edit notes");
+      return;
+    }
+
     try {
       if (notesDialog.type === "packing") {
         await updatePackingNotes({
