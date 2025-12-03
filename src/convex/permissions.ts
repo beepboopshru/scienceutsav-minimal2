@@ -26,7 +26,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     processingJobs: { view: true, create: true, edit: true, complete: true, delete: true, editBOM: true, editTargets: true },
     procurementJobs: { view: true, create: true, edit: true, complete: true, delete: true },
     packing: { view: true, initiate: true, validate: true, transfer: true, edit: true },
-    dispatch: { view: true, verify: true, dispatch: true, updateStatus: true },
+    dispatch: { view: true, verify: true, dispatch: true, updateStatus: true, edit: true },
     discrepancyTickets: { view: true, create: true, edit: true, resolve: true, delete: true },
     billTracking: { view: true, create: true, edit: true, updateStatus: true, delete: true },
     vendorImports: { view: true, create: true, edit: true, updatePaymentStatus: true, delete: true },
