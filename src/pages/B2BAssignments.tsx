@@ -203,7 +203,9 @@ export default function B2BAssignments() {
     status: true,
     dispatchDate: true,
     productionMonth: true,
-    notes: true,
+    assignmentNotes: true,
+    packingNotes: true,
+    dispatchNotes: true,
   });
 
   const toggleColumn = (columnId: string) => {
@@ -222,7 +224,9 @@ export default function B2BAssignments() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "notes", label: "Notes", visible: columnVisibility.notes },
+    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
+    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
   ];
 
   useEffect(() => {
@@ -870,7 +874,9 @@ export default function B2BAssignments() {
                 {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                 {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
                 <TableHead>Order Created On</TableHead>
-                {columnVisibility.notes && <TableHead>Notes</TableHead>}
+                  {columnVisibility.assignmentNotes && <TableHead className="text-center">Assignment Notes</TableHead>}
+                  {columnVisibility.packingNotes && <TableHead className="text-center">Packing Notes</TableHead>}
+                  {columnVisibility.dispatchNotes && <TableHead className="text-center">Dispatch Notes</TableHead>}
                 {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1206,7 +1212,7 @@ export default function B2BAssignments() {
                       <TableCell>
                         <span className="text-sm text-muted-foreground">-</span>
                       </TableCell>
-                      {columnVisibility.notes && (
+                      {(columnVisibility.assignmentNotes || columnVisibility.packingNotes || columnVisibility.dispatchNotes) && (
                         <TableCell>
                           <Input
                             value={row.notes}
