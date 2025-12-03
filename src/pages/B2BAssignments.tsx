@@ -9,6 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -218,9 +224,7 @@ export default function B2BAssignments() {
     status: true,
     dispatchDate: true,
     productionMonth: true,
-    assignmentNotes: true,
-    packingNotes: true,
-    dispatchNotes: true,
+    notes: true,
   });
 
   const toggleColumn = (columnId: string) => {
@@ -239,9 +243,7 @@ export default function B2BAssignments() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
-    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
-    { id: "dispatchNotes", label: "Dispatch Notes", visible: columnVisibility.dispatchNotes },
+    { id: "notes", label: "Notes", visible: columnVisibility.notes },
   ];
 
   useEffect(() => {
@@ -935,9 +937,7 @@ export default function B2BAssignments() {
                 {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                 {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
                 <TableHead>Order Created On</TableHead>
-                  {columnVisibility.assignmentNotes && <TableHead className="text-center">Assignment Notes</TableHead>}
-                  {columnVisibility.packingNotes && <TableHead className="text-center">Packing Notes</TableHead>}
-                  {columnVisibility.dispatchNotes && <TableHead className="text-center">Dispatch Notes</TableHead>}
+                  {columnVisibility.notes && <TableHead className="text-center">Notes</TableHead>}
                 {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1273,7 +1273,7 @@ export default function B2BAssignments() {
                       <TableCell>
                         <span className="text-sm text-muted-foreground">-</span>
                       </TableCell>
-                      {(columnVisibility.assignmentNotes || columnVisibility.packingNotes || columnVisibility.dispatchNotes) && (
+                      {columnVisibility.notes && (
                         <TableCell>
                           <Input
                             value={row.notes}
@@ -1820,61 +1820,58 @@ export default function B2BAssignments() {
                                   <TableCell>
                                     {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
                                   </TableCell>
-                                  {columnVisibility.assignmentNotes && (
+                                  {columnVisibility.notes && (
                                     <TableCell className="text-center">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() =>
-                                          handleOpenNotesDialog(
-                                            assignment._id,
-                                            "assignment",
-                                            assignment.notes || "",
-                                            canEdit
-                                          )
-                                        }
-                                        className="h-8 w-8"
-                                      >
-                                        <FileText className="h-4 w-4 text-blue-500" />
-                                      </Button>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.packingNotes && (
-                                    <TableCell className="text-center">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() =>
-                                          handleOpenNotesDialog(
-                                            assignment._id,
-                                            "packing",
-                                            assignment.packingNotes || "",
-                                            false
-                                          )
-                                        }
-                                        className="h-8 w-8"
-                                      >
-                                        <MessageSquare className="h-4 w-4 text-green-500" />
-                                      </Button>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.dispatchNotes && (
-                                    <TableCell className="text-center">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() =>
-                                          handleOpenNotesDialog(
-                                            assignment._id,
-                                            "dispatch",
-                                            assignment.dispatchNotes || "",
-                                            false
-                                          )
-                                        }
-                                        className="h-8 w-8"
-                                      >
-                                        <Truck className="h-4 w-4 text-orange-500" />
-                                      </Button>
+                                      <div className="flex items-center justify-center gap-1">
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleOpenNotesDialog(
+                                              assignment._id,
+                                              "assignment",
+                                              assignment.notes || "",
+                                              canEdit
+                                            )
+                                          }
+                                          className="h-8 w-8"
+                                          title="Assignment Notes"
+                                        >
+                                          <FileText className="h-4 w-4 text-blue-500" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleOpenNotesDialog(
+                                              assignment._id,
+                                              "packing",
+                                              assignment.packingNotes || "",
+                                              false
+                                            )
+                                          }
+                                          className="h-8 w-8"
+                                          title="Packing Notes"
+                                        >
+                                          <MessageSquare className="h-4 w-4 text-green-500" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleOpenNotesDialog(
+                                              assignment._id,
+                                              "dispatch",
+                                              assignment.dispatchNotes || "",
+                                              false
+                                            )
+                                          }
+                                          className="h-8 w-8"
+                                          title="Dispatch Notes"
+                                        >
+                                          <Truck className="h-4 w-4 text-orange-500" />
+                                        </Button>
+                                      </div>
                                     </TableCell>
                                   )}
                                   <TableCell className="text-right">
@@ -2085,61 +2082,76 @@ export default function B2BAssignments() {
                           <TableCell>
                             {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
                           </TableCell>
-                          {columnVisibility.assignmentNotes && (
+                          {columnVisibility.notes && (
                             <TableCell className="text-center">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleOpenNotesDialog(
-                                    assignment._id,
-                                    "assignment",
-                                    assignment.notes || "",
-                                    canEdit
-                                  )
-                                }
-                                className="h-8 w-8"
-                              >
-                                <FileText className="h-4 w-4 text-blue-500" />
-                              </Button>
-                            </TableCell>
-                          )}
-                          {columnVisibility.packingNotes && (
-                            <TableCell className="text-center">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleOpenNotesDialog(
-                                    assignment._id,
-                                    "packing",
-                                    assignment.packingNotes || "",
-                                    false
-                                  )
-                                }
-                                className="h-8 w-8"
-                              >
-                                <MessageSquare className="h-4 w-4 text-green-500" />
-                              </Button>
-                            </TableCell>
-                          )}
-                          {columnVisibility.dispatchNotes && (
-                            <TableCell className="text-center">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleOpenNotesDialog(
-                                    assignment._id,
-                                    "dispatch",
-                                    assignment.dispatchNotes || "",
-                                    false
-                                  )
-                                }
-                                className="h-8 w-8"
-                              >
-                                <Truck className="h-4 w-4 text-orange-500" />
-                              </Button>
+                              <div className="flex items-center justify-center gap-1">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleOpenNotesDialog(
+                                            assignment._id,
+                                            "assignment",
+                                            assignment.notes || "",
+                                            canEdit
+                                          )
+                                        }
+                                        className="h-8 w-8"
+                                      >
+                                        <FileText className="h-4 w-4 text-blue-500" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Assignment Notes</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleOpenNotesDialog(
+                                            assignment._id,
+                                            "packing",
+                                            assignment.packingNotes || "",
+                                            false
+                                          )
+                                        }
+                                        className="h-8 w-8"
+                                      >
+                                        <MessageSquare className="h-4 w-4 text-green-500" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Packing Notes</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() =>
+                                          handleOpenNotesDialog(
+                                            assignment._id,
+                                            "dispatch",
+                                            assignment.dispatchNotes || "",
+                                            false
+                                          )
+                                        }
+                                        className="h-8 w-8"
+                                      >
+                                        <Truck className="h-4 w-4 text-orange-500" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Dispatch Notes</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
                             </TableCell>
                           )}
                           <TableCell className="text-right">
