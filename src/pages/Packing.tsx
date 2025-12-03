@@ -85,7 +85,6 @@ export default function Packing() {
   const [procurementJobName, setProcurementJobName] = useState("");
   const [procurementPriority, setProcurementPriority] = useState<"low" | "medium" | "high">("medium");
   const [procurementNotes, setProcurementNotes] = useState("");
-  const [procurementRemarks, setProcurementRemarks] = useState("");
   
   // Kit stock warning dialog state
   const [kitStockWarningDialog, setKitStockWarningDialog] = useState<{
@@ -480,7 +479,7 @@ export default function Packing() {
         materialShortages: materials,
         priority: procurementPriority,
         notes: procurementNotes || undefined,
-        remarks: procurementRemarks || undefined,
+        name: procurementJobName || undefined,
       });
       
       toast.success("Inventory request created successfully");
@@ -488,7 +487,6 @@ export default function Packing() {
       setProcurementDialog(false);
       setProcurementJobName("");
       setProcurementNotes("");
-      setProcurementRemarks("");
       setProcurementPriority("medium");
     } catch (error) {
       toast.error("Failed to create inventory request", {
@@ -1449,19 +1447,11 @@ export default function Packing() {
 
             <div>
               <Label>Notes (Optional)</Label>
-              <Input
+              <Textarea
                 placeholder="Add any notes about this procurement request..."
                 value={procurementNotes}
                 onChange={(e) => setProcurementNotes(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Label>Remarks (Optional)</Label>
-              <Input
-                placeholder="Add any remarks about this inventory request..."
-                value={procurementRemarks}
-                onChange={(e) => setProcurementRemarks(e.target.value)}
+                rows={3}
               />
             </div>
 

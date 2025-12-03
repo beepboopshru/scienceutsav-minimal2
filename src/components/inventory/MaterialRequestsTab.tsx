@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Trash2, CheckCircle, XCircle, Clock, Package } from "lucide-react";
+import { Plus, Search, Trash2, CheckCircle, XCircle, Clock, Package, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -45,9 +45,17 @@ export function MaterialRequestsTab() {
     vendorId: "" as Id<"vendors"> | "",
   });
   const [categoryPopoverOpen, setCategoryPopoverOpen] = useState(false);
+  const [notesDialog, setNotesDialog] = useState<{
+    open: boolean;
+    notes: string;
+  }>({
+    open: false,
+    notes: "",
+  });
 
   const inventory = useQuery(api.inventory.list);
   const requestsData = useQuery(api.materialRequests.list);
+  const procurementJobs = useQuery(api.procurementJobs.list);
   const createRequest = useMutation(api.materialRequests.create);
   const approveRequest = useMutation(api.materialRequests.approve);
   const rejectRequest = useMutation(api.materialRequests.reject);
@@ -477,13 +485,14 @@ export function MaterialRequestsTab() {
                 <TableHead>Items</TableHead>
                 <TableHead>Purpose</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-center">Notes</TableHead>
                 {(canApprove || canReject) && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests?.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={(canApprove || canReject) ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={(canApprove || canReject) ? 7 : 6} className="text-center py-8 text-muted-foreground">
                     No requests found
                   </TableCell>
                 </TableRow>
@@ -507,8 +516,17 @@ export function MaterialRequestsTab() {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={req.purpose}>
-                    {req.purpose || "-"}
+                  <TableCell className="max-w-[200px]">
+                    {req.purpose?.startsWith("PROC-") ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">
+                          {procurementJobs?.find((job: any) => job.jobId === req.purpose)?.name || `Procurement Job ${req.purpose}`}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{req.purpose}</span>
+                      </div>
+                    ) : (
+                      <span className="truncate" title={req.purpose}>{req.purpose || "-"}</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant={
@@ -520,6 +538,24 @@ export function MaterialRequestsTab() {
                       {req.status === "pending" && <Clock className="mr-1 h-3 w-3" />}
                       {req.status.toUpperCase()}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {req.purpose?.startsWith("PROC-") && procurementJobs?.find((job: any) => job.jobId === req.purpose)?.notes ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setNotesDialog({
+                          open: true,
+                          notes: procurementJobs?.find((job: any) => job.jobId === req.purpose)?.notes || "",
+                        })}
+                        title="View Notes"
+                        className="h-8 w-8 p-0"
+                      >
+                        <FileText className="h-4 w-4 text-blue-600" />
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   {(canApprove || canReject) && (
                     <TableCell>
@@ -545,6 +581,27 @@ export function MaterialRequestsTab() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={notesDialog.open} onOpenChange={(open) => !open && setNotesDialog({ open: false, notes: "" })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Procurement Job Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border rounded-lg p-4 bg-muted/50 min-h-[200px]">
+              <p className="text-sm whitespace-pre-wrap">{notesDialog.notes || "No notes available"}</p>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setNotesDialog({ open: false, notes: "" })}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
