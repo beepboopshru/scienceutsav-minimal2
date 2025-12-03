@@ -196,6 +196,7 @@ export default function Assignments() {
   const [columnVisibility, setColumnVisibility] = useState({
     program: true,
     kit: true,
+    category: true,
     client: true,
     quantity: true,
     grade: true,
@@ -230,6 +231,7 @@ export default function Assignments() {
   const columns = [
     { id: "program", label: "Program", visible: columnVisibility.program },
     { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "category", label: "Category", visible: columnVisibility.category },
     { id: "client", label: "Client", visible: columnVisibility.client },
     { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
     { id: "grade", label: "Grade", visible: columnVisibility.grade },
@@ -856,6 +858,7 @@ export default function Assignments() {
                 <TableHead className="w-[50px]"></TableHead>
                 {columnVisibility.program && <TableHead>Program</TableHead>}
                 {columnVisibility.kit && <TableHead>Kit</TableHead>}
+                {columnVisibility.category && <TableHead>Category</TableHead>}
                 {columnVisibility.client && <TableHead>Client</TableHead>}
                 {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
                 {columnVisibility.grade && <TableHead>Grade</TableHead>}
@@ -1443,6 +1446,11 @@ export default function Assignments() {
                                   <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
                                 </TableCell>
                               )}
+                              {columnVisibility.category && (
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
+                                </TableCell>
+                              )}
                               {columnVisibility.client && (
                                 <TableCell>
                                   <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
@@ -1606,6 +1614,11 @@ export default function Assignments() {
                       {columnVisibility.kit && (
                         <TableCell>
                           <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.category && (
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
                         </TableCell>
                       )}
                       {columnVisibility.client && (
