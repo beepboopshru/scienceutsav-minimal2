@@ -26,6 +26,7 @@ import type * as clients from "../clients.js";
 import type * as customDispatches from "../customDispatches.js";
 import type * as deletionRequests from "../deletionRequests.js";
 import type * as discrepancyTickets from "../discrepancyTickets.js";
+import type * as dispatchChecklist from "../dispatchChecklist.js";
 import type * as fixClientType from "../fixClientType.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
@@ -71,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   customDispatches: typeof customDispatches;
   deletionRequests: typeof deletionRequests;
   discrepancyTickets: typeof discrepancyTickets;
+  dispatchChecklist: typeof dispatchChecklist;
   fixClientType: typeof fixClientType;
   http: typeof http;
   inventory: typeof inventory;

@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, AlertTriangle, Trash2, Download } from "lucide-react";
+import { Loader2, AlertTriangle, Trash2, Download, Plus, Edit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -38,10 +38,22 @@ export default function AdminZone() {
     dateRange: dateRangeFilter,
   });
   const allAssignments = useQuery(api.assignments.list, {});
+  const checklistItems = useQuery(api.dispatchChecklist.list, {});
   
   const clearPendingAssignments = useMutation(api.users.clearPendingAssignments);
   const clearAllAssignments = useMutation(api.users.clearAllAssignments);
   const deleteAllLogs = useMutation(api.activityLogs.deleteAll);
+  const createChecklistItem = useMutation(api.dispatchChecklist.create);
+  const updateChecklistItem = useMutation(api.dispatchChecklist.update);
+  const deleteChecklistItem = useMutation(api.dispatchChecklist.remove);
+
+  const [checklistDialog, setChecklistDialog] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    id?: Id<"dispatchChecklist">;
+    name: string;
+    label: string;
+  }>({ open: false, mode: "create", name: "", label: "" });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -56,7 +68,7 @@ export default function AdminZone() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (isLoading || !user || !activityLogs || !allAssignments) {
+  if (isLoading || !user || !activityLogs || !allAssignments || !checklistItems) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
@@ -148,6 +160,50 @@ export default function AdminZone() {
     toast.success("Logs exported successfully");
   };
 
+  const handleSaveChecklistItem = async () => {
+    if (!checklistDialog.name.trim() || !checklistDialog.label.trim()) {
+      toast.error("Name and label are required");
+      return;
+    }
+
+    try {
+      if (checklistDialog.mode === "create") {
+        await createChecklistItem({
+          name: checklistDialog.name,
+          label: checklistDialog.label,
+        });
+        toast.success("Checklist item created");
+      } else if (checklistDialog.id) {
+        await updateChecklistItem({
+          id: checklistDialog.id,
+          name: checklistDialog.name,
+          label: checklistDialog.label,
+        });
+        toast.success("Checklist item updated");
+      }
+      setChecklistDialog({ open: false, mode: "create", name: "", label: "" });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save checklist item");
+    }
+  };
+
+  const handleDeleteChecklistItem = async (id: Id<"dispatchChecklist">) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete Checklist Item",
+      description: "Are you sure you want to delete this checklist item?",
+      action: async () => {
+        try {
+          await deleteChecklistItem({ id });
+          toast.success("Checklist item deleted");
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error: any) {
+          toast.error(error.message || "Failed to delete checklist item");
+        }
+      },
+    });
+  };
+
   const paginatedLogs = activityLogs.slice(
     (currentPage - 1) * logsPerPage,
     currentPage * logsPerPage
@@ -177,6 +233,54 @@ export default function AdminZone() {
               <strong>Danger Zone:</strong> Actions performed here are powerful and often irreversible. Proceed with caution.
             </AlertDescription>
           </Alert>
+
+          {/* Dispatch Checklist Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Dispatch Checklist Configuration</CardTitle>
+              <CardDescription>Manage checklist items for dispatch transfers (minimum 1 item required)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button onClick={() => setChecklistDialog({ open: true, mode: "create", name: "", label: "" })}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Checklist Item
+              </Button>
+              
+              <div className="space-y-2">
+                {checklistItems.map((item) => (
+                  <div key={item._id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-medium">{item.label}</p>
+                      <p className="text-sm text-muted-foreground">Name: {item.name}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setChecklistDialog({
+                          open: true,
+                          mode: "edit",
+                          id: item._id,
+                          name: item.name,
+                          label: item.label,
+                        })}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteChecklistItem(item._id)}
+                        disabled={checklistItems.length <= 1}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Assignment Management */}
           <Card className="border-red-500/50">
@@ -351,6 +455,50 @@ export default function AdminZone() {
             </Button>
             <Button variant="destructive" onClick={confirmDialog.action}>
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checklist Item Dialog */}
+      <Dialog open={checklistDialog.open} onOpenChange={(open) => setChecklistDialog({ ...checklistDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {checklistDialog.mode === "create" ? "Create Checklist Item" : "Edit Checklist Item"}
+            </DialogTitle>
+            <DialogDescription>
+              Configure a checklist item for dispatch transfers
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <input
+                type="text"
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={checklistDialog.name}
+                onChange={(e) => setChecklistDialog({ ...checklistDialog, name: e.target.value })}
+                placeholder="e.g., kit_components"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Label</label>
+              <input
+                type="text"
+                className="w-full mt-1 px-3 py-2 border rounded-md"
+                value={checklistDialog.label}
+                onChange={(e) => setChecklistDialog({ ...checklistDialog, label: e.target.value })}
+                placeholder="e.g., Kit Components"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChecklistDialog({ ...checklistDialog, open: false })}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveChecklistItem}>
+              {checklistDialog.mode === "create" ? "Create" : "Update"}
             </Button>
           </DialogFooter>
         </DialogContent>
