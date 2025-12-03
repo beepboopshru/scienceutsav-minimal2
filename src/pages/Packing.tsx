@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { useAuth } from "@/hooks/use-auth";
-import { Check, X, Pencil } from "lucide-react";
+import { Check, X, Pencil, FileText, MessageSquare, Truck } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -132,6 +132,21 @@ export default function Packing() {
 
   const [editingPackingNotes, setEditingPackingNotes] = useState<Record<string, { isEditing: boolean; value: string }>>({});
 
+  // Notes dialog state
+  const [notesDialog, setNotesDialog] = useState<{
+    open: boolean;
+    assignmentId: Id<"assignments"> | null;
+    type: "assignment" | "packing" | "dispatch";
+    value: string;
+    canEdit: boolean;
+  }>({
+    open: false,
+    assignmentId: null,
+    type: "assignment",
+    value: "",
+    canEdit: false,
+  });
+
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
     program: true,
@@ -162,8 +177,8 @@ export default function Packing() {
     { id: "status", label: "Status", visible: columnVisibility.status },
     { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
     { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "assignmentNotes", label: "Assignment Notes", visible: columnVisibility.assignmentNotes },
-    { id: "packingNotes", label: "Packing Notes", visible: columnVisibility.packingNotes },
+    { id: "assignmentNotes", label: "Notes", visible: columnVisibility.assignmentNotes },
+    { id: "packingNotes", label: "Notes", visible: columnVisibility.packingNotes },
   ];
 
   const handleSavePackingNotes = async (assignmentId: Id<"assignments">) => {
@@ -183,6 +198,41 @@ export default function Packing() {
       });
     } catch (error) {
       toast.error("Failed to update packing notes", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  };
+
+  const handleOpenNotesDialog = (
+    assignmentId: Id<"assignments">,
+    type: "assignment" | "packing" | "dispatch",
+    value: string,
+    canEdit: boolean
+  ) => {
+    setNotesDialog({
+      open: true,
+      assignmentId,
+      type,
+      value: value || "",
+      canEdit,
+    });
+  };
+
+  const handleSaveNotesDialog = async () => {
+    if (!notesDialog.assignmentId) return;
+
+    try {
+      if (notesDialog.type === "packing") {
+        await updatePackingNotes({
+          id: notesDialog.assignmentId,
+          packingNotes: notesDialog.value,
+        });
+        toast.success("Packing notes updated successfully");
+      }
+      // Assignment notes and dispatch notes are read-only in packing page
+      setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false });
+    } catch (error) {
+      toast.error("Failed to update notes", {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -700,8 +750,7 @@ export default function Packing() {
                   {columnVisibility.status && <TableHead>Status</TableHead>}
                   {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
                   {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
-                  {columnVisibility.assignmentNotes && <TableHead>Assignment Notes</TableHead>}
-                  {columnVisibility.packingNotes && <TableHead>Packing Notes</TableHead>}
+                  {columnVisibility.assignmentNotes && <TableHead className="text-center">Notes</TableHead>}
                   {canEdit && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -785,67 +834,36 @@ export default function Packing() {
                             </TableCell>
                           )}
                           {columnVisibility.assignmentNotes && (
-                            <TableCell>
-                              <span className="text-sm text-muted-foreground">{assignment.notes || "-"}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.packingNotes && (
-                            <TableCell>
-                              {editingPackingNotes[assignment._id]?.isEditing ? (
-                                <div className="flex gap-2 items-center">
-                                  <Input
-                                    value={editingPackingNotes[assignment._id].value}
-                                    onChange={(e) => {
-                                      setEditingPackingNotes((prev) => ({
-                                        ...prev,
-                                        [assignment._id]: { isEditing: true, value: e.target.value },
-                                      }));
-                                    }}
-                                    placeholder="Add packing notes..."
-                                    className="h-8 text-sm"
-                                  />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleSavePackingNotes(assignment._id)}
-                                    className="h-8"
-                                  >
-                                    Save
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                      setEditingPackingNotes((prev) => {
-                                        const newState = { ...prev };
-                                        delete newState[assignment._id];
-                                        return newState;
-                                      });
-                                    }}
-                                    className="h-8"
-                                  >
-                                    Cancel
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2 items-center">
-                                  <span className="text-sm flex-1">{assignment.packingNotes || "—"}</span>
-                                  {canEdit && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        setEditingPackingNotes((prev) => ({
-                                          ...prev,
-                                          [assignment._id]: { isEditing: true, value: assignment.packingNotes || "" },
-                                        }));
-                                      }}
-                                      className="h-8"
-                                    >
-                                      Edit
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
+                            <TableCell className="text-center">
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
+                                  title="Assignment Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <FileText className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
+                                  title="Packing Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <MessageSquare className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
+                                  title="Dispatch Notes"
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Truck className="h-4 w-4 text-orange-600" />
+                                </Button>
+                              </div>
                             </TableCell>
                           )}
 
@@ -1010,63 +1028,36 @@ export default function Packing() {
                             <TableCell className="text-sm">
                               {new Date(assignment._creationTime).toLocaleDateString()}
                             </TableCell>
-                          <TableCell className="text-sm max-w-[200px] truncate" title={assignment.notes}>
-                            {assignment.notes || "—"}
-                          </TableCell>
-                          <TableCell>
-                            {editingPackingNotes[assignment._id]?.isEditing ? (
-                              <div className="flex gap-2 items-center">
-                                <Input
-                                  value={editingPackingNotes[assignment._id].value}
-                                  onChange={(e) => {
-                                    setEditingPackingNotes((prev) => ({
-                                      ...prev,
-                                      [assignment._id]: { isEditing: true, value: e.target.value },
-                                    }));
-                                  }}
-                                  placeholder="Add packing notes..."
-                                  className="h-8 text-sm"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSavePackingNotes(assignment._id)}
-                                  className="h-8"
-                                >
-                                  Save
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingPackingNotes((prev) => {
-                                      const newState = { ...prev };
-                                      delete newState[assignment._id];
-                                      return newState;
-                                    });
-                                  }}
-                                  className="h-8"
-                                >
-                                  Cancel
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="flex gap-2 items-center">
-                                <span className="text-sm flex-1">{assignment.packingNotes || "—"}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingPackingNotes((prev) => ({
-                                      ...prev,
-                                      [assignment._id]: { isEditing: true, value: assignment.packingNotes || "" },
-                                    }));
-                                  }}
-                                  className="h-8"
-                                >
-                                  Edit
-                                </Button>
-                              </div>
-                            )}
+                          <TableCell className="text-center">
+                            <div className="flex gap-1 justify-center">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
+                                title="Assignment Notes"
+                                className="h-8 w-8 p-0"
+                              >
+                                <FileText className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
+                                title="Packing Notes"
+                                className="h-8 w-8 p-0"
+                              >
+                                <MessageSquare className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
+                                title="Dispatch Notes"
+                                className="h-8 w-8 p-0"
+                              >
+                                <Truck className="h-4 w-4 text-orange-600" />
+                              </Button>
+                            </div>
                           </TableCell>
                           {canEdit && (
                               <TableCell>
@@ -1306,6 +1297,56 @@ export default function Packing() {
                 Yes, Request Inventory
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={notesDialog.open} onOpenChange={(open) => !open && setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {notesDialog.type === "assignment" && "Assignment Notes"}
+              {notesDialog.type === "packing" && "Packing Notes"}
+              {notesDialog.type === "dispatch" && "Dispatch Notes"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {notesDialog.canEdit ? (
+              <>
+                <Textarea
+                  value={notesDialog.value}
+                  onChange={(e) => setNotesDialog({ ...notesDialog, value: e.target.value })}
+                  placeholder={`Enter ${notesDialog.type} notes...`}
+                  rows={8}
+                  className="resize-none"
+                />
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveNotesDialog}>
+                    Save Notes
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="border rounded-lg p-4 bg-muted/50 min-h-[200px]">
+                  <p className="text-sm whitespace-pre-wrap">{notesDialog.value || "No notes available"}</p>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
