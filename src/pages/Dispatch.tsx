@@ -845,18 +845,6 @@ export default function Dispatch() {
             
             <div class="address-section">
               <div class="address-box">
-                <div class="address-label">FROM:</div>
-                <div class="address-content">
-                  <div><strong>ScienceUtsav Educational Services Pvt Ltd</strong></div>
-                  <div>25/1 9th Cross, 19th A Main Rd</div>
-                  <div>2nd Phase, J. P. Nagar</div>
-                  <div>Bengaluru - 560078</div>
-                  <div>Karnataka, India</div>
-                  <div class="contact-info">Contact: 9739008220, 9029402028</div>
-                </div>
-              </div>
-              
-              <div class="address-box">
                 <div class="address-label">TO:</div>
                 <div class="address-content">
                   <div><strong>${clientName}</strong></div>
@@ -872,6 +860,18 @@ export default function Dispatch() {
                     ${poc.phone ? `Phone: ${poc.phone}` : ''}
                     ${poc.email ? `${poc.phone ? ' | ' : ''}Email: ${poc.email}` : ''}
                   </div>
+                </div>
+              </div>
+              
+              <div class="address-box">
+                <div class="address-label">FROM:</div>
+                <div class="address-content">
+                  <div><strong>ScienceUtsav Educational Services Pvt Ltd</strong></div>
+                  <div>25/1 9th Cross, 19th A Main Rd</div>
+                  <div>2nd Phase, J. P. Nagar</div>
+                  <div>Bengaluru - 560078</div>
+                  <div>Karnataka, India</div>
+                  <div class="contact-info">Contact: 9739008220, 9029402028</div>
                 </div>
               </div>
             </div>
