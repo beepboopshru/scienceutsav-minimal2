@@ -268,11 +268,16 @@ export default function Packing() {
         try {
           const packingData = JSON.parse(kit.packingRequirements);
           
-          // Process pouches - show individual materials
+          // Process pouches - show final components (materials as they exist in inventory)
           if (packingData.pouches) {
             packingData.pouches.forEach((pouch: any, pouchIndex: number) => {
               if (pouch.materials) {
                 pouch.materials.forEach((material: any) => {
+                  // Find the inventory item for this material
+                  const inventoryItem = inventory?.find((item) => 
+                    item.name.toLowerCase() === material.name.toLowerCase()
+                  );
+                  
                   const key = `${material.name.toLowerCase()}_${kit._id}_pouch_${pouchIndex}`;
                   const required = material.quantity * requiredQty;
                   
@@ -284,7 +289,10 @@ export default function Packing() {
                       name: material.name,
                       required,
                       unit: material.unit,
-                      category: "Main Component",
+                      category: inventoryItem?.type === "raw" ? "Raw Material" :
+                               inventoryItem?.type === "pre_processed" ? "Processed Material" :
+                               inventoryItem?.type === "finished" ? "Finished Component" :
+                               "Main Component",
                       sourceKits: [kit.name],
                       componentLocation: `Pouch ${pouchIndex + 1}`,
                     });
