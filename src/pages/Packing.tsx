@@ -251,9 +251,7 @@ export default function Packing() {
     });
   };
 
-  const calculateMaterialShortages = () => {
-    if (!inventory) return [];
-
+  const calculateMaterialRequirements = () => {
     const materialMap = new Map<string, any>();
 
     selectedAssignments.forEach((assignmentId) => {
@@ -275,24 +273,20 @@ export default function Packing() {
             packingData.pouches.forEach((pouch: any, pouchIndex: number) => {
               if (pouch.materials) {
                 pouch.materials.forEach((material: any) => {
-                  const key = `${material.name.toLowerCase()}_${kit._id}`;
+                  const key = `${material.name.toLowerCase()}_${kit._id}_pouch_${pouchIndex}`;
                   const required = material.quantity * requiredQty;
                   
                   if (materialMap.has(key)) {
                     const existing = materialMap.get(key);
                     existing.required += required;
-                    existing.traceability.push(`Pouch ${pouchIndex + 1}`);
                   } else {
-                    const invItem = inventory.find((i) => i.name.toLowerCase() === material.name.toLowerCase());
                     materialMap.set(key, {
                       name: material.name,
-                      currentStock: invItem?.quantity || 0,
                       required,
                       unit: material.unit,
                       category: "Main Component",
-                      inventoryType: invItem?.type || "unknown",
                       sourceKits: [kit.name],
-                      traceability: [`Pouch ${pouchIndex + 1}`],
+                      componentLocation: `Pouch ${pouchIndex + 1}`,
                     });
                   }
                 });
@@ -303,24 +297,20 @@ export default function Packing() {
           // Process packets - show sealed packet itself, not materials inside
           if (packingData.packets) {
             packingData.packets.forEach((packet: any, packetIndex: number) => {
-              const key = `${packet.name.toLowerCase()}_${kit._id}`;
+              const key = `${packet.name.toLowerCase()}_${kit._id}_packet_${packetIndex}`;
               const required = requiredQty; // 1 sealed packet per kit
               
               if (materialMap.has(key)) {
                 const existing = materialMap.get(key);
                 existing.required += required;
-                existing.traceability.push(`Sealed Packet ${packetIndex + 1}`);
               } else {
-                const invItem = inventory.find((i) => i.name.toLowerCase() === packet.name.toLowerCase());
                 materialMap.set(key, {
                   name: packet.name,
-                  currentStock: invItem?.quantity || 0,
                   required,
                   unit: "pcs",
                   category: "Sealed Packet",
-                  inventoryType: invItem?.type || "sealed_packet",
                   sourceKits: [kit.name],
-                  traceability: [`Sealed Packet ${packetIndex + 1}`],
+                  componentLocation: `Sealed Packet ${packetIndex + 1}`,
                 });
               }
             });
@@ -332,25 +322,21 @@ export default function Packing() {
 
       // Process spare kits
       if (kit.spareKits && Array.isArray(kit.spareKits)) {
-        kit.spareKits.forEach((spare: any) => {
-          const key = `${spare.name.toLowerCase()}_${kit._id}`;
+        kit.spareKits.forEach((spare: any, spareIndex: number) => {
+          const key = `${spare.name.toLowerCase()}_${kit._id}_spare_${spareIndex}`;
           const required = spare.quantity * requiredQty;
           
           if (materialMap.has(key)) {
             const existing = materialMap.get(key);
             existing.required += required;
-            existing.traceability.push("Spare Kit");
           } else {
-            const invItem = inventory.find((i) => i.name.toLowerCase() === spare.name.toLowerCase());
             materialMap.set(key, {
               name: spare.name,
-              currentStock: invItem?.quantity || 0,
               required,
               unit: spare.unit,
               category: "Spare Kit",
-              inventoryType: invItem?.type || "unknown",
               sourceKits: [kit.name],
-              traceability: ["Spare Kit"],
+              componentLocation: "Spare Kit",
             });
           }
         });
@@ -358,37 +344,28 @@ export default function Packing() {
 
       // Process bulk materials
       if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
-        kit.bulkMaterials.forEach((bulk: any) => {
-          const key = `${bulk.name.toLowerCase()}_${kit._id}`;
+        kit.bulkMaterials.forEach((bulk: any, bulkIndex: number) => {
+          const key = `${bulk.name.toLowerCase()}_${kit._id}_bulk_${bulkIndex}`;
           const required = bulk.quantity * requiredQty;
           
           if (materialMap.has(key)) {
             const existing = materialMap.get(key);
             existing.required += required;
-            existing.traceability.push("Bulk Material");
           } else {
-            const invItem = inventory.find((i) => i.name.toLowerCase() === bulk.name.toLowerCase());
             materialMap.set(key, {
               name: bulk.name,
-              currentStock: invItem?.quantity || 0,
               required,
               unit: bulk.unit,
               category: "Bulk Material",
-              inventoryType: invItem?.type || "unknown",
               sourceKits: [kit.name],
-              traceability: ["Bulk Material"],
+              componentLocation: "Bulk Material",
             });
           }
         });
       }
     });
 
-    // Return all materials with shortage calculation (but don't filter by shortage)
-    return Array.from(materialMap.values()).map((item) => ({
-      ...item,
-      shortage: Math.max(0, item.required - item.currentStock),
-      traceability: [...new Set(item.traceability)].join(", "),
-    }));
+    return Array.from(materialMap.values());
   };
 
   const handleRequestInventory = () => {
@@ -457,7 +434,7 @@ export default function Packing() {
   };
 
   const handleSubmitInventoryRequest = async () => {
-    const materials = calculateMaterialShortages();
+    const materials = calculateMaterialRequirements();
     
     if (materials.length === 0) {
       toast.error("No materials found for selected assignments");
@@ -1330,41 +1307,35 @@ export default function Packing() {
                 <thead className="bg-muted sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left whitespace-nowrap">Material</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Type</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Source Kit(s)</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Category</th>
                     <th className="px-3 py-2 text-left whitespace-nowrap">Component Location</th>
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Current</th>
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Required</th>
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Shortage</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Source Kit(s)</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Quantity Required</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Unit</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {calculateMaterialShortages().map((item, idx) => (
+                  {calculateMaterialRequirements().map((item, idx) => (
                     <tr key={idx} className="border-t">
-                      <td className="px-3 py-2 whitespace-nowrap">{item.name}</td>
+                      <td className="px-3 py-2 whitespace-nowrap font-medium">{item.name}</td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <Badge variant={
-                          item.inventoryType === "sealed_packet" ? "default" :
-                          item.inventoryType === "finished" ? "secondary" :
+                          item.category === "Sealed Packet" ? "default" :
+                          item.category === "Main Component" ? "secondary" :
+                          item.category === "Spare Kit" ? "outline" :
                           "outline"
                         }>
-                          {item.inventoryType === "sealed_packet" ? "Sealed Packet" :
-                           item.inventoryType === "finished" ? "Finished" :
-                           item.inventoryType === "pre_processed" ? "Pre-Processed" :
-                           item.inventoryType === "raw" ? "Raw" : "Unknown"}
+                          {item.category}
                         </Badge>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground">{item.componentLocation}</span>
                       </td>
                       <td className="px-3 py-2">
                         <span className="text-xs">{item.sourceKits.join(", ")}</span>
                       </td>
-                      <td className="px-3 py-2">
-                        <span className="text-xs text-muted-foreground">{item.traceability}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">{item.currentStock} {item.unit}</td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">{item.required} {item.unit}</td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap">
-                        <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
-                      </td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap font-semibold">{item.required}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{item.unit}</td>
                     </tr>
                   ))}
                 </tbody>
