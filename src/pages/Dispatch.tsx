@@ -575,21 +575,21 @@ export default function Dispatch() {
 
       // Upload e-way document
       const ewayUploadUrl = await generateUploadUrl();
-      await fetch(ewayUploadUrl, {
+      const ewayUploadResponse = await fetch(ewayUploadUrl, {
         method: "POST",
         headers: { "Content-Type": "image/webp" },
         body: ewayWebpBlob,
       });
-      const { storageId: ewayStorageId } = await fetch(ewayUploadUrl).then((r) => r.json());
+      const { storageId: ewayStorageId } = await ewayUploadResponse.json();
 
       // Upload dispatch document
       const dispatchUploadUrl = await generateUploadUrl();
-      await fetch(dispatchUploadUrl, {
+      const dispatchUploadResponse = await fetch(dispatchUploadUrl, {
         method: "POST",
         headers: { "Content-Type": "image/webp" },
         body: dispatchWebpBlob,
       });
-      const { storageId: dispatchStorageId } = await fetch(dispatchUploadUrl).then((r) => r.json());
+      const { storageId: dispatchStorageId } = await dispatchUploadResponse.json();
 
       // Update assignment status with all information
       await updateStatus({
