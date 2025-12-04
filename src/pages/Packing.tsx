@@ -1316,33 +1316,33 @@ export default function Packing() {
       </Dialog>
 
       <Dialog open={procurementDialog} onOpenChange={setProcurementDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Request Inventory</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1 overflow-y-auto">
             <p className="text-sm text-muted-foreground">
               Materials required for {selectedAssignments.size} selected assignment{selectedAssignments.size !== 1 ? "s" : ""}
             </p>
             
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted">
+                <thead className="bg-muted sticky top-0">
                   <tr>
-                    <th className="px-3 py-2 text-left">Material</th>
-                    <th className="px-3 py-2 text-left">Type</th>
-                    <th className="px-3 py-2 text-left">Source Kit(s)</th>
-                    <th className="px-3 py-2 text-left">Component Location</th>
-                    <th className="px-3 py-2 text-right">Current</th>
-                    <th className="px-3 py-2 text-right">Required</th>
-                    <th className="px-3 py-2 text-right">Shortage</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Material</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Type</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Source Kit(s)</th>
+                    <th className="px-3 py-2 text-left whitespace-nowrap">Component Location</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Current</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Required</th>
+                    <th className="px-3 py-2 text-right whitespace-nowrap">Shortage</th>
                   </tr>
                 </thead>
                 <tbody>
                   {calculateMaterialShortages().map((item, idx) => (
                     <tr key={idx} className="border-t">
-                      <td className="px-3 py-2">{item.name}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 whitespace-nowrap">{item.name}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
                         <Badge variant={
                           item.inventoryType === "sealed_packet" ? "default" :
                           item.inventoryType === "finished" ? "secondary" :
@@ -1360,9 +1360,9 @@ export default function Packing() {
                       <td className="px-3 py-2">
                         <span className="text-xs text-muted-foreground">{item.traceability}</span>
                       </td>
-                      <td className="px-3 py-2 text-right">{item.currentStock} {item.unit}</td>
-                      <td className="px-3 py-2 text-right">{item.required} {item.unit}</td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{item.currentStock} {item.unit}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">{item.required} {item.unit}</td>
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
                         <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
                       </td>
                     </tr>
@@ -1371,27 +1371,29 @@ export default function Packing() {
               </table>
             </div>
 
-            <div>
-              <Label>Job Name</Label>
-              <Input
-                placeholder="Enter job name for this procurement request..."
-                value={procurementJobName}
-                onChange={(e) => setProcurementJobName(e.target.value)}
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Job Name</Label>
+                <Input
+                  placeholder="Enter job name for this procurement request..."
+                  value={procurementJobName}
+                  onChange={(e) => setProcurementJobName(e.target.value)}
+                />
+              </div>
 
-            <div>
-              <Label>Priority</Label>
-              <Select value={procurementPriority} onValueChange={(v) => setProcurementPriority(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <Label>Priority</Label>
+                <Select value={procurementPriority} onValueChange={(v) => setProcurementPriority(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>
@@ -1403,15 +1405,15 @@ export default function Packing() {
                 rows={3}
               />
             </div>
+          </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setProcurementDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSubmitInventoryRequest}>
-                Submit Inventory Request
-              </Button>
-            </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setProcurementDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitInventoryRequest}>
+              Submit Inventory Request
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
