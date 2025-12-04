@@ -511,13 +511,13 @@ export default function Dispatch() {
 
       // Convert proof photo to WebP
       const webpBlob = await convertToWebP(proofPhoto);
-      const proofPhotoId = await generateUploadUrl();
-      await fetch(proofPhotoId, {
+      const proofPhotoUploadUrl = await generateUploadUrl();
+      const proofPhotoResponse = await fetch(proofPhotoUploadUrl, {
         method: "POST",
         headers: { "Content-Type": "image/webp" },
         body: webpBlob,
       });
-      const { storageId: proofStorageId } = await fetch(proofPhotoId).then((r) => r.json());
+      const { storageId: proofStorageId } = await proofPhotoResponse.json();
 
       await updateStatus({
         id: selectedAssignmentForProof,
