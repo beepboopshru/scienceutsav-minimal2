@@ -810,9 +810,13 @@ const schema = defineSchema(
       purpose: v.optional(v.string()),
       reviewedBy: v.optional(v.id("users")),
       reviewedAt: v.optional(v.number()),
+      assignmentId: v.optional(v.id("assignments")),
+      procurementJobId: v.optional(v.id("procurementJobs")),
     })
       .index("by_user", ["userId"])
-      .index("by_status", ["status"]),
+      .index("by_status", ["status"])
+      .index("by_assignment", ["assignmentId"])
+      .index("by_procurement_job", ["procurementJobId"]),
 
     // Procurement purchasing quantities (persistent storage)
     procurementPurchasingQuantities: defineTable({

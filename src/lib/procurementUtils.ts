@@ -218,12 +218,14 @@ export function calculateAssignmentShortages(
 
 /**
  * Aggregate materials across multiple assignments with BOM explosion
+ * @param approvedMaterialRequests - Map of material name (lowercase) to approved quantity to subtract from shortages
  */
 export function aggregateMaterials(
   assignments: Assignment[],
   inventoryByName: Map<string, InventoryItem>,
   inventoryById: Map<string, InventoryItem>,
-  vendors: Vendor[]
+  vendors: Vendor[],
+  approvedMaterialRequests?: Record<string, number>
 ): MaterialShortage[] {
   const materialMap = new Map<string, MaterialShortage>();
 
@@ -336,6 +338,17 @@ export function aggregateMaterials(
         }
       });
     }
+  }
+
+  // Apply approved material request deductions
+  if (approvedMaterialRequests) {
+    materialMap.forEach((item, key) => {
+      const approvedQty = approvedMaterialRequests[key] || 0;
+      if (approvedQty > 0) {
+        // Reduce the shortage by the approved quantity
+        item.shortage = Math.max(0, item.shortage - approvedQty);
+      }
+    });
   }
 
   // Filter out exploded items and return only raw materials

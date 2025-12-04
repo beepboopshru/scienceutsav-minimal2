@@ -35,6 +35,7 @@ import type * as kitPdf from "../kitPdf.js";
 import type * as kits from "../kits.js";
 import type * as laserFiles from "../laserFiles.js";
 import type * as materialRequests from "../materialRequests.js";
+import type * as materialRequestsByAssignment from "../materialRequestsByAssignment.js";
 import type * as notifications from "../notifications.js";
 import type * as operations from "../operations.js";
 import type * as orderHistory from "../orderHistory.js";
@@ -81,6 +82,7 @@ declare const fullApi: ApiFromModules<{
   kits: typeof kits;
   laserFiles: typeof laserFiles;
   materialRequests: typeof materialRequests;
+  materialRequestsByAssignment: typeof materialRequestsByAssignment;
   notifications: typeof notifications;
   operations: typeof operations;
   orderHistory: typeof orderHistory;

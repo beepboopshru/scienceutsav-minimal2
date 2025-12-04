@@ -55,6 +55,8 @@ export const create = mutation({
       })
     ),
     purpose: v.optional(v.string()),
+    assignmentId: v.optional(v.id("assignments")),
+    procurementJobId: v.optional(v.id("procurementJobs")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -67,6 +69,8 @@ export const create = mutation({
       items: args.items,
       status: "pending",
       purpose: args.purpose,
+      assignmentId: args.assignmentId,
+      procurementJobId: args.procurementJobId,
     });
   },
 });

@@ -34,6 +34,7 @@ export default function Procurement() {
   const vendors = useQuery(api.vendors.list);
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
   const procurementJobs = useQuery(api.procurementJobs.list);
+  const approvedMaterialRequests = useQuery(api.materialRequestsByAssignment.getAllApprovedQuantities);
 
   // Mutations
   const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
@@ -86,8 +87,14 @@ export default function Procurement() {
   // Generate aggregated data views
   const materialSummary = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
-    return aggregateMaterials(assignments, inventoryByName, inventoryById, vendors);
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
+    return aggregateMaterials(
+      assignments, 
+      inventoryByName, 
+      inventoryById, 
+      vendors,
+      approvedMaterialRequests || undefined
+    );
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
 
   const kitWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
@@ -109,9 +116,15 @@ export default function Procurement() {
 
     return Array.from(kitMap.values()).map((kit) => ({
       ...kit,
-      materials: aggregateMaterials(kit.assignments, inventoryByName, inventoryById, vendors),
+      materials: aggregateMaterials(
+        kit.assignments, 
+        inventoryByName, 
+        inventoryById, 
+        vendors,
+        approvedMaterialRequests || undefined
+      ),
     }));
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
 
   const monthWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
@@ -138,9 +151,15 @@ export default function Procurement() {
       .sort((a, b) => b.month.localeCompare(a.month))
       .map((month) => ({
         ...month,
-        materials: aggregateMaterials(month.assignments, inventoryByName, inventoryById, vendors),
+        materials: aggregateMaterials(
+          month.assignments, 
+          inventoryByName, 
+          inventoryById, 
+          vendors,
+          approvedMaterialRequests || undefined
+        ),
       }));
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
 
   const clientWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
@@ -180,9 +199,15 @@ export default function Procurement() {
 
     return Array.from(clientMap.values()).map((client) => ({
       ...client,
-      materials: aggregateMaterials(client.assignments, inventoryByName, inventoryById, vendors),
+      materials: aggregateMaterials(
+        client.assignments, 
+        inventoryByName, 
+        inventoryById, 
+        vendors,
+        approvedMaterialRequests || undefined
+      ),
     }));
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
 
   // Auth redirect
   useEffect(() => {
