@@ -675,11 +675,13 @@ const schema = defineSchema(
       materialShortages: v.array(
         v.object({
           name: v.string(),
-          currentStock: v.number(),
+          currentStock: v.optional(v.number()),
           required: v.number(),
-          shortage: v.number(),
+          shortage: v.optional(v.number()),
           unit: v.string(),
           category: v.optional(v.string()),
+          componentLocation: v.optional(v.string()),
+          sourceKits: v.optional(v.array(v.string())),
         })
       ),
       status: v.union(
