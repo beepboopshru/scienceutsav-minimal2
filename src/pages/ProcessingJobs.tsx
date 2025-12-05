@@ -42,6 +42,8 @@ export default function ProcessingJobs() {
   const services = useQuery(api.services.list);
   const kits = useQuery(api.kits.list);
   const assignments = useQuery(api.assignments.list, {});
+  const clients = useQuery(api.clients.list);
+  const b2cClients = useQuery(api.b2cClients.list);
 
   const createProcessingJob = useMutation(api.processingJobs.create);
   const completeJob = useMutation(api.processingJobs.complete);
@@ -552,6 +554,7 @@ export default function ProcessingJobs() {
             <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
               <TabsTrigger value="requirements">Requirements & Planning</TabsTrigger>
               <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
+              <TabsTrigger value="assignment">Assignment Wise</TabsTrigger>
             </TabsList>
 
             <TabsContent value="requirements" className="space-y-4">
@@ -576,6 +579,96 @@ export default function ProcessingJobs() {
                 onCancelJob={handleCancel}
                 onDeleteJob={handleDelete}
               />
+            </TabsContent>
+
+            <TabsContent value="assignment" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Assignment Wise Pre-Processing</CardTitle>
+                  <CardDescription>
+                    Processing jobs grouped by assignment
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {(() => {
+                    // Group jobs by assignment
+                    const assignmentGroups = new Map<string, {
+                      assignment: any;
+                      jobs: any[];
+                    }>();
+
+                    jobs?.forEach((job) => {
+                      if (job.assignmentIds && job.assignmentIds.length > 0) {
+                        job.assignmentIds.forEach((assignmentId) => {
+                          const assignment = assignments?.find(a => a._id === assignmentId);
+                          if (!assignment) return;
+
+                          // Skip completed assignments
+                          if (assignment.status === "dispatched" || assignment.status === "delivered") {
+                            return;
+                          }
+
+                          const key = assignmentId;
+                          if (!assignmentGroups.has(key)) {
+                            const kit = kits?.find(k => k._id === assignment.kitId);
+                            const client = assignment.clientType === "b2b"
+                              ? clients?.find(c => c._id === assignment.clientId)
+                              : b2cClients?.find(c => c._id === assignment.clientId);
+                            
+                            assignmentGroups.set(key, {
+                              assignment: { ...assignment, kit, client },
+                              jobs: [],
+                            });
+                          }
+                          assignmentGroups.get(key)!.jobs.push(job);
+                        });
+                      }
+                    });
+
+                    if (assignmentGroups.size === 0) {
+                      return (
+                        <div className="text-center py-8 text-muted-foreground">
+                          No processing jobs linked to assignments yet.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-6">
+                        {Array.from(assignmentGroups.entries()).map(([assignmentId, data]) => {
+                          const { assignment, jobs: assignmentJobs } = data;
+
+                          return (
+                            <div key={assignmentId} className="border rounded-lg p-4">
+                              <div className="mb-4">
+                                <h3 className="font-semibold text-lg">
+                                  {assignment.kit?.name || "Unknown Kit"}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  Client: {assignment.client?.name || assignment.client?.buyerName || "Unknown"} • 
+                                  Quantity: {assignment.quantity} units • 
+                                  Jobs: {assignmentJobs.length}
+                                </p>
+                              </div>
+                              <ProcessingJobsList
+                                jobs={assignmentJobs}
+                                inventory={inventory}
+                                vendors={vendors || []}
+                                services={services || []}
+                                canEdit={canEdit}
+                                onStartJob={handleStartJob}
+                                onCompleteJob={handleComplete}
+                                onCancelJob={handleCancel}
+                                onDeleteJob={handleDelete}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
 

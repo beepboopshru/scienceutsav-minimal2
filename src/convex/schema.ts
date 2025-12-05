@@ -383,6 +383,7 @@ const schema = defineSchema(
       completedAt: v.optional(v.number()),
       completedBy: v.optional(v.id("users")),
       createdBy: v.id("users"),
+      assignmentIds: v.optional(v.array(v.id("assignments"))),
     })
       .index("by_status", ["status"])
       .index("by_created_by", ["createdBy"]),

@@ -51,12 +51,12 @@ export const create = mutation({
     processedBy: v.optional(v.string()),
     processedByType: v.optional(v.union(v.literal("vendor"), v.literal("service"), v.literal("in_house"))),
     notes: v.optional(v.string()),
+    assignmentIds: v.optional(v.array(v.id("assignments"))),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Allow creation with empty sources array
     // Allow creation with empty sources array
     return await ctx.db.insert("processingJobs", {
       ...args,

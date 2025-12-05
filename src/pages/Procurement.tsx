@@ -35,6 +35,9 @@ export default function Procurement() {
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
   const procurementJobs = useQuery(api.procurementJobs.list);
   const approvedMaterialRequests = useQuery(api.materialRequestsByAssignment.getAllApprovedQuantities);
+  const kits = useQuery(api.kits.list);
+  const clients = useQuery(api.clients.list);
+  const b2cClients = useQuery(api.b2cClients.list);
 
   // Mutations
   const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
@@ -50,6 +53,8 @@ export default function Procurement() {
   // Filter states
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [showShortagesOnly, setShowShortagesOnly] = useState<boolean>(false);
 
   // Load saved purchasing quantities
   useEffect(() => {
@@ -779,6 +784,91 @@ export default function Procurement() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Assignment Wise Tab */}
+            <TabsContent value="assignment" className="space-y-4">
+              <ScrollArea className="h-[calc(100vh-250px)]">
+                <div className="space-y-4 pr-4">
+                  {(() => {
+                    if (!assignments || !kits) return null;
+
+                    // Filter out completed assignments
+                    const activeAssignments = assignments.filter(
+                      (a) => a.status !== "dispatched" && a.status !== "delivered"
+                    );
+
+                    if (activeAssignments.length === 0) {
+                      return (
+                        <Card>
+                          <CardContent className="py-8">
+                            <div className="text-center text-muted-foreground">
+                              No active assignments found.
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    }
+
+                    return activeAssignments.map((assignment) => {
+                      const kit = kits.find((k) => k._id === assignment.kitId);
+                      const client = assignment.clientType === "b2b"
+                        ? clients?.find((c) => c._id === assignment.clientId)
+                        : b2cClients?.find((c) => c._id === assignment.clientId);
+
+                      if (!kit) return null;
+
+                      // Calculate materials for this specific assignment
+                      const materials = aggregateMaterials(
+                        [assignment],
+                        inventoryByName,
+                        inventoryById,
+                        vendors || [],
+                        approvedMaterialRequests || undefined
+                      );
+
+                      const totalShortages = materials.filter((m) => m.shortage > 0).length;
+
+                      return (
+                        <Card key={assignment._id}>
+                          <CardHeader className="pb-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-lg">{kit.name}</CardTitle>
+                                <div className="flex flex-wrap gap-2 mt-2 mb-1">
+                                  <Badge variant="secondary" className="font-normal">
+                                    Program: {assignment.program?.name || "Unknown"}
+                                  </Badge>
+                                  <Badge variant="outline" className="font-normal">
+                                    Category: {kit.category || "Unknown"}
+                                  </Badge>
+                                </div>
+                                <CardDescription>
+                                  Client: {assignment.clientType === "b2b" 
+                                    ? (client as any)?.name 
+                                    : (client as any)?.buyerName || "Unknown"} • 
+                                  Quantity: {assignment.quantity} units • 
+                                  Month: {assignment.productionMonth || "N/A"}
+                                </CardDescription>
+                              </div>
+                              {totalShortages > 0 ? (
+                                <Badge variant="destructive">
+                                  {totalShortages} Shortage{totalShortages !== 1 ? "s" : ""}
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">All Available</Badge>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <MaterialTable materials={materials} />
+                          </CardContent>
+                        </Card>
+                      );
+                    });
+                  })()}
                 </div>
               </ScrollArea>
             </TabsContent>
