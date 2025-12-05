@@ -219,13 +219,15 @@ export function calculateAssignmentShortages(
 /**
  * Aggregate materials across multiple assignments with BOM explosion
  * @param approvedMaterialRequests - Map of material name (lowercase) to approved quantity to subtract from shortages
+ * @param activeProcessingJobs - Active processing jobs to account for materials already allocated
  */
 export function aggregateMaterials(
   assignments: Assignment[],
   inventoryByName: Map<string, InventoryItem>,
   inventoryById: Map<string, InventoryItem>,
   vendors: Vendor[],
-  approvedMaterialRequests?: Record<string, number>
+  approvedMaterialRequests?: Record<string, number>,
+  activeProcessingJobs?: any[]
 ): MaterialShortage[] {
   const materialMap = new Map<string, MaterialShortage>();
 
@@ -347,6 +349,36 @@ export function aggregateMaterials(
       if (approvedQty > 0) {
         // Reduce the shortage by the approved quantity
         item.shortage = Math.max(0, item.shortage - approvedQty);
+      }
+    });
+  }
+
+  // Account for materials allocated to active processing jobs
+  if (activeProcessingJobs) {
+    const activeJobs = activeProcessingJobs.filter(
+      (job) => job.status === "assigned" || job.status === "in_progress"
+    );
+
+    // Build a map of materials being produced in active jobs
+    const materialsInProduction = new Map<string, number>();
+    
+    activeJobs.forEach((job) => {
+      job.targets.forEach((target: any) => {
+        const targetItem = inventoryById.get(target.targetItemId);
+        if (targetItem) {
+          const key = targetItem.name.toLowerCase();
+          const existing = materialsInProduction.get(key) || 0;
+          materialsInProduction.set(key, existing + target.targetQuantity);
+        }
+      });
+    });
+
+    // Reduce shortages by the quantity being produced
+    materialMap.forEach((item, key) => {
+      const inProduction = materialsInProduction.get(key) || 0;
+      if (inProduction > 0) {
+        // Reduce shortage by the amount already being produced
+        item.shortage = Math.max(0, item.shortage - inProduction);
       }
     });
   }

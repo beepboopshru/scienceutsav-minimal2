@@ -34,6 +34,7 @@ export default function Procurement() {
   const vendors = useQuery(api.vendors.list);
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
   const procurementJobs = useQuery(api.procurementJobs.list);
+  const processingJobs = useQuery(api.processingJobs.list);
   const approvedMaterialRequests = useQuery(api.materialRequestsByAssignment.getAllApprovedQuantities);
   const kits = useQuery(api.kits.list);
   const clients = useQuery(api.clients.list);
@@ -97,9 +98,10 @@ export default function Procurement() {
       inventoryByName, 
       inventoryById, 
       vendors,
-      approvedMaterialRequests || undefined
+      approvedMaterialRequests || undefined,
+      processingJobs || undefined
     );
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const kitWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
@@ -126,10 +128,11 @@ export default function Procurement() {
         inventoryByName, 
         inventoryById, 
         vendors,
-        approvedMaterialRequests || undefined
+        approvedMaterialRequests || undefined,
+        processingJobs || undefined
       ),
     }));
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const monthWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
@@ -161,10 +164,11 @@ export default function Procurement() {
           inventoryByName, 
           inventoryById, 
           vendors,
-          approvedMaterialRequests || undefined
+          approvedMaterialRequests || undefined,
+          processingJobs || undefined
         ),
       }));
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const clientWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
@@ -209,10 +213,11 @@ export default function Procurement() {
         inventoryByName, 
         inventoryById, 
         vendors,
-        approvedMaterialRequests || undefined
+        approvedMaterialRequests || undefined,
+        processingJobs || undefined
       ),
     }));
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests]);
+  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   // Auth redirect
   useEffect(() => {
@@ -827,7 +832,8 @@ export default function Procurement() {
                         inventoryByName,
                         inventoryById,
                         vendors || [],
-                        approvedMaterialRequests || undefined
+                        approvedMaterialRequests || undefined,
+                        processingJobs || undefined
                       );
 
                       const totalShortages = materials.filter((m) => m.shortage > 0).length;
