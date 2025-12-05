@@ -168,7 +168,6 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     }).filter(i => i.shortage > 0);
   };
 
-  // Generate Data Views
   const summaryData = aggregateRequirements(assignments);
 
   const kitWiseData = useMemo(() => {
@@ -249,6 +248,37 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       ...client,
       requirements: aggregateRequirements(client.assignments)
     })).filter(c => c.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  const assignmentWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    return assignments.map((assignment) => {
+      const kit = assignment.kit;
+      const client = assignment.client;
+      
+      let clientName = "Unknown Client";
+      if (typeof client === 'string') {
+        clientName = client;
+      } else if (typeof client === 'object' && client) {
+        clientName = 
+          client.organization || 
+          client.name || 
+          client.buyerName || 
+          client.contactPerson ||
+          client.email ||
+          "Unknown Client";
+      }
+      
+      return {
+        assignment,
+        kitName: kit?.name || "Unknown Kit",
+        clientName,
+        quantity: assignment.quantity,
+        productionMonth: assignment.productionMonth,
+        requirements: aggregateRequirements([assignment])
+      };
+    }).filter(a => a.requirements.length > 0);
   }, [assignments, inventory, refreshTrigger, activeJobs]);
 
   const toggleRow = (key: string) => {
@@ -355,11 +385,12 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[800px]">
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="kit-wise">Kit Wise</TabsTrigger>
           <TabsTrigger value="month-wise">Month Wise</TabsTrigger>
           <TabsTrigger value="client-wise">Client Wise</TabsTrigger>
+          <TabsTrigger value="assignment-wise">Assignment Wise</TabsTrigger>
         </TabsList>
 
         <div className="mt-4">
@@ -437,6 +468,30 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
                       </CardHeader>
                       <CardContent>
                         <RequirementsTable items={client.requirements} />
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="assignment-wise">
+            <ScrollArea className="h-[600px]">
+              <div className="space-y-4">
+                {assignmentWiseData.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                ) : (
+                  assignmentWiseData.map((item, idx) => (
+                    <Card key={idx}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg">{item.kitName}</CardTitle>
+                        <CardDescription>
+                          Client: {item.clientName} • Quantity: {item.quantity} • Month: {item.productionMonth || "N/A"}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <RequirementsTable items={item.requirements} />
                       </CardContent>
                     </Card>
                   ))
