@@ -92,53 +92,61 @@ export default function OperationsInventoryRelations() {
 
     const inventoryMap = new Map(inventory.map(item => [item._id, item]));
     const inventoryByName = new Map(inventory.map(item => [item.name, item]));
-    const requirementsMap = new Map<string, any>();
-
-    const processShortage = (itemName: string, qtyNeeded: number, processed = new Set<string>()) => {
-      // Prevent infinite recursion by tracking processed items
-      if (processed.has(itemName.toLowerCase())) {
-        return;
-      }
-      processed.add(itemName.toLowerCase());
-
-      const item = inventoryByName.get(itemName);
-      
-      if (item && item.components && item.components.length > 0) {
-        item.components.forEach(comp => {
-          const rawItem = inventoryMap.get(comp.rawMaterialId);
-          if (rawItem) {
-            processShortage(rawItem.name, qtyNeeded * comp.quantityRequired, processed);
-          }
-        });
-      } else {
-        const key = itemName;
-        if (!requirementsMap.has(key)) {
-          requirementsMap.set(key, {
-            name: itemName,
-            subcategory: item?.subcategory || "Uncategorized",
-            description: item?.description || "N/A",
-            inventoryType: item?.type || "N/A",
-            unit: item?.unit || "units",
-            requiredQty: 0,
-            currentStock: item?.quantity || 0,
-          });
-        }
-        const req = requirementsMap.get(key)!;
-        req.requiredQty += qtyNeeded;
-      }
-    };
+    
+    // Group materials by their properties for display
+    const materialMap = new Map<string, {
+      name: string;
+      subcategory: string;
+      description: string;
+      inventoryType: string;
+      unit: string;
+      requiredQty: number;
+      currentStock: number;
+      componentLocation?: string;
+      sourceKits?: string[];
+    }>();
 
     job.materialShortages.forEach((mat: any) => {
-      if (mat.required > 0) {
-        processShortage(mat.name, mat.required);
+      const key = `${mat.name}-${mat.componentLocation || 'bulk'}`;
+      const item = inventoryByName.get(mat.name);
+      
+      if (!materialMap.has(key)) {
+        // Determine category based on inventory type
+        let category = "Raw Material";
+        if (item?.type === "pre_processed") {
+          category = "Processed Material";
+        } else if (item?.type === "finished") {
+          category = "Finished Component";
+        }
+
+        materialMap.set(key, {
+          name: mat.name,
+          subcategory: mat.category || item?.subcategory || "Uncategorized",
+          description: item?.description || "N/A",
+          inventoryType: category,
+          unit: mat.unit || item?.unit || "units",
+          requiredQty: mat.required || 0,
+          currentStock: mat.currentStock ?? item?.quantity ?? 0,
+          componentLocation: mat.componentLocation,
+          sourceKits: mat.sourceKits,
+        });
+      } else {
+        const existing = materialMap.get(key)!;
+        existing.requiredQty += mat.required || 0;
       }
     });
 
-    return Array.from(requirementsMap.values()).map(req => ({
+    return Array.from(materialMap.values()).map(req => ({
       ...req,
       shortage: Math.max(0, req.requiredQty - req.currentStock),
-      category: req.subcategory 
-    })).sort((a, b) => a.subcategory.localeCompare(b.subcategory) || a.name.localeCompare(b.name));
+      category: req.subcategory
+    })).sort((a, b) => {
+      // Sort by component location first, then by name
+      const locA = a.componentLocation || 'zzz';
+      const locB = b.componentLocation || 'zzz';
+      if (locA !== locB) return locA.localeCompare(locB);
+      return a.name.localeCompare(b.name);
+    });
   };
 
   const filteredJobs = procurementJobs ? procurementJobs.filter((job) => {
@@ -812,6 +820,8 @@ export default function OperationsInventoryRelations() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Location</TableHead>
                         <TableHead>Stock</TableHead>
                         <TableHead>Required</TableHead>
                         <TableHead>Shortage</TableHead>
@@ -823,8 +833,16 @@ export default function OperationsInventoryRelations() {
                           <TableCell>
                             <div className="flex flex-col">
                               <span className="font-medium">{mat.name}</span>
-                              <span className="text-xs text-muted-foreground">{mat.subcategory}</span>
+                              <span className="text-xs text-muted-foreground">{mat.inventoryType}</span>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{mat.subcategory}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground">
+                              {mat.componentLocation || '-'}
+                            </span>
                           </TableCell>
                           <TableCell>
                             {mat.currentStock} {mat.unit}
