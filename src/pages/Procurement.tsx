@@ -523,11 +523,12 @@ export default function Procurement() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-5 lg:w-[800px]">
             <TabsTrigger value="summary">Material Summary</TabsTrigger>
             <TabsTrigger value="kit-wise">Kit Wise</TabsTrigger>
             <TabsTrigger value="month-wise">Month Wise</TabsTrigger>
             <TabsTrigger value="client-wise">Client Wise</TabsTrigger>
+            <TabsTrigger value="assignment">Assignment Wise</TabsTrigger>
           </TabsList>
 
           <div className="mt-6 flex-1">

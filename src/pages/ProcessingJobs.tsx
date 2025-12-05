@@ -551,7 +551,7 @@ export default function ProcessingJobs() {
           </div>
 
           <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+            <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
               <TabsTrigger value="requirements">Requirements & Planning</TabsTrigger>
               <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
               <TabsTrigger value="assignment">Assignment Wise</TabsTrigger>
