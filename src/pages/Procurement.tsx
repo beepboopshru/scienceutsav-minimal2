@@ -93,8 +93,12 @@ export default function Procurement() {
   // Generate aggregated data views
   const materialSummary = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
+    // Filter out assignments that have received materials from inventory
+    const activeAssignments = assignments.filter(
+      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+    );
     return aggregateMaterials(
-      assignments, 
+      activeAssignments, 
       inventoryByName, 
       inventoryById, 
       vendors,
@@ -106,8 +110,13 @@ export default function Procurement() {
   const kitWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
 
+    // Filter out assignments that have received materials from inventory
+    const activeAssignments = assignments.filter(
+      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+    );
+
     const kitMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
+    activeAssignments.forEach((assignment) => {
       const kitName = assignment.kit?.name || "Unknown";
       if (!kitMap.has(kitName)) {
         kitMap.set(kitName, {
@@ -137,8 +146,13 @@ export default function Procurement() {
   const monthWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
 
+    // Filter out assignments that have received materials from inventory
+    const activeAssignments = assignments.filter(
+      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+    );
+
     const monthMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
+    activeAssignments.forEach((assignment) => {
       const monthKey =
         assignment.productionMonth ||
         new Date(assignment._creationTime).toISOString().slice(0, 7);
@@ -173,8 +187,13 @@ export default function Procurement() {
   const clientWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
 
+    // Filter out assignments that have received materials from inventory
+    const activeAssignments = assignments.filter(
+      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+    );
+
     const clientMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
+    activeAssignments.forEach((assignment) => {
       // Skip assignments without client data
       if (!assignment.client) return;
 

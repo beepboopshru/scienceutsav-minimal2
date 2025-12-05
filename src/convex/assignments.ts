@@ -91,6 +91,7 @@ export const updateStatus = mutation({
       v.literal("assigned"),
       v.literal("in_production"),
       v.literal("ready_to_pack"),
+      v.literal("received_from_inventory"),
       v.literal("transferred_to_dispatch"),
       v.literal("ready_for_dispatch"),
       v.literal("dispatched"),
@@ -328,6 +329,7 @@ export const updatePackingStatus = mutation({
     packingStatus: v.union(
       v.literal("assigned"),
       v.literal("in_progress"),
+      v.literal("received_from_inventory"),
       v.literal("transferred_to_dispatch")
     ),
   },

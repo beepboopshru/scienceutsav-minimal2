@@ -289,6 +289,7 @@ const schema = defineSchema(
     status: v.union(
       v.literal("assigned"),
       v.literal("in_progress"),
+      v.literal("received_from_inventory"),
       v.literal("transferred_to_dispatch"),
       v.literal("ready_for_dispatch"),
       v.literal("dispatched"),
