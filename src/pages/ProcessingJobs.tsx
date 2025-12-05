@@ -551,10 +551,9 @@ export default function ProcessingJobs() {
           </div>
 
           <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+            <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
               <TabsTrigger value="requirements">Requirements & Planning</TabsTrigger>
               <TabsTrigger value="jobs">Active Jobs</TabsTrigger>
-              <TabsTrigger value="assignment">Assignment Wise</TabsTrigger>
             </TabsList>
 
             <TabsContent value="requirements" className="space-y-4">
@@ -579,96 +578,6 @@ export default function ProcessingJobs() {
                 onCancelJob={handleCancel}
                 onDeleteJob={handleDelete}
               />
-            </TabsContent>
-
-            <TabsContent value="assignment" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Assignment Wise Pre-Processing</CardTitle>
-                  <CardDescription>
-                    Processing jobs grouped by assignment
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {(() => {
-                    // Group jobs by assignment
-                    const assignmentGroups = new Map<string, {
-                      assignment: any;
-                      jobs: any[];
-                    }>();
-
-                    jobs?.forEach((job) => {
-                      if (job.assignmentIds && job.assignmentIds.length > 0) {
-                        job.assignmentIds.forEach((assignmentId) => {
-                          const assignment = assignments?.find(a => a._id === assignmentId);
-                          if (!assignment) return;
-
-                          // Skip completed assignments
-                          if (assignment.status === "dispatched" || assignment.status === "delivered") {
-                            return;
-                          }
-
-                          const key = assignmentId;
-                          if (!assignmentGroups.has(key)) {
-                            const kit = kits?.find(k => k._id === assignment.kitId);
-                            const client = assignment.clientType === "b2b"
-                              ? clients?.find(c => c._id === assignment.clientId)
-                              : b2cClients?.find(c => c._id === assignment.clientId);
-                            
-                            assignmentGroups.set(key, {
-                              assignment: { ...assignment, kit, client },
-                              jobs: [],
-                            });
-                          }
-                          assignmentGroups.get(key)!.jobs.push(job);
-                        });
-                      }
-                    });
-
-                    if (assignmentGroups.size === 0) {
-                      return (
-                        <div className="text-center py-8 text-muted-foreground">
-                          No processing jobs linked to assignments yet.
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="space-y-6">
-                        {Array.from(assignmentGroups.entries()).map(([assignmentId, data]) => {
-                          const { assignment, jobs: assignmentJobs } = data;
-
-                          return (
-                            <div key={assignmentId} className="border rounded-lg p-4">
-                              <div className="mb-4">
-                                <h3 className="font-semibold text-lg">
-                                  {assignment.kit?.name || "Unknown Kit"}
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                  Client: {assignment.client?.name || assignment.client?.buyerName || "Unknown"} • 
-                                  Quantity: {assignment.quantity} units • 
-                                  Jobs: {assignmentJobs.length}
-                                </p>
-                              </div>
-                              <ProcessingJobsList
-                                jobs={assignmentJobs}
-                                inventory={inventory}
-                                vendors={vendors || []}
-                                services={services || []}
-                                canEdit={canEdit}
-                                onStartJob={handleStartJob}
-                                onCompleteJob={handleComplete}
-                                onCancelJob={handleCancel}
-                                onDeleteJob={handleDelete}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
             </TabsContent>
           </Tabs>
 
