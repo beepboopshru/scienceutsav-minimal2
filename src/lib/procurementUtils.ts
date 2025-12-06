@@ -304,8 +304,8 @@ export function aggregateMaterials(
     let currentShortage = 0;
     if (invItem && invItem.type === "raw") {
       const minStockLevel = invItem.minStockLevel || 0;
-      // Always add min stock to the shortage calculation
-      currentShortage = Math.max(0, item.required - item.available) + minStockLevel;
+      // Apply formula: (required - available) + minStockLevel, then ensure non-negative
+      currentShortage = Math.max(0, (item.required - item.available) + minStockLevel);
     } else {
       currentShortage = Math.max(0, item.required - item.available);
     }
