@@ -1,15 +1,4 @@
-inventory: {
-  // ... existing fields
-  quantity: number,  // Physical stock
-  allocated: number,  // NEW: Reserved for approved requests
-  available: number,  // Calculated: quantity - allocated
-}
-
-assignments: {
-  // ... existing fields
-  materialsFulfilled?: Array<{
-    materialId: Id<"inventory">,
-    quantityFulfilled: number,
-    requestId?: Id<"materialRequests">
-  }>
-}
+// Deduct stock
+await ctx.db.patch(item.inventoryId, {
+  quantity: inventoryItem.quantity - item.quantity,
+});
