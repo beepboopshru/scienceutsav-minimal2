@@ -1,4 +1,3 @@
-// Deduct stock
 await ctx.db.patch(item.inventoryId, {
   quantity: inventoryItem.quantity - item.quantity,
 });
