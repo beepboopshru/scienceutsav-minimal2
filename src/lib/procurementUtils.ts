@@ -299,19 +299,13 @@ export function aggregateMaterials(
     const invItem = inventoryByName.get(key);
 
     // Recalculate shortage considering min stock
-    // Formula: If stock is below min level, shortage = order_required + (min_stock - available)
-    //          Otherwise, shortage = max(0, order_required - available)
+    // Formula: shortage = (order_required - available) + min_stock_level
     // This ensures procurement covers both order fulfillment AND restocking to min level
     let currentShortage = 0;
     if (invItem && invItem.type === "raw") {
       const minStockLevel = invItem.minStockLevel || 0;
-      if (item.available < minStockLevel) {
-        // Stock is below minimum - need to fulfill order AND restock to min level
-        currentShortage = item.required + (minStockLevel - item.available);
-      } else {
-        // Stock is above minimum - only need to fulfill order if insufficient
-        currentShortage = Math.max(0, item.required - item.available);
-      }
+      // Always add min stock to the shortage calculation
+      currentShortage = Math.max(0, item.required - item.available) + minStockLevel;
     } else {
       currentShortage = Math.max(0, item.required - item.available);
     }
