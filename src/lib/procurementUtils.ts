@@ -232,25 +232,44 @@ export function aggregateMaterials(
   const materialMap = new Map<string, MaterialShortage>();
   const receivedFromInventoryMap = new Map<string, number>();
 
-  // First pass: collect all materials and track received_from_inventory quantities
+  // First pass: separate received_from_inventory assignments and collect materials
+  const activeAssignments: Assignment[] = [];
+  const receivedAssignments: Assignment[] = [];
+
   assignments.forEach((assignment) => {
+    const isReceivedFromInventory = (assignment as any).status === "received_from_inventory";
+    if (isReceivedFromInventory) {
+      receivedAssignments.push(assignment);
+    } else {
+      activeAssignments.push(assignment);
+    }
+  });
+
+  // Track materials from received_from_inventory assignments
+  receivedAssignments.forEach((assignment) => {
     const shortages = calculateAssignmentShortages(
       assignment,
       inventoryByName,
       inventoryById
     );
 
-    // Track materials for assignments with received_from_inventory status
-    const isReceivedFromInventory = (assignment as any).status === "received_from_inventory";
+    shortages.forEach((item) => {
+      const key = item.name.toLowerCase();
+      const existing = receivedFromInventoryMap.get(key) || 0;
+      receivedFromInventoryMap.set(key, existing + item.required);
+    });
+  });
+
+  // Second pass: collect materials only from active assignments
+  activeAssignments.forEach((assignment) => {
+    const shortages = calculateAssignmentShortages(
+      assignment,
+      inventoryByName,
+      inventoryById
+    );
 
     shortages.forEach((item) => {
       const key = item.name.toLowerCase();
-      
-      // Track quantities for received_from_inventory assignments separately
-      if (isReceivedFromInventory) {
-        const existing = receivedFromInventoryMap.get(key) || 0;
-        receivedFromInventoryMap.set(key, existing + item.required);
-      }
       
       if (materialMap.has(key)) {
         const existing = materialMap.get(key)!;
@@ -278,7 +297,7 @@ export function aggregateMaterials(
     });
   });
 
-  // Second pass: BOM explosion for items with shortages
+  // Third pass: BOM explosion for items with shortages
   const queue = Array.from(materialMap.keys());
   const processed = new Set<string>();
 
