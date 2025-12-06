@@ -237,13 +237,20 @@ export function aggregateMaterials(
   const receivedAssignments: Assignment[] = [];
 
   assignments.forEach((assignment) => {
-    const isReceivedFromInventory = (assignment as any).status === "received_from_inventory";
+    const status = (assignment as any).status;
+    const isReceivedFromInventory = status === "received_from_inventory";
+    
+    // Debug logging to help identify the issue
+    console.log(`Assignment ${(assignment as any)._id}: status="${status}", isReceivedFromInventory=${isReceivedFromInventory}`);
+    
     if (isReceivedFromInventory) {
       receivedAssignments.push(assignment);
     } else {
       activeAssignments.push(assignment);
     }
   });
+
+  console.log(`Active assignments: ${activeAssignments.length}, Received assignments: ${receivedAssignments.length}`);
 
   // Track materials from received_from_inventory assignments
   receivedAssignments.forEach((assignment) => {
