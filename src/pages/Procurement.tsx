@@ -97,7 +97,7 @@ export default function Procurement() {
     const activeAssignments = assignments.filter(
       (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
     );
-    return aggregateMaterials(
+    const allMaterials = aggregateMaterials(
       activeAssignments, 
       inventoryByName, 
       inventoryById, 
@@ -105,6 +105,8 @@ export default function Procurement() {
       approvedMaterialRequests || undefined,
       processingJobs || undefined
     );
+    // Filter out items that are fully in stock (no shortage)
+    return allMaterials.filter(item => item.shortage > 0);
   }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const kitWiseData = useMemo(() => {
@@ -130,17 +132,20 @@ export default function Procurement() {
       entry.totalQuantity += assignment.quantity;
     });
 
-    return Array.from(kitMap.values()).map((kit) => ({
-      ...kit,
-      materials: aggregateMaterials(
+    return Array.from(kitMap.values()).map((kit) => {
+      const allMaterials = aggregateMaterials(
         kit.assignments, 
         inventoryByName, 
         inventoryById, 
         vendors,
         approvedMaterialRequests || undefined,
         processingJobs || undefined
-      ),
-    }));
+      );
+      return {
+        ...kit,
+        materials: allMaterials.filter(item => item.shortage > 0),
+      };
+    });
   }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const monthWiseData = useMemo(() => {
@@ -171,17 +176,20 @@ export default function Procurement() {
 
     return Array.from(monthMap.values())
       .sort((a, b) => b.month.localeCompare(a.month))
-      .map((month) => ({
-        ...month,
-        materials: aggregateMaterials(
+      .map((month) => {
+        const allMaterials = aggregateMaterials(
           month.assignments, 
           inventoryByName, 
           inventoryById, 
           vendors,
           approvedMaterialRequests || undefined,
           processingJobs || undefined
-        ),
-      }));
+        );
+        return {
+          ...month,
+          materials: allMaterials.filter(item => item.shortage > 0),
+        };
+      }).filter(month => month.materials.length > 0);
   }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const clientWiseData = useMemo(() => {
@@ -225,17 +233,20 @@ export default function Procurement() {
       entry.totalKits += assignment.quantity;
     });
 
-    return Array.from(clientMap.values()).map((client) => ({
-      ...client,
-      materials: aggregateMaterials(
+    return Array.from(clientMap.values()).map((client) => {
+      const allMaterials = aggregateMaterials(
         client.assignments, 
         inventoryByName, 
         inventoryById, 
         vendors,
         approvedMaterialRequests || undefined,
         processingJobs || undefined
-      ),
-    }));
+      );
+      return {
+        ...client,
+        materials: allMaterials.filter(item => item.shortage > 0),
+      };
+    }).filter(client => client.materials.length > 0); // Remove clients with no shortages
   }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   // Auth redirect
@@ -846,7 +857,7 @@ export default function Procurement() {
                       if (!kit) return null;
 
                       // Calculate materials for this specific assignment
-                      const materials = aggregateMaterials(
+                      const allMaterials = aggregateMaterials(
                         [assignment],
                         inventoryByName,
                         inventoryById,
@@ -855,7 +866,13 @@ export default function Procurement() {
                         processingJobs || undefined
                       );
 
-                      const totalShortages = materials.filter((m) => m.shortage > 0).length;
+                      // Filter to only show materials with shortages
+                      const materials = allMaterials.filter((m) => m.shortage > 0);
+                      
+                      // Skip assignments with no shortages
+                      if (materials.length === 0) return null;
+
+                      const totalShortages = materials.length;
 
                       return (
                         <Card key={assignment._id}>
