@@ -230,8 +230,9 @@ export function aggregateMaterials(
   activeProcessingJobs?: any[]
 ): MaterialShortage[] {
   const materialMap = new Map<string, MaterialShortage>();
+  const receivedFromInventoryMap = new Map<string, number>();
 
-  // First pass: collect all materials
+  // First pass: collect all materials and track received_from_inventory quantities
   assignments.forEach((assignment) => {
     const shortages = calculateAssignmentShortages(
       assignment,
@@ -239,8 +240,18 @@ export function aggregateMaterials(
       inventoryById
     );
 
+    // Track materials for assignments with received_from_inventory status
+    const isReceivedFromInventory = (assignment as any).status === "received_from_inventory";
+
     shortages.forEach((item) => {
       const key = item.name.toLowerCase();
+      
+      // Track quantities for received_from_inventory assignments separately
+      if (isReceivedFromInventory) {
+        const existing = receivedFromInventoryMap.get(key) || 0;
+        receivedFromInventoryMap.set(key, existing + item.required);
+      }
+      
       if (materialMap.has(key)) {
         const existing = materialMap.get(key)!;
         existing.required += item.required;
@@ -382,6 +393,15 @@ export function aggregateMaterials(
       }
     });
   }
+
+  // Apply deductions for materials received from inventory
+  materialMap.forEach((item, key) => {
+    const receivedQty = receivedFromInventoryMap.get(key) || 0;
+    if (receivedQty > 0) {
+      // Reduce the shortage by the quantity already received from inventory
+      item.shortage = Math.max(0, item.shortage - receivedQty);
+    }
+  });
 
   // Filter out exploded items and return only raw materials
   return Array.from(materialMap.values()).filter((item) => {

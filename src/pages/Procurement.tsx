@@ -93,9 +93,9 @@ export default function Procurement() {
   // Generate aggregated data views
   const materialSummary = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
-    // Filter out assignments that have received materials from inventory
+    // Include all assignments except dispatched and delivered
     const activeAssignments = assignments.filter(
-      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+      (a) => a.status !== "dispatched" && a.status !== "delivered"
     );
     const allMaterials = aggregateMaterials(
       activeAssignments, 
@@ -112,9 +112,9 @@ export default function Procurement() {
   const kitWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
 
-    // Filter out assignments that have received materials from inventory
+    // Include all assignments except dispatched and delivered
     const activeAssignments = assignments.filter(
-      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+      (a) => a.status !== "dispatched" && a.status !== "delivered"
     );
 
     const kitMap = new Map<string, any>();
@@ -151,9 +151,9 @@ export default function Procurement() {
   const monthWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
 
-    // Filter out assignments that have received materials from inventory
+    // Include all assignments except dispatched and delivered
     const activeAssignments = assignments.filter(
-      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+      (a) => a.status !== "dispatched" && a.status !== "delivered"
     );
 
     const monthMap = new Map<string, any>();
@@ -195,9 +195,9 @@ export default function Procurement() {
   const clientWiseData = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
 
-    // Filter out assignments that have received materials from inventory
+    // Include all assignments except dispatched and delivered
     const activeAssignments = assignments.filter(
-      (a) => a.status !== "received_from_inventory" && a.status !== "dispatched" && a.status !== "delivered"
+      (a) => a.status !== "dispatched" && a.status !== "delivered"
     );
 
     const clientMap = new Map<string, any>();
