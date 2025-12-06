@@ -90,16 +90,12 @@ export default function Procurement() {
     });
   }, [procurementJobs, statusFilter, priorityFilter]);
 
-  // Generate aggregated data views
   const materialSummary = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
     // Include all assignments except dispatched and delivered
     const activeAssignments = assignments.filter(
       (a) => a.status !== "dispatched" && a.status !== "delivered"
     );
-    
-    console.log(`Total assignments: ${assignments.length}, Active assignments: ${activeAssignments.length}`);
-    console.log('Assignment statuses:', assignments.map(a => ({ id: a._id, status: a.status })));
     
     const allMaterials = aggregateMaterials(
       activeAssignments, 
@@ -110,12 +106,8 @@ export default function Procurement() {
       processingJobs || undefined
     );
     
-    console.log(`All materials before filtering: ${allMaterials.length}`);
-    console.log('Materials:', allMaterials.map(m => ({ name: m.name, required: m.required, available: m.available, shortage: m.shortage })));
-    
     // Filter out items that are fully in stock (no shortage)
     const materialsWithShortage = allMaterials.filter(item => item.shortage > 0);
-    console.log(`Materials with shortage: ${materialsWithShortage.length}`);
     
     return materialsWithShortage;
   }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);

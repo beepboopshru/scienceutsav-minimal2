@@ -240,31 +240,11 @@ export function aggregateMaterials(
     const status = (assignment as any).status;
     const isReceivedFromInventory = status === "received_from_inventory";
     
-    // Debug logging to help identify the issue
-    console.log(`Assignment ${(assignment as any)._id}: status="${status}", isReceivedFromInventory=${isReceivedFromInventory}`);
-    
     if (isReceivedFromInventory) {
       receivedAssignments.push(assignment);
     } else {
       activeAssignments.push(assignment);
     }
-  });
-
-  console.log(`Active assignments: ${activeAssignments.length}, Received assignments: ${receivedAssignments.length}`);
-
-  // Track materials from received_from_inventory assignments
-  receivedAssignments.forEach((assignment) => {
-    const shortages = calculateAssignmentShortages(
-      assignment,
-      inventoryByName,
-      inventoryById
-    );
-
-    shortages.forEach((item) => {
-      const key = item.name.toLowerCase();
-      const existing = receivedFromInventoryMap.get(key) || 0;
-      receivedFromInventoryMap.set(key, existing + item.required);
-    });
   });
 
   // Second pass: collect materials only from active assignments
