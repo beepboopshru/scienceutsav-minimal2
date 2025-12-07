@@ -133,7 +133,7 @@ export const aggregateMaterials = (
     }
   };
 
-  // Helper to process structured packing requirements
+  // Helper to process structured packing requirements with BOM explosion
   const processPackingRequirements = (
     packingRequirements: string,
     kitId: Id<"kits">,
@@ -143,19 +143,40 @@ export const aggregateMaterials = (
     try {
       const structure = JSON.parse(packingRequirements);
       
+      // Helper to process a material with BOM explosion
+      const processMaterial = (material: any) => {
+        if (!material.inventoryItemId) return;
+        
+        const invItem = inventory.find(i => i._id === material.inventoryItemId);
+        if (!invItem) return;
+        
+        const requiredQty = (material.quantity || 0) * assignmentQty;
+        
+        // If it's a raw material, add it directly
+        if (invItem.type === "raw") {
+          addRawMaterialRequirement(invItem._id, requiredQty, kitId, kitName, assignmentQty);
+        }
+        // If it's a sealed_packet or pre_processed with components, explode the BOM
+        else if ((invItem.type === "sealed_packet" || invItem.type === "pre_processed") && 
+                 invItem.components && invItem.components.length > 0) {
+          invItem.components.forEach((subComp: any) => {
+            const subRequired = subComp.quantityRequired * requiredQty;
+            addRawMaterialRequirement(
+              subComp.rawMaterialId,
+              subRequired,
+              kitId,
+              kitName,
+              assignmentQty
+            );
+          });
+        }
+      };
+      
       // Process pouches
       if (structure.pouches && Array.isArray(structure.pouches)) {
         structure.pouches.forEach((pouch: any) => {
           if (pouch.materials && Array.isArray(pouch.materials)) {
-            pouch.materials.forEach((material: any) => {
-              if (material.inventoryItemId) {
-                const invItem = inventory.find(i => i._id === material.inventoryItemId);
-                if (invItem && invItem.type === "raw") {
-                  const requiredQty = (material.quantity || 0) * assignmentQty;
-                  addRawMaterialRequirement(invItem._id, requiredQty, kitId, kitName, assignmentQty);
-                }
-              }
-            });
+            pouch.materials.forEach(processMaterial);
           }
         });
       }
@@ -164,15 +185,7 @@ export const aggregateMaterials = (
       if (structure.packets && Array.isArray(structure.packets)) {
         structure.packets.forEach((packet: any) => {
           if (packet.materials && Array.isArray(packet.materials)) {
-            packet.materials.forEach((material: any) => {
-              if (material.inventoryItemId) {
-                const invItem = inventory.find(i => i._id === material.inventoryItemId);
-                if (invItem && invItem.type === "raw") {
-                  const requiredQty = (material.quantity || 0) * assignmentQty;
-                  addRawMaterialRequirement(invItem._id, requiredQty, kitId, kitName, assignmentQty);
-                }
-              }
-            });
+            packet.materials.forEach(processMaterial);
           }
         });
       }
