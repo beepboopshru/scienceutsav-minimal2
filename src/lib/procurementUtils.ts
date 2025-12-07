@@ -254,7 +254,8 @@ export const aggregateMaterials = (
         });
 
         // Handle BOM explosion for composite items
-        if (invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
+        if ((invItem.type === "sealed_packet" || invItem.type === "pre_processed") && 
+            invItem.components && invItem.components.length > 0) {
           // Explode to raw materials
           invItem.components.forEach((subComp: any) => {
             const subRequired = subComp.quantityRequired * requiredQty;
