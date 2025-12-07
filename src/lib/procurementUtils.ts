@@ -155,14 +155,17 @@ export const aggregateMaterials = (
       componentsLength: kit.components?.length || 0,
       components: kit.components,
       hasSpareKits: !!kit.spareKits,
+      spareKitsLength: kit.spareKits?.length || 0,
       hasBulkMaterials: !!kit.bulkMaterials,
-      hasMiscellaneous: !!kit.miscellaneous
+      bulkMaterialsLength: kit.bulkMaterials?.length || 0,
+      hasMiscellaneous: !!kit.miscellaneous,
+      miscellaneousLength: kit.miscellaneous?.length || 0
     });
 
     processedCount++;
 
     // Process kit components
-    if (kit.components && Array.isArray(kit.components)) {
+    if (kit.components && Array.isArray(kit.components) && kit.components.length > 0) {
       console.log('Kit has components:', kit.components.length);
       kit.components.forEach((kitComp: any) => {
         console.log('Processing kit component:', kitComp);
@@ -170,6 +173,7 @@ export const aggregateMaterials = (
         console.log('Looking for inventory item:', kitComp.inventoryItemId, 'Found:', !!invItem);
         if (!invItem) {
           console.log('Inventory item not found:', kitComp.inventoryItemId);
+          console.log('Available inventory IDs:', inventory.map(i => i._id).slice(0, 5));
           return;
         }
 
@@ -208,9 +212,11 @@ export const aggregateMaterials = (
     }
 
     // Process spare kits
-    if (kit.spareKits && Array.isArray(kit.spareKits)) {
+    if (kit.spareKits && Array.isArray(kit.spareKits) && kit.spareKits.length > 0) {
+      console.log('Processing spare kits:', kit.spareKits.length);
       kit.spareKits.forEach((spare: any) => {
         const spareItem = inventory.find(i => i.name === spare.name);
+        console.log('Looking for spare:', spare.name, 'Found:', !!spareItem, 'Type:', spareItem?.type);
         if (spareItem && spareItem.type === "raw") {
           const spareQty = spare.quantity * assignment.quantity;
           addRawMaterialRequirement(
@@ -225,9 +231,11 @@ export const aggregateMaterials = (
     }
 
     // Process bulk materials
-    if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+    if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials) && kit.bulkMaterials.length > 0) {
+      console.log('Processing bulk materials:', kit.bulkMaterials.length);
       kit.bulkMaterials.forEach((bulk: any) => {
         const bulkItem = inventory.find(i => i.name === bulk.name);
+        console.log('Looking for bulk:', bulk.name, 'Found:', !!bulkItem, 'Type:', bulkItem?.type);
         if (bulkItem && bulkItem.type === "raw") {
           const bulkQty = bulk.quantity * assignment.quantity;
           addRawMaterialRequirement(
@@ -242,9 +250,11 @@ export const aggregateMaterials = (
     }
 
     // Process miscellaneous items
-    if (kit.miscellaneous && Array.isArray(kit.miscellaneous)) {
+    if (kit.miscellaneous && Array.isArray(kit.miscellaneous) && kit.miscellaneous.length > 0) {
+      console.log('Processing miscellaneous:', kit.miscellaneous.length);
       kit.miscellaneous.forEach((misc: any) => {
         const miscItem = inventory.find(i => i.name === misc.name);
+        console.log('Looking for misc:', misc.name, 'Found:', !!miscItem, 'Type:', miscItem?.type);
         if (miscItem && miscItem.type === "raw") {
           const miscQty = misc.quantity * assignment.quantity;
           addRawMaterialRequirement(
