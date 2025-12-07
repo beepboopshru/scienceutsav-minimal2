@@ -16,10 +16,21 @@ export function ClientWiseTab({ materials, assignments, clients }: ClientWiseTab
     
     const clientId = assignment.clientId;
     if (!acc[clientId]) {
-      const client = clients.find(c => (c.clientId === clientId) || (c._id === clientId));
+      // Find client based on clientType
+      let clientName = "Unknown Client";
+      
+      if (assignment.clientType === "b2b") {
+        const b2bClient = clients.find(c => c._id === clientId);
+        clientName = b2bClient?.name || b2bClient?.organization || "Unknown Client";
+      } else if (assignment.clientType === "b2c") {
+        // For B2C, we need to check b2cClients array (passed as prop)
+        const b2cClient = (clients as any[]).find(c => c._id === clientId && c.buyerName);
+        clientName = b2cClient?.buyerName || "Unknown Client";
+      }
+      
       acc[clientId] = {
         id: clientId,
-        name: client?.name || client?.buyerName || "Unknown Client",
+        name: clientName,
         assignments: [],
         materials: new Set()
       };
