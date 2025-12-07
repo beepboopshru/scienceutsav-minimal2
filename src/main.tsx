@@ -13,8 +13,9 @@ import NotFound from "./pages/NotFound.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import PendingApproval from "./pages/PendingApproval.tsx";
 import Research from "./pages/Research.tsx";
-import Inventory from "./pages/Inventory.tsx";
-import ProcessingJobs from "./pages/ProcessingJobs.tsx";
+import Inventory from "./pages/Inventory";
+import Procurement from "./pages/Procurement";
+import ProcessingJobs from "./pages/ProcessingJobs";
 import BillRecords from "./pages/BillRecords.tsx";
 import VendorContacts from "./pages/VendorContacts.tsx";
 import Services from "./pages/Services.tsx";
@@ -101,6 +102,7 @@ const router = createBrowserRouter(
       <Route path="/admin-zone" element={<AdminZone />} />
       <Route path="/deletion-requests" element={<DeletionRequests />} />
       <Route path="/inventory" element={<Inventory />} />
+      <Route path="/procurement" element={<Procurement />} />
       <Route path="/inventory/processing-jobs" element={<ProcessingJobs />} />
       <Route path="/inventory/sealing-jobs" element={<SealingJobs />} />
       <Route path="/inventory/bill-records" element={<BillRecords />} />

@@ -804,6 +804,14 @@ const schema = defineSchema(
       label: v.string(),
     }),
 
+    // Procurement purchasing quantities overrides
+    procurementPurchasingQuantities: defineTable({
+      materialId: v.id("inventory"),
+      quantity: v.number(),
+      updatedAt: v.number(),
+      updatedBy: v.id("users"),
+    }).index("by_material", ["materialId"]),
+
   },
   {
     schemaValidation: false,

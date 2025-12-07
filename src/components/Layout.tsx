@@ -333,6 +333,12 @@ export function Layout({ children }: LayoutProps) {
       roles: [hasPermission("inventory", "view") ? "allowed" : ""],
     },
     {
+      title: "Procurement",
+      icon: ClipboardList,
+      path: "/procurement",
+      roles: [hasPermission("inventory", "view") ? "allowed" : ""],
+    },
+    {
       title: "Pre-Processing Jobs",
       icon: Package,
       path: "/inventory/processing-jobs",
