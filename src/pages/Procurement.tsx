@@ -22,6 +22,8 @@ export default function Procurement() {
   const vendors = useQuery(api.vendors.list) || [];
   const clients = useQuery(api.clients.list) || [];
   const b2cClients = useQuery(api.b2cClients.list) || [];
+  const processingJobs = useQuery(api.processingJobs.list) || [];
+  const materialRequests = useQuery(api.materialRequests.list) || [];
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -32,9 +34,11 @@ export default function Procurement() {
       kits,
       inventory,
       purchasingQuantities,
-      vendors
+      vendors,
+      processingJobs,
+      materialRequests
     );
-  }, [assignments, kits, inventory, purchasingQuantities, vendors]);
+  }, [assignments, kits, inventory, purchasingQuantities, vendors, processingJobs, materialRequests]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);

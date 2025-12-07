@@ -9,6 +9,7 @@ export interface ProcurementMaterial {
   unit: string;
   minStockLevel: number;
   available: number;
+  reserved: number;
   orderRequired: number;
   shortage: number;
   purchasingQty: number;
@@ -67,7 +68,9 @@ export const aggregateMaterials = (
   kits: any[],
   inventory: any[],
   purchasingQuantities: any[],
-  vendors: any[]
+  vendors: any[],
+  processingJobs: any[] = [],
+  materialRequests: any[] = []
 ): ProcurementMaterial[] => {
   const materialMap = new Map<string, ProcurementMaterial>();
 
@@ -86,6 +89,7 @@ export const aggregateMaterials = (
         unit: invItem.unit,
         minStockLevel: invItem.minStockLevel || 0,
         available: invItem.quantity || 0,
+        reserved: 0,
         orderRequired: 0,
         shortage: 0,
         purchasingQty: savedQty ? savedQty.quantity : 0,
@@ -158,6 +162,32 @@ export const aggregateMaterials = (
     }
   });
 
+  // Process processing jobs (assigned status only - reserves source materials)
+  processingJobs.forEach(job => {
+    if (job.status === "assigned" && job.sources) {
+      job.sources.forEach((source: any) => {
+        const invItem = inventory.find(i => i._id === source.sourceItemId);
+        if (invItem) {
+          const entry = getMaterialEntry(invItem);
+          entry.reserved += source.sourceQuantity;
+        }
+      });
+    }
+  });
+
+  // Process material requests (approved status - reserves materials)
+  materialRequests.forEach(req => {
+    if (req.status === "approved" && req.items) {
+      req.items.forEach((item: any) => {
+        const invItem = inventory.find(i => i._id === item.inventoryId);
+        if (invItem) {
+          const entry = getMaterialEntry(invItem);
+          entry.reserved += item.quantity;
+        }
+      });
+    }
+  });
+
   // Check for low stock items that might not be in active assignments
   inventory.forEach(invItem => {
     // If item has a min stock level and current quantity is below it, add to map
@@ -170,7 +200,9 @@ export const aggregateMaterials = (
 
   // Calculate shortages and costs
   return Array.from(materialMap.values()).map(item => {
-    const shortage = calculateShortage(item.orderRequired, item.available, item.minStockLevel);
+    // Effective available = available - reserved
+    const effectiveAvailable = item.available - item.reserved;
+    const shortage = calculateShortage(item.orderRequired, effectiveAvailable, item.minStockLevel);
     const purchasingQty = item.purchasingQty > 0 ? item.purchasingQty : shortage;
     
     return {
@@ -179,5 +211,5 @@ export const aggregateMaterials = (
       purchasingQty,
       estCost: purchasingQty * (item.vendorPrice || 0)
     };
-  }).filter(item => item.shortage > 0 || item.orderRequired > 0); // Show items that are needed
+  }).filter(item => item.shortage > 0 || item.orderRequired > 0 || item.reserved > 0); // Show items that are needed or reserved
 };
