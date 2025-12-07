@@ -46,7 +46,9 @@ export const shouldIncludeAssignment = (status: string): boolean => {
     "delivered",
     "cancelled"
   ];
-  return !excludedStatuses.includes(status);
+  // Ensure case-insensitive comparison and handle potential undefined
+  const normalizedStatus = (status || "").toLowerCase();
+  return !excludedStatuses.includes(normalizedStatus);
 };
 
 // Calculate shortage for a material
@@ -83,7 +85,7 @@ export const aggregateMaterials = (
         type: invItem.type,
         unit: invItem.unit,
         minStockLevel: invItem.minStockLevel || 0,
-        available: invItem.quantity,
+        available: invItem.quantity || 0,
         orderRequired: 0,
         shortage: 0,
         purchasingQty: savedQty ? savedQty.quantity : 0,
@@ -105,7 +107,7 @@ export const aggregateMaterials = (
     if (!kit) return;
 
     // Use kit.components which links to inventory
-    if (kit.components) {
+    if (kit.components && Array.isArray(kit.components)) {
       kit.components.forEach((kitComp: any) => {
         const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
         if (!invItem) return;
@@ -153,6 +155,16 @@ export const aggregateMaterials = (
           kitEntry.quantity += assignment.quantity;
         }
       });
+    }
+  });
+
+  // Check for low stock items that might not be in active assignments
+  inventory.forEach(invItem => {
+    // If item has a min stock level and current quantity is below it, add to map
+    // Ensure quantity is treated as 0 if undefined
+    const currentQty = invItem.quantity || 0;
+    if (invItem.minStockLevel && currentQty < invItem.minStockLevel) {
+      getMaterialEntry(invItem);
     }
   });
 

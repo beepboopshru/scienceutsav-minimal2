@@ -15,7 +15,7 @@ import { AssignmentWiseTab } from "@/components/procurement/AssignmentWiseTab";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function Procurement() {
-  const assignments = useQuery(api.assignments.list) || [];
+  const assignments = useQuery(api.assignments.list, {}) || [];
   const kits = useQuery(api.kits.list) || [];
   const inventory = useQuery(api.inventory.list) || [];
   const purchasingQuantities = useQuery(api.procurement.getPurchasingQuantities) || [];

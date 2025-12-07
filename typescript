@@ -1,6 +1,7 @@
-export function MaterialRequestsTab() {
-  const materialRequests = useQuery(api.materialRequests.list) || [];
-  const assignments = useQuery(api.assignments.listAll) || [];
-  const users = useQuery(api.users.list) || [];
-  
-  const updateStatus = useMutation(api.materialRequests.updateStatus);
+    return aggregateMaterials(
+      assignments,
+      kits,
+      inventory,
+      purchasingQuantities,
+      vendors
+    );
