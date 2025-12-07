@@ -74,6 +74,13 @@ export const aggregateMaterials = (
 ): ProcurementMaterial[] => {
   const materialMap = new Map<string, ProcurementMaterial>();
 
+  console.log('=== PROCUREMENT DEBUG ===');
+  console.log('Total assignments:', assignments.length);
+  console.log('Total kits:', kits.length);
+  console.log('Total inventory:', inventory.length);
+  console.log('Sample assignment:', assignments[0]);
+  console.log('Sample kit:', kits[0]);
+
   // Helper to get or create material entry
   const getMaterialEntry = (invItem: any): ProcurementMaterial => {
     if (!materialMap.has(invItem._id)) {
@@ -127,19 +134,39 @@ export const aggregateMaterials = (
   };
 
   // Process each active assignment
+  let processedCount = 0;
   assignments.forEach(assignment => {
-    if (!shouldIncludeAssignment(assignment.status)) return;
+    if (!shouldIncludeAssignment(assignment.status)) {
+      console.log('Skipping assignment with status:', assignment.status);
+      return;
+    }
 
     const kit = kits.find(k => k._id === assignment.kitId);
-    if (!kit) return;
+    if (!kit) {
+      console.log('Kit not found for assignment:', assignment.kitId);
+      return;
+    }
+
+    console.log('Processing assignment:', {
+      kitName: kit.name,
+      quantity: assignment.quantity,
+      hasComponents: !!kit.components,
+      componentsLength: kit.components?.length || 0
+    });
+
+    processedCount++;
 
     // Process kit components
     if (kit.components && Array.isArray(kit.components)) {
       kit.components.forEach((kitComp: any) => {
         const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
-        if (!invItem) return;
+        if (!invItem) {
+          console.log('Inventory item not found:', kitComp.inventoryItemId);
+          return;
+        }
 
         const requiredQty = kitComp.quantityPerKit * assignment.quantity;
+        console.log('Processing component:', invItem.name, 'type:', invItem.type, 'required:', requiredQty);
 
         // Handle BOM explosion for composite items
         if (invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
@@ -219,6 +246,9 @@ export const aggregateMaterials = (
     }
   });
 
+  console.log('Processed assignments:', processedCount);
+  console.log('Materials in map:', materialMap.size);
+
   // Process processing jobs (assigned status only - reserves source materials)
   processingJobs.forEach(job => {
     if (job.status === "assigned" && job.sources) {
@@ -243,9 +273,9 @@ export const aggregateMaterials = (
     }
   });
 
-  // Calculate shortages and costs - only return raw materials with shortages
-  return Array.from(materialMap.values())
-    .filter(item => item.type === "raw") // Only raw materials
+  // Calculate shortages and costs - return all raw materials for debugging
+  const result = Array.from(materialMap.values())
+    .filter(item => item.type === "raw")
     .map(item => {
       const shortage = calculateShortage(
         item.orderRequired,
@@ -261,6 +291,11 @@ export const aggregateMaterials = (
         purchasingQty,
         estCost: purchasingQty * (item.vendorPrice || 0)
       };
-    })
-    .filter(item => item.shortage > 0); // Only show items with shortages
+    });
+
+  console.log('Final materials count:', result.length);
+  console.log('Sample material:', result[0]);
+  console.log('=== END DEBUG ===');
+
+  return result;
 };
