@@ -29,6 +29,10 @@ export default function Procurement() {
 
   const materials = useMemo(() => {
     if (!assignments.length || !kits.length || !inventory.length) return [];
+    
+    // Filter to only approved material requests
+    const approvedMaterialRequests = materialRequests.filter(mr => mr.status === "approved");
+    
     return aggregateMaterials(
       assignments,
       kits,
@@ -36,13 +40,12 @@ export default function Procurement() {
       purchasingQuantities,
       vendors,
       processingJobs,
-      materialRequests
+      approvedMaterialRequests
     );
   }, [assignments, kits, inventory, purchasingQuantities, vendors, processingJobs, materialRequests]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Simulate refresh delay
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success("Requirements recalculated");
@@ -51,7 +54,6 @@ export default function Procurement() {
 
   const handleExport = () => {
     toast.info("Exporting procurement summary...");
-    // Implement export logic here
   };
 
   return (
@@ -61,7 +63,7 @@ export default function Procurement() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Procurement</h1>
             <p className="text-muted-foreground mt-2">
-              Manage material requirements and shortages across all active assignments
+              Material shortages for active assignments (raw materials only)
             </p>
           </div>
           <div className="flex items-center gap-2">

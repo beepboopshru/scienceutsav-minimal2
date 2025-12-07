@@ -47,7 +47,6 @@ export const shouldIncludeAssignment = (status: string): boolean => {
     "delivered",
     "cancelled"
   ];
-  // Ensure case-insensitive comparison and handle potential undefined
   const normalizedStatus = (status || "").toLowerCase();
   return !excludedStatuses.includes(normalizedStatus);
 };
@@ -58,7 +57,6 @@ export const calculateShortage = (
   available: number,
   minStock: number
 ): number => {
-  // Formula: max(0, (order_required - available) + min_stock_level)
   return Math.max(0, (required - available) + minStock);
 };
 
@@ -110,7 +108,7 @@ export const aggregateMaterials = (
     const kit = kits.find(k => k._id === assignment.kitId);
     if (!kit) return;
 
-    // Use kit.components which links to inventory
+    // Process kit components
     if (kit.components && Array.isArray(kit.components)) {
       kit.components.forEach((kitComp: any) => {
         const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
@@ -119,44 +117,35 @@ export const aggregateMaterials = (
         const requiredQty = kitComp.quantityPerKit * assignment.quantity;
         
         // Handle BOM explosion for composite items
-        if (["pre_processed", "finished", "sealed_packet"].includes(invItem.type)) {
-          // Check if this composite item has components defined in inventory
-          if (invItem.components && invItem.components.length > 0) {
-            // Explode to raw materials
-            invItem.components.forEach((subComp: any) => {
-              const rawItem = inventory.find(i => i._id === subComp.rawMaterialId);
-              if (rawItem) {
-                const entry = getMaterialEntry(rawItem);
-                const subRequired = subComp.quantityRequired * requiredQty;
-                entry.orderRequired += subRequired;
-                
-                // Add kit info if not present
-                if (!entry.kits.find(k => k.id === kit._id)) {
-                  entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
-                }
-                const kitEntry = entry.kits.find(k => k.id === kit._id)!;
-                kitEntry.quantity += assignment.quantity; // This is kit quantity, not material quantity
+        if (invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
+          // Explode to raw materials
+          invItem.components.forEach((subComp: any) => {
+            const rawItem = inventory.find(i => i._id === subComp.rawMaterialId);
+            if (rawItem && rawItem.type === "raw") {
+              const entry = getMaterialEntry(rawItem);
+              const subRequired = subComp.quantityRequired * requiredQty;
+              entry.orderRequired += subRequired;
+              
+              // Add kit info
+              const existingKit = entry.kits.find(k => k.id === kit._id);
+              if (existingKit) {
+                existingKit.quantity += assignment.quantity;
+              } else {
+                entry.kits.push({ id: kit._id, name: kit.name, quantity: assignment.quantity });
               }
-            });
-          } else {
-            // No components defined, treat as raw material
-            const entry = getMaterialEntry(invItem);
-            entry.orderRequired += requiredQty;
-            if (!entry.kits.find(k => k.id === kit._id)) {
-              entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
             }
-            const kitEntry = entry.kits.find(k => k.id === kit._id)!;
-            kitEntry.quantity += assignment.quantity;
-          }
-        } else {
-          // Raw material
+          });
+        } else if (invItem.type === "raw") {
+          // Direct raw material
           const entry = getMaterialEntry(invItem);
           entry.orderRequired += requiredQty;
-          if (!entry.kits.find(k => k.id === kit._id)) {
-            entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
+          
+          const existingKit = entry.kits.find(k => k.id === kit._id);
+          if (existingKit) {
+            existingKit.quantity += assignment.quantity;
+          } else {
+            entry.kits.push({ id: kit._id, name: kit.name, quantity: assignment.quantity });
           }
-          const kitEntry = entry.kits.find(k => k.id === kit._id)!;
-          kitEntry.quantity += assignment.quantity;
         }
       });
     }
@@ -188,28 +177,20 @@ export const aggregateMaterials = (
     }
   });
 
-  // Check for low stock items that might not be in active assignments
-  inventory.forEach(invItem => {
-    // If item has a min stock level and current quantity is below it, add to map
-    // Ensure quantity is treated as 0 if undefined
-    const currentQty = invItem.quantity || 0;
-    if (invItem.minStockLevel && currentQty < invItem.minStockLevel) {
-      getMaterialEntry(invItem);
-    }
-  });
-
-  // Calculate shortages and costs
-  return Array.from(materialMap.values()).map(item => {
-    // Effective available = available - reserved
-    const effectiveAvailable = item.available - item.reserved;
-    const shortage = calculateShortage(item.orderRequired, effectiveAvailable, item.minStockLevel);
-    const purchasingQty = item.purchasingQty > 0 ? item.purchasingQty : shortage;
-    
-    return {
-      ...item,
-      shortage,
-      purchasingQty,
-      estCost: purchasingQty * (item.vendorPrice || 0)
-    };
-  }).filter(item => item.shortage > 0 || item.orderRequired > 0 || item.reserved > 0); // Show items that are needed or reserved
+  // Calculate shortages and costs - only return raw materials with shortages
+  return Array.from(materialMap.values())
+    .filter(item => item.type === "raw") // Only raw materials
+    .map(item => {
+      const effectiveAvailable = item.available - item.reserved;
+      const shortage = calculateShortage(item.orderRequired, effectiveAvailable, item.minStockLevel);
+      const purchasingQty = item.purchasingQty > 0 ? item.purchasingQty : shortage;
+      
+      return {
+        ...item,
+        shortage,
+        purchasingQty,
+        estCost: purchasingQty * (item.vendorPrice || 0)
+      };
+    })
+    .filter(item => item.shortage > 0); // Only show items with shortages
 };
