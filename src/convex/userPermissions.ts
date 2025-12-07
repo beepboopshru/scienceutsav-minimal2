@@ -86,15 +86,8 @@ export const update = mutation({
           edit: v.boolean(),
           complete: v.boolean(),
           delete: v.boolean(),
-          editBOM: v.optional(v.boolean()),
-          editTargets: v.optional(v.boolean()),
-        })),
-      procurementJobs: v.optional(v.object({
-        view: v.boolean(),
-        create: v.boolean(),
-        edit: v.boolean(),
-        complete: v.boolean(),
-        delete: v.boolean(),
+        editBOM: v.optional(v.boolean()),
+        editTargets: v.optional(v.boolean()),
       })),
       packing: v.optional(v.object({
         view: v.boolean(),

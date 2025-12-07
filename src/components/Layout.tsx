@@ -333,12 +333,6 @@ export function Layout({ children }: LayoutProps) {
       roles: [hasPermission("inventory", "view") ? "allowed" : ""],
     },
     {
-      title: "Procurement Jobs",
-      icon: TrendingUp,
-      path: "/procurement",
-      roles: [hasPermission("inventory", "view") ? "allowed" : ""],
-    },
-    {
       title: "Pre-Processing Jobs",
       icon: Package,
       path: "/inventory/processing-jobs",
@@ -355,7 +349,6 @@ export function Layout({ children }: LayoutProps) {
       icon: TrendingUp,
       path: "/operations-inventory-relations",
       roles: [
-        hasPermission("procurementJobs", "view") ||
         hasPermission("materialRequests", "view")
           ? "allowed"
           : "",

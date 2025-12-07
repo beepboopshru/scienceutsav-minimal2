@@ -310,9 +310,6 @@ async function performDeletion(ctx: MutationCtx, entityType: string, entityId: s
       }
       await ctx.db.delete(entityId as Id<"processingJobs">);
       break;
-    case "procurementJob":
-      await ctx.db.delete(entityId as Id<"procurementJobs">);
-      break;
     case "program":
       await ctx.db.delete(entityId as Id<"programs">);
       break;

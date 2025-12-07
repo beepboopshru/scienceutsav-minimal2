@@ -75,9 +75,26 @@ export default function UserManagement() {
         vendors: { view: false, create: false, edit: false, delete: false },
         services: { view: false, create: false, edit: false, delete: false },
           processingJobs: { view: false, create: false, edit: false, complete: false, delete: false, editBOM: false, editTargets: false },
-        procurementJobs: { view: false, create: false, edit: false, complete: false, delete: false },
         packing: { view: false, initiate: false, validate: false, transfer: false, edit: false },
         dispatch: { view: false, verify: false, dispatch: false, updateStatus: false, edit: false },
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+                    <h4 className="font-semibold capitalize text-base">
+                      {section === 'kitStatistics' ? 'Kit Statistics' : 
+                       section === 'lms' ? 'LMS' :
+                       section === 'procurementJobs' ? 'Packing Requests' :
+                       section === 'materialRequests' ? 'Material Requests' :
+                       section === 'billRecords' ? 'Inventory Bill Records' :
+                       section.replace(/([A-Z])/g, ' $1').trim()}
+                    </h4>
+=======
+                    <h4 className="font-semibold capitalize text-base">
+                      {section === 'kitStatistics' ? 'Kit Statistics' : 
+                       section === 'lms' ? 'LMS' :
+                       section === 'materialRequests' ? 'Material Requests' :
+                       section === 'billRecords' ? 'Inventory Bill Records' :
+                       section.replace(/([A-Z])/g, ' $1').trim()}
+                    </h4>
         discrepancyTickets: { view: false, create: false, edit: false, resolve: false, delete: false },
         billTracking: { view: false, create: false, edit: false, updateStatus: false, delete: false },
         billRecords: { view: false, download: false },

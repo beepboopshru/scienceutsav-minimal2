@@ -2,11 +2,72 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+  const inventory = useQuery(api.inventory.list);
+  const requestsData = useQuery(api.materialRequests.list);
+  const procurementJobs = useQuery(api.procurementJobs.list);
+  const createRequest = useMutation(api.materialRequests.create);
+=======
+  const inventory = useQuery(api.inventory.list);
+  const requestsData = useQuery(api.materialRequests.list);
+  const createRequest = useMutation(api.materialRequests.create);
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+                  <TableCell className="max-w-[200px]">
+                    {req.purpose?.startsWith("PROC-") ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium">
+                          {procurementJobs?.find((job: any) => job.jobId === req.purpose)?.name || "Procurement Job"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{req.purpose}</span>
+                      </div>
+                    ) : (
+                      <span className="truncate" title={req.purpose}>{req.purpose || "-"}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+=======
+                  <TableCell className="max-w-[200px]">
+                    <span className="truncate" title={req.purpose}>{req.purpose || "-"}</span>
+                  </TableCell>
+                  <TableCell>
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+                  <TableCell className="text-center">
+                    {req.purpose?.startsWith("PROC-") && procurementJobs?.find((job: any) => job.jobId === req.purpose)?.notes ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setNotesDialog({
+                          open: true,
+                          notes: procurementJobs?.find((job: any) => job.jobId === req.purpose)?.notes || "",
+                        })}
+                        title="View Notes"
+                        className="h-8 w-8 p-0"
+                      >
+                        <FileText className="h-4 w-4 text-blue-600" />
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+=======
+                  <TableCell className="text-center">
+                    <span className="text-muted-foreground">-</span>
+                  </TableCell>
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,8 +78,17 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { Check, X, Search as SearchIcon, Filter } from "lucide-react";
 
 export function MaterialRequestsTab() {
+  const materialRequests = useQuery(api.materialRequests.list) || [];
+  const assignments = useQuery(api.assignments.listAll) || [];
+  const users = useQuery(api.users.list) || [];
+  
+  const updateStatus = useMutation(api.materialRequests.updateStatus);
+
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [isCreateItemDialogOpen, setIsCreateItemDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -386,7 +456,7 @@ export function MaterialRequestsTab() {
                 <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Search inventory..."
                         value={searchQuery}

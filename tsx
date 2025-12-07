@@ -1,22 +1,8 @@
-  return (
-    <Layout>
-      <div className="p-8 space-y-6">
-        <motion.div ...>
-          <div>...</div>
-
-          <Tabs ...>
-            <TabsList>...</TabsList>
-
-            <TabsContent value="procurement">
-               {/* ... existing content ... */}
-            </TabsContent>
-
-            <TabsContent value="requests">
-              <MaterialRequestsTab />
-            </TabsContent>
-          </Tabs>
-        </motion.div>
-      </div>
-
-      <Dialog ...>
-      {/* ... */}
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
+                Clear Selection
+              </Button>
+              <Button onClick={handleRequestInventory}>
+                Request Inventory
+              </Button>
+            </div>

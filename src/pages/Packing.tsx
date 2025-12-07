@@ -46,13 +46,11 @@ export default function Packing() {
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list, {});
   const inventory = useQuery(api.inventory.list, {});
-  const procurementJobs = useQuery(api.procurementJobs.list);
   const checklistItems = useQuery(api.dispatchChecklist.list, {});
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
-  const createProcurementJob = useMutation(api.procurementJobs.create);
 
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
@@ -80,26 +78,6 @@ export default function Packing() {
   const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
   const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
   const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
-
-  // Procurement dialog state
-  const [procurementDialog, setProcurementDialog] = useState(false);
-  const [procurementJobName, setProcurementJobName] = useState("");
-  const [procurementPriority, setProcurementPriority] = useState<"low" | "medium" | "high">("medium");
-  const [procurementNotes, setProcurementNotes] = useState("");
-  
-  // Kit stock warning dialog state
-  const [kitStockWarningDialog, setKitStockWarningDialog] = useState<{
-    open: boolean;
-    kitBreakdown: Array<{
-      kitName: string;
-      required: number;
-      available: number;
-      shortage: number;
-    }>;
-  }>({
-    open: false,
-    kitBreakdown: [],
-  });
 
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
@@ -249,226 +227,6 @@ export default function Packing() {
       }
       return newSet;
     });
-  };
-
-  const calculateMaterialRequirements = () => {
-    const materialMap = new Map<string, any>();
-
-    selectedAssignments.forEach((assignmentId) => {
-      const assignment = assignments?.find((a) => a._id === assignmentId);
-      if (!assignment) return;
-
-      const kit = kits?.find((k) => k._id === assignment.kitId);
-      if (!kit) return;
-
-      const requiredQty = assignment.quantity;
-
-      // Process structured packing requirements (BOM)
-      if (kit.isStructured && kit.packingRequirements) {
-        try {
-          const packingData = JSON.parse(kit.packingRequirements);
-          
-          // Process pouches - show final components (materials as they exist in inventory)
-          if (packingData.pouches) {
-            packingData.pouches.forEach((pouch: any, pouchIndex: number) => {
-              if (pouch.materials) {
-                pouch.materials.forEach((material: any) => {
-                  // Find the inventory item for this material
-                  const inventoryItem = inventory?.find((item) => 
-                    item.name.toLowerCase() === material.name.toLowerCase()
-                  );
-                  
-                  const key = `${material.name.toLowerCase()}_${kit._id}_pouch_${pouchIndex}`;
-                  const required = material.quantity * requiredQty;
-                  
-                  if (materialMap.has(key)) {
-                    const existing = materialMap.get(key);
-                    existing.required += required;
-                  } else {
-                    materialMap.set(key, {
-                      name: material.name,
-                      required,
-                      unit: material.unit,
-                      category: inventoryItem?.type === "raw" ? "Raw Material" :
-                               inventoryItem?.type === "pre_processed" ? "Processed Material" :
-                               inventoryItem?.type === "finished" ? "Finished Component" :
-                               "Main Component",
-                      sourceKits: [kit.name],
-                      componentLocation: `Pouch ${pouchIndex + 1}`,
-                    });
-                  }
-                });
-              }
-            });
-          }
-
-          // Process packets - show sealed packet itself, not materials inside
-          if (packingData.packets) {
-            packingData.packets.forEach((packet: any, packetIndex: number) => {
-              const key = `${packet.name.toLowerCase()}_${kit._id}_packet_${packetIndex}`;
-              const required = requiredQty; // 1 sealed packet per kit
-              
-              if (materialMap.has(key)) {
-                const existing = materialMap.get(key);
-                existing.required += required;
-              } else {
-                materialMap.set(key, {
-                  name: packet.name,
-                  required,
-                  unit: "pcs",
-                  category: "Sealed Packet",
-                  sourceKits: [kit.name],
-                  componentLocation: `Sealed Packet ${packetIndex + 1}`,
-                });
-              }
-            });
-          }
-        } catch (error) {
-          console.error("Error parsing packing requirements:", error);
-        }
-      }
-
-      // Process spare kits
-      if (kit.spareKits && Array.isArray(kit.spareKits)) {
-        kit.spareKits.forEach((spare: any, spareIndex: number) => {
-          const key = `${spare.name.toLowerCase()}_${kit._id}_spare_${spareIndex}`;
-          const required = spare.quantity * requiredQty;
-          
-          if (materialMap.has(key)) {
-            const existing = materialMap.get(key);
-            existing.required += required;
-          } else {
-            materialMap.set(key, {
-              name: spare.name,
-              required,
-              unit: spare.unit,
-              category: "Spare Kit",
-              sourceKits: [kit.name],
-              componentLocation: "Spare Kit",
-            });
-          }
-        });
-      }
-
-      // Process bulk materials
-      if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
-        kit.bulkMaterials.forEach((bulk: any, bulkIndex: number) => {
-          const key = `${bulk.name.toLowerCase()}_${kit._id}_bulk_${bulkIndex}`;
-          const required = bulk.quantity * requiredQty;
-          
-          if (materialMap.has(key)) {
-            const existing = materialMap.get(key);
-            existing.required += required;
-          } else {
-            materialMap.set(key, {
-              name: bulk.name,
-              required,
-              unit: bulk.unit,
-              category: "Bulk Material",
-              sourceKits: [kit.name],
-              componentLocation: "Bulk Material",
-            });
-          }
-        });
-      }
-    });
-
-    return Array.from(materialMap.values());
-  };
-
-  const handleRequestInventory = () => {
-    // Check if any selected assignments already have inventory requests
-    const selectedAssignmentIds = Array.from(selectedAssignments);
-    const existingJobs = procurementJobs?.filter((job: any) => 
-      job.status !== "completed" && 
-      job.assignmentIds.some((id: Id<"assignments">) => selectedAssignmentIds.includes(id))
-    );
-
-    if (existingJobs && existingJobs.length > 0) {
-      const jobIds = existingJobs.map((j: any) => j.jobId).join(", ");
-      toast.error("Inventory request already exists", {
-        description: `Some selected assignments already have active inventory requests: ${jobIds}`,
-      });
-      return;
-    }
-
-    // Check kit stock availability
-    const kitBreakdown: Array<{
-      kitName: string;
-      required: number;
-      available: number;
-      shortage: number;
-    }> = [];
-
-    selectedAssignments.forEach((assignmentId) => {
-      const assignment = assignments?.find((a) => a._id === assignmentId);
-      if (!assignment) return;
-
-      const kit = kits?.find((k) => k._id === assignment.kitId);
-      if (!kit) return;
-
-      const existingKit = kitBreakdown.find((k) => k.kitName === kit.name);
-      if (existingKit) {
-        existingKit.required += assignment.quantity;
-        existingKit.shortage = Math.max(0, existingKit.required - existingKit.available);
-      } else {
-        kitBreakdown.push({
-          kitName: kit.name,
-          required: assignment.quantity,
-          available: kit.stockCount,
-          shortage: Math.max(0, assignment.quantity - kit.stockCount),
-        });
-      }
-    });
-
-    // Check if any kits are available in stock
-    const hasKitsInStock = kitBreakdown.some((k) => k.available > 0);
-
-    if (hasKitsInStock) {
-      // Show warning dialog with kit breakdown
-      setKitStockWarningDialog({
-        open: true,
-        kitBreakdown,
-      });
-    } else {
-      // No kits in stock, proceed directly to procurement
-      setProcurementDialog(true);
-    }
-  };
-
-  const handleProceedWithInventoryRequest = () => {
-    setKitStockWarningDialog({ open: false, kitBreakdown: [] });
-    setProcurementDialog(true);
-  };
-
-  const handleSubmitInventoryRequest = async () => {
-    const materials = calculateMaterialRequirements();
-    
-    if (materials.length === 0) {
-      toast.error("No materials found for selected assignments");
-      return;
-    }
-
-    try {
-      const procJobId = await createProcurementJob({
-        assignmentIds: Array.from(selectedAssignments),
-        materialShortages: materials,
-        priority: procurementPriority,
-        notes: procurementNotes || undefined,
-        name: procurementJobName || undefined,
-      });
-      
-      toast.success("Inventory request created successfully");
-      setSelectedAssignments(new Set());
-      setProcurementDialog(false);
-      setProcurementJobName("");
-      setProcurementNotes("");
-      setProcurementPriority("medium");
-    } catch (error) {
-      toast.error("Failed to create inventory request", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
   };
 
   const filteredAssignments = (assignments || []).filter((assignment) => {
@@ -706,9 +464,6 @@ export default function Packing() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
                 Clear Selection
-              </Button>
-              <Button onClick={handleRequestInventory}>
-                Request Inventory
               </Button>
             </div>
           </motion.div>
@@ -1196,61 +951,6 @@ export default function Packing() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={kitStockWarningDialog.open} onOpenChange={(open) => !open && setKitStockWarningDialog({ open: false, kitBreakdown: [] })}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Kit Stock Available</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Some kits are available in stock. Do you still want to request inventory from the warehouse?
-            </p>
-            
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Kit Name</th>
-                    <th className="px-3 py-2 text-right">Required</th>
-                    <th className="px-3 py-2 text-right">Available</th>
-                    <th className="px-3 py-2 text-right">Shortage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {kitStockWarningDialog.kitBreakdown.map((kit, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="px-3 py-2">{kit.kitName}</td>
-                      <td className="px-3 py-2 text-right">{kit.required}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Badge variant={kit.available >= kit.required ? "default" : kit.available > 0 ? "secondary" : "destructive"}>
-                          {kit.available}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {kit.shortage > 0 ? (
-                          <Badge variant="destructive">{kit.shortage}</Badge>
-                        ) : (
-                          <Badge variant="outline">0</Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setKitStockWarningDialog({ open: false, kitBreakdown: [] })}>
-                Cancel
-              </Button>
-              <Button onClick={handleProceedWithInventoryRequest}>
-                Yes, Request Inventory
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <Dialog open={notesDialog.open} onOpenChange={(open) => !open && setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -1297,103 +997,6 @@ export default function Packing() {
                 </div>
               </>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={procurementDialog} onOpenChange={setProcurementDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Request Inventory</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 flex-1 overflow-y-auto">
-            <p className="text-sm text-muted-foreground">
-              Materials required for {selectedAssignments.size} selected assignment{selectedAssignments.size !== 1 ? "s" : ""}
-            </p>
-            
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted sticky top-0">
-                  <tr>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Material</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Category</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Component Location</th>
-                    <th className="px-3 py-2 text-left whitespace-nowrap">Source Kit(s)</th>
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Quantity Required</th>
-                    <th className="px-3 py-2 text-right whitespace-nowrap">Unit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {calculateMaterialRequirements().map((item, idx) => (
-                    <tr key={idx} className="border-t">
-                      <td className="px-3 py-2 whitespace-nowrap font-medium">{item.name}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <Badge variant={
-                          item.category === "Sealed Packet" ? "default" :
-                          item.category === "Main Component" ? "secondary" :
-                          item.category === "Spare Kit" ? "outline" :
-                          "outline"
-                        }>
-                          {item.category}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span className="text-xs text-muted-foreground">{item.componentLocation}</span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="text-xs">{item.sourceKits.join(", ")}</span>
-                      </td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap font-semibold">{item.required}</td>
-                      <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{item.unit}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Job Name</Label>
-                <Input
-                  placeholder="Enter job name for this procurement request..."
-                  value={procurementJobName}
-                  onChange={(e) => setProcurementJobName(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label>Priority</Label>
-                <Select value={procurementPriority} onValueChange={(v) => setProcurementPriority(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label>Notes (Optional)</Label>
-              <Textarea
-                placeholder="Add any notes about this procurement request..."
-                value={procurementNotes}
-                onChange={(e) => setProcurementNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setProcurementDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitInventoryRequest}>
-              Submit Inventory Request
-            </Button>
           </div>
         </DialogContent>
       </Dialog>

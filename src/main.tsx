@@ -27,7 +27,6 @@ import LaserFiles from "@/pages/LaserFiles.tsx";
 import ViewKitFiles from "@/pages/ViewKitFiles.tsx";
 import UserManagement from "@/pages/UserManagement.tsx";
 import AdminZone from "@/pages/AdminZone.tsx";
-import Procurement from "@/pages/Procurement.tsx";
 import Packing from "@/pages/Packing.tsx";
 import Dispatch from "@/pages/Dispatch.tsx";
 import OperationsInventoryRelations from "@/pages/OperationsInventoryRelations.tsx";
@@ -95,7 +94,6 @@ const router = createBrowserRouter(
       <Route path="/b2c-assignments" element={<B2CAssignments />} />
       <Route path="/packing" element={<Packing />} />
       <Route path="/dispatch" element={<Dispatch />} />
-      <Route path="/procurement" element={<Procurement />} />
       <Route path="/operations-inventory-relations" element={<OperationsInventoryRelations />} />
       <Route path="/laser-files" element={<LaserFiles />} />
       <Route path="/view-kit-files" element={<ViewKitFiles />} />

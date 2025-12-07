@@ -584,13 +584,6 @@ const schema = defineSchema(
           editBOM: v.optional(v.boolean()),
           editTargets: v.optional(v.boolean()),
         })),
-        procurementJobs: v.optional(v.object({
-          view: v.boolean(),
-          create: v.boolean(),
-          edit: v.boolean(),
-          complete: v.boolean(),
-          delete: v.boolean(),
-        })),
         packing: v.optional(v.object({
           view: v.boolean(),
           initiate: v.boolean(),
@@ -667,41 +660,6 @@ const schema = defineSchema(
         })),
       }),
     }).index("by_user", ["userId"]),
-
-    // Procurement jobs for tracking material shortage requests
-    procurementJobs: defineTable({
-      jobId: v.string(),
-      name: v.optional(v.string()),
-      createdBy: v.id("users"),
-      assignmentIds: v.array(v.id("assignments")),
-      materialShortages: v.array(
-        v.object({
-          name: v.string(),
-          currentStock: v.optional(v.number()),
-          required: v.number(),
-          shortage: v.optional(v.number()),
-          unit: v.string(),
-          category: v.optional(v.string()),
-          componentLocation: v.optional(v.string()),
-          sourceKits: v.optional(v.array(v.string())),
-        })
-      ),
-      status: v.union(
-        v.literal("pending"),
-        v.literal("in_progress"),
-        v.literal("completed")
-      ),
-      priority: v.union(
-        v.literal("low"),
-        v.literal("medium"),
-        v.literal("high")
-      ),
-      notes: v.optional(v.string()),
-      remarks: v.optional(v.string()),
-    })
-      .index("by_created_by", ["createdBy"])
-      .index("by_status", ["status"])
-      .index("by_priority", ["priority"]),
 
     discrepancyTickets: defineTable({
       clientId: v.string(),
@@ -815,19 +773,10 @@ const schema = defineSchema(
       reviewedBy: v.optional(v.id("users")),
       reviewedAt: v.optional(v.number()),
       assignmentId: v.optional(v.id("assignments")),
-      procurementJobId: v.optional(v.id("procurementJobs")),
     })
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
-      .index("by_assignment", ["assignmentId"])
-      .index("by_procurement_job", ["procurementJobId"]),
-
-    // Procurement purchasing quantities (persistent storage)
-    procurementPurchasingQuantities: defineTable({
-      materialName: v.string(),
-      purchasingQty: v.number(),
-      updatedBy: v.id("users"),
-    }).index("by_material_name", ["materialName"]),
+      .index("by_assignment", ["assignmentId"]),
 
     customDispatches: defineTable({
       description: v.string(),

@@ -1,1 +1,1 @@
-npx convex run fixClientType:addTypeToClient '{"clientId":"k971p1srrht1ejh8pkfthqqfgs7wd9m9","type":"one_time"}' && npx convex run fixClientType:addTypeToClient '{"clientId":"k976fawwzzysyfymc0wggrjwfh7wacvx","type":"one_time"}'
+rm src/convex/procurementJobs.ts
