@@ -5,20 +5,19 @@ import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import { Download, Package, RefreshCw, Info } from "lucide-react";
+import { Download, Package, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { exportProcurementPDF } from "@/lib/procurementExport";
 import { aggregateMaterials, type MaterialShortage } from "@/lib/procurementUtils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// Import sub-components
+import { MaterialSummaryTab } from "@/components/procurement/MaterialSummaryTab";
+import { KitWiseTab } from "@/components/procurement/KitWiseTab";
+import { MonthWiseTab } from "@/components/procurement/MonthWiseTab";
+import { ClientWiseTab } from "@/components/procurement/ClientWiseTab";
+import { AssignmentWiseTab } from "@/components/procurement/AssignmentWiseTab";
 
 export default function Procurement() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -33,7 +32,6 @@ export default function Procurement() {
   const inventory = useQuery(api.inventory.list);
   const vendors = useQuery(api.vendors.list);
   const savedQuantities = useQuery(api.procurementPurchasingQuantities.list);
-  const procurementJobs = useQuery(api.procurementJobs.list);
   const processingJobs = useQuery(api.processingJobs.list);
   const approvedMaterialRequests = useQuery(api.materialRequestsByAssignment.getAllApprovedQuantities);
   const kits = useQuery(api.kits.list);
@@ -42,7 +40,6 @@ export default function Procurement() {
 
   // Mutations
   const upsertPurchasingQty = useMutation(api.procurementPurchasingQuantities.upsert);
-  const markJobComplete = useMutation(api.procurementJobs.markAsComplete);
 
   // Local state
   const [activeTab, setActiveTab] = useState("summary");
@@ -50,12 +47,6 @@ export default function Procurement() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [purchasingQuantities, setPurchasingQuantities] = useState<Map<string, number>>(new Map());
   const [selectedVendors, setSelectedVendors] = useState<Map<string, string>>(new Map());
-  
-  // Filter states
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [showShortagesOnly, setShowShortagesOnly] = useState<boolean>(false);
 
   // Load saved purchasing quantities
   useEffect(() => {
@@ -79,26 +70,29 @@ export default function Procurement() {
     return new Map(inventory.map((i) => [i._id, i]));
   }, [inventory]);
 
-  // Filter procurement jobs
-  const filteredProcurementJobs = useMemo(() => {
-    if (!procurementJobs) return [];
-    
-    return procurementJobs.filter((job: any) => {
-      if (statusFilter !== "all" && job.status !== statusFilter) return false;
-      if (priorityFilter !== "all" && job.priority !== priorityFilter) return false;
-      return true;
+  // Filter active assignments (exclude received_from_inventory, dispatched, delivered)
+  // Note: aggregateMaterials also does this filtering, but we do it here for grouping logic
+  const activeAssignments = useMemo(() => {
+    if (!assignments) return [];
+    return assignments.filter((a) => {
+      const status = (a as any).status;
+      return (
+        status === "assigned" ||
+        status === "in_production" ||
+        status === "ready_to_pack" ||
+        status === "transferred_to_dispatch" ||
+        status === "ready_for_dispatch"
+      );
     });
-  }, [procurementJobs, statusFilter, priorityFilter]);
+  }, [assignments]);
+
+  // --- Data Aggregation ---
 
   const materialSummary = useMemo(() => {
     if (!assignments || !inventory || !vendors) return [];
-    // Include all assignments except dispatched and delivered
-    const activeAssignments = assignments.filter(
-      (a) => a.status !== "dispatched" && a.status !== "delivered"
-    );
     
     const allMaterials = aggregateMaterials(
-      activeAssignments, 
+      assignments, // aggregateMaterials handles filtering internally now
       inventoryByName, 
       inventoryById, 
       vendors,
@@ -107,18 +101,11 @@ export default function Procurement() {
     );
     
     // Filter out items that are fully in stock (no shortage)
-    const materialsWithShortage = allMaterials.filter(item => item.shortage > 0);
-    
-    return materialsWithShortage;
+    return allMaterials.filter(item => item.shortage > 0);
   }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const kitWiseData = useMemo(() => {
-    if (!assignments || !inventory || !vendors) return [];
-
-    // Include all assignments except dispatched and delivered
-    const activeAssignments = assignments.filter(
-      (a) => a.status !== "dispatched" && a.status !== "delivered"
-    );
+    if (!activeAssignments || !inventory || !vendors) return [];
 
     const kitMap = new Map<string, any>();
     activeAssignments.forEach((assignment) => {
@@ -148,16 +135,11 @@ export default function Procurement() {
         ...kit,
         materials: allMaterials.filter(item => item.shortage > 0),
       };
-    });
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
+    }).filter(kit => kit.materials.length > 0);
+  }, [activeAssignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const monthWiseData = useMemo(() => {
-    if (!assignments || !inventory || !vendors) return [];
-
-    // Include all assignments except dispatched and delivered
-    const activeAssignments = assignments.filter(
-      (a) => a.status !== "dispatched" && a.status !== "delivered"
-    );
+    if (!activeAssignments || !inventory || !vendors) return [];
 
     const monthMap = new Map<string, any>();
     activeAssignments.forEach((assignment) => {
@@ -193,22 +175,15 @@ export default function Procurement() {
           materials: allMaterials.filter(item => item.shortage > 0),
         };
       }).filter(month => month.materials.length > 0);
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
+  }, [activeAssignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
   const clientWiseData = useMemo(() => {
-    if (!assignments || !inventory || !vendors) return [];
-
-    // Include all assignments except dispatched and delivered
-    const activeAssignments = assignments.filter(
-      (a) => a.status !== "dispatched" && a.status !== "delivered"
-    );
+    if (!activeAssignments || !inventory || !vendors) return [];
 
     const clientMap = new Map<string, any>();
     activeAssignments.forEach((assignment) => {
-      // Skip assignments without client data
       if (!assignment.client) return;
 
-      // Extract client name with better fallback logic
       let clientName = "Unknown Client";
       const client = assignment.client as any;
       
@@ -249,20 +224,11 @@ export default function Procurement() {
         ...client,
         materials: allMaterials.filter(item => item.shortage > 0),
       };
-    }).filter(client => client.materials.length > 0); // Remove clients with no shortages
-  }, [assignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
+    }).filter(client => client.materials.length > 0);
+  }, [activeAssignments, inventory, vendors, inventoryByName, inventoryById, approvedMaterialRequests, processingJobs]);
 
-  // Auth redirect
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
-    }
-    if (!isLoading && isAuthenticated && user && !user.isApproved) {
-      navigate("/pending-approval");
-    }
-  }, [isLoading, isAuthenticated, user, navigate]);
+  // --- Handlers ---
 
-  // Handlers
   const handleRefresh = () => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefresh;
@@ -283,15 +249,32 @@ export default function Procurement() {
     }, 500);
   };
 
-  const handleMarkComplete = async (jobId: string) => {
+  const handlePurchasingQtyChange = async (materialName: string, newQty: number) => {
+    const materialKey = materialName.toLowerCase();
+    setPurchasingQuantities((prev) => {
+      const updated = new Map(prev);
+      updated.set(materialKey, newQty);
+      return updated;
+    });
+
     try {
-      await markJobComplete({ id: jobId as any });
-      toast.success("Procurement job marked as complete");
-    } catch (error) {
-      toast.error("Failed to mark procurement as complete", {
-        description: error instanceof Error ? error.message : "Unknown error",
+      await upsertPurchasingQty({
+        materialName: materialKey,
+        purchasingQty: newQty,
       });
+    } catch (err) {
+      console.error("Failed to save purchasing quantity:", err);
+      toast.error("Failed to save purchasing quantity");
     }
+  };
+
+  const handleVendorChange = (materialName: string, vendorName: string) => {
+    const materialKey = materialName.toLowerCase();
+    setSelectedVendors((prev) => {
+      const updated = new Map(prev);
+      updated.set(materialKey, vendorName);
+      return updated;
+    });
   };
 
   const handleExport = () => {
@@ -334,35 +317,17 @@ export default function Procurement() {
     }
   };
 
-  const handlePurchasingQtyChange = async (materialName: string, newQty: number) => {
-    const materialKey = materialName.toLowerCase();
-    setPurchasingQuantities((prev) => {
-      const updated = new Map(prev);
-      updated.set(materialKey, newQty);
-      return updated;
-    });
+  // --- Auth & Permissions ---
 
-    try {
-      await upsertPurchasingQty({
-        materialName: materialKey,
-        purchasingQty: newQty,
-      });
-    } catch (err) {
-      console.error("Failed to save purchasing quantity:", err);
-      toast.error("Failed to save purchasing quantity");
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate("/auth");
     }
-  };
+    if (!isLoading && isAuthenticated && user && !user.isApproved) {
+      navigate("/pending-approval");
+    }
+  }, [isLoading, isAuthenticated, user, navigate]);
 
-  const handleVendorChange = (materialName: string, vendorName: string) => {
-    const materialKey = materialName.toLowerCase();
-    setSelectedVendors((prev) => {
-      const updated = new Map(prev);
-      updated.set(materialKey, vendorName);
-      return updated;
-    });
-  };
-
-  // Permission check
   if (!canView) {
     return (
       <Layout>
@@ -375,7 +340,6 @@ export default function Procurement() {
     );
   }
 
-  // Loading state
   if (isLoading || !assignments || !inventory || !vendors) {
     return (
       <Layout>
@@ -385,156 +349,6 @@ export default function Procurement() {
       </Layout>
     );
   }
-
-  // Render components
-  const MaterialTable = ({ materials }: { materials: MaterialShortage[] }) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Material</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Order Req.</TableHead>
-          <TableHead>Available</TableHead>
-          <TableHead>Min. Stock</TableHead>
-          <TableHead>Shortage (Procurement)</TableHead>
-          <TableHead>Purchasing Qty</TableHead>
-          <TableHead>Vendor</TableHead>
-          <TableHead>Est. Cost</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {materials.map((mat, idx) => {
-          const materialKey = mat.name.toLowerCase();
-          const purchasingQty = purchasingQuantities.get(materialKey) ?? mat.shortage;
-          const selectedVendor = selectedVendors.get(materialKey) || mat.vendorName;
-          
-          // Get vendors for this material
-          const materialVendors = vendors?.filter(v => 
-            v.inventoryItems?.includes(mat.inventoryId as any)
-          ) || [];
-          
-          const estimatedCost = mat.vendorPrice
-            ? (purchasingQty * mat.vendorPrice).toFixed(2)
-            : null;
-
-          return (
-            <TableRow key={idx}>
-              <TableCell className="font-medium">{mat.name}</TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {mat.category}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {mat.required} {mat.unit}
-              </TableCell>
-              <TableCell>
-                {mat.available} {mat.unit}
-              </TableCell>
-              <TableCell>
-                {mat.minStockLevel || 0} {mat.unit}
-              </TableCell>
-              <TableCell>
-                {mat.shortage > 0 ? (
-                  <Badge variant="destructive" className="text-xs">
-                    {mat.shortage} {mat.unit}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs">
-                    In Stock
-                  </Badge>
-                )}
-              </TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  min="0"
-                  value={purchasingQty}
-                  onChange={(e) => handlePurchasingQtyChange(mat.name, Number(e.target.value))}
-                  className="w-24"
-                  placeholder="0"
-                />
-              </TableCell>
-              <TableCell>
-                <Select
-                  value={selectedVendor || ""}
-                  onValueChange={(value) => handleVendorChange(mat.name, value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select vendor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materialVendors.length > 0 ? (
-                      materialVendors.map((vendor) => (
-                        <SelectItem key={vendor._id} value={vendor.name}>
-                          {vendor.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-vendor" disabled>
-                        No vendors available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell>
-                {estimatedCost ? (
-                  <span className="font-medium">₹{estimatedCost}</span>
-                ) : (
-                  <span className="text-muted-foreground text-xs">No price</span>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-  );
-
-  const AssignmentsTable = ({ assignments }: { assignments: any[] }) => (
-    <div className="mb-6 border rounded-md overflow-hidden">
-      <div className="bg-muted/50 px-4 py-2 border-b text-sm font-medium">Assignment Details</div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[100px]">Batch</TableHead>
-            <TableHead>Program</TableHead>
-            <TableHead>Kit</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Client</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
-            <TableHead>Dispatch</TableHead>
-            <TableHead>Prod. Month</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {assignments.map((a, i) => (
-            <TableRow key={i}>
-              <TableCell className="font-medium text-xs">
-                {a.batch?.batchId || a.batchId || "-"}
-              </TableCell>
-              <TableCell className="text-xs">{a.program?.name || "-"}</TableCell>
-              <TableCell className="text-xs">{a.kit?.name || "-"}</TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-[10px]">
-                  {a.kit?.category || "-"}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-xs">
-                {a.client?.name || a.client?.buyerName || "-"}
-              </TableCell>
-              <TableCell className="text-right text-xs">{a.quantity}</TableCell>
-              <TableCell className="text-xs">
-                {a.dispatchedAt ? new Date(a.dispatchedAt).toLocaleDateString() : "-"}
-              </TableCell>
-              <TableCell className="text-xs">{a.productionMonth || "-"}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
 
   return (
     <Layout>
@@ -570,353 +384,66 @@ export default function Procurement() {
           </TabsList>
 
           <div className="mt-6 flex-1">
-            {/* Material Summary Tab */}
             <TabsContent value="summary" className="h-full">
-              <Card className="h-full flex flex-col">
-                <CardHeader>
-                  <CardTitle>Total Material Requirements</CardTitle>
-                  <CardDescription>Aggregated list of all materials needed across all assignments</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-hidden p-0">
-                  <ScrollArea className="h-[calc(100vh-350px)]">
-                    <div className="p-6 pt-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Material</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Order Req.</TableHead>
-                            <TableHead>Available</TableHead>
-                            <TableHead>Min. Stock</TableHead>
-                            <TableHead>Shortage (Procurement)</TableHead>
-                            <TableHead>Purchasing Qty</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead>Est. Cost</TableHead>
-                            <TableHead className="w-[80px]">Kits</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {materialSummary.map((item, idx) => {
-                            const materialKey = item.name.toLowerCase();
-                            const purchasingQty =
-                              purchasingQuantities.get(materialKey) ?? item.shortage;
-                            const selectedVendor = selectedVendors.get(materialKey) || item.vendorName;
-                            
-                            // Get vendors for this material
-                            const materialVendors = vendors?.filter(v => 
-                              v.inventoryItems?.includes(item.inventoryId as any)
-                            ) || [];
-                            
-                            const estimatedCost = item.vendorPrice
-                              ? (purchasingQty * item.vendorPrice).toFixed(2)
-                              : null;
-
-                            return (
-                              <TableRow key={idx}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{item.category}</Badge>
-                                </TableCell>
-                                <TableCell>
-                                  {item.required} {item.unit}
-                                </TableCell>
-                                <TableCell>
-                                  {item.available} {item.unit}
-                                </TableCell>
-                                <TableCell>
-                                  {item.minStockLevel || 0} {item.unit}
-                                </TableCell>
-                                <TableCell>
-                                  {item.shortage > 0 ? (
-                                    <Badge variant="destructive">
-                                      {item.shortage} {item.unit}
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="secondary">In Stock</Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={purchasingQty}
-                                    onChange={(e) =>
-                                      handlePurchasingQtyChange(item.name, Number(e.target.value))
-                                    }
-                                    className="w-24"
-                                    placeholder="0"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Select
-                                    value={selectedVendor || ""}
-                                    onValueChange={(value) => handleVendorChange(item.name, value)}
-                                  >
-                                    <SelectTrigger className="w-[180px]">
-                                      <SelectValue placeholder="Select vendor" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {materialVendors.length > 0 ? (
-                                        materialVendors.map((vendor) => (
-                                          <SelectItem key={vendor._id} value={vendor.name}>
-                                            {vendor.name}
-                                          </SelectItem>
-                                        ))
-                                      ) : (
-                                        <SelectItem value="no-vendor" disabled>
-                                          No vendors available
-                                        </SelectItem>
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell>
-                                  {estimatedCost ? (
-                                    <span className="font-medium">₹{estimatedCost}</span>
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">No price</span>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                        <Info className="h-4 w-4" />
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                      <div className="space-y-2">
-                                        <h4 className="font-medium text-sm">Used in Kits</h4>
-                                        <div className="text-sm text-muted-foreground max-h-[200px] overflow-y-auto">
-                                          {item.kits.length > 0 ? (
-                                            <ul className="list-disc list-inside space-y-1">
-                                              {item.kits.map((kit, idx) => (
-                                                <li key={idx}>{kit}</li>
-                                              ))}
-                                            </ul>
-                                          ) : (
-                                            <p>No kits found</p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </PopoverContent>
-                                  </Popover>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+              <MaterialSummaryTab
+                materials={materialSummary}
+                vendors={vendors}
+                purchasingQuantities={purchasingQuantities}
+                selectedVendors={selectedVendors}
+                onPurchasingQtyChange={handlePurchasingQtyChange}
+                onVendorChange={handleVendorChange}
+              />
             </TabsContent>
 
-            {/* Kit Wise Tab */}
-            <TabsContent value="kit-wise" className="space-y-4">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="space-y-4 pr-4">
-                  {kitWiseData.map((kit, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{kit.name}</CardTitle>
-                            <div className="flex flex-wrap gap-2 mt-2 mb-1">
-                            <Badge variant="secondary" className="font-normal">
-                              Program: {kit.assignments[0]?.program?.name || "Unknown"}
-                            </Badge>
-                            <Badge variant="outline" className="font-normal">
-                              Category: {kit.assignments[0]?.kit?.category || "Unknown"}
-                            </Badge>
-                            </div>
-                            <CardDescription>Total Assigned: {kit.totalQuantity} units</CardDescription>
-                          </div>
-                          <Badge
-                            variant={
-                              kit.materials.some((m: MaterialShortage) => m.shortage > 0)
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {kit.materials.filter((m: MaterialShortage) => m.shortage > 0).length} Shortages
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <MaterialTable materials={kit.materials} />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+            <TabsContent value="kit-wise" className="h-full">
+              <KitWiseTab
+                data={kitWiseData}
+                vendors={vendors}
+                purchasingQuantities={purchasingQuantities}
+                selectedVendors={selectedVendors}
+                onPurchasingQtyChange={handlePurchasingQtyChange}
+                onVendorChange={handleVendorChange}
+              />
             </TabsContent>
 
-            {/* Month Wise Tab */}
-            <TabsContent value="month-wise" className="space-y-4">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="space-y-4 pr-4">
-                  {monthWiseData.map((month, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">
-                              {new Date(month.month + "-01").toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-                            </CardTitle>
-                            <CardDescription>{month.totalAssignments} Assignments</CardDescription>
-                          </div>
-                          <Badge
-                            variant={
-                              month.materials.some((m: MaterialShortage) => m.shortage > 0)
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {month.materials.filter((m: MaterialShortage) => m.shortage > 0).length} Shortages
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <AssignmentsTable assignments={month.assignments} />
-                        <div className="mt-6">
-                          <h4 className="text-sm font-medium mb-3">Material Requirements</h4>
-                          <MaterialTable materials={month.materials} />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+            <TabsContent value="month-wise" className="h-full">
+              <MonthWiseTab
+                data={monthWiseData}
+                vendors={vendors}
+                purchasingQuantities={purchasingQuantities}
+                selectedVendors={selectedVendors}
+                onPurchasingQtyChange={handlePurchasingQtyChange}
+                onVendorChange={handleVendorChange}
+              />
             </TabsContent>
 
-            {/* Client Wise Tab */}
-            <TabsContent value="client-wise" className="space-y-4">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="space-y-4 pr-4">
-                  {clientWiseData.map((client, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{client.clientName}</CardTitle>
-                            <CardDescription>Total Kits Ordered: {client.totalKits}</CardDescription>
-                          </div>
-                          <Badge
-                            variant={
-                              client.materials.some((m: MaterialShortage) => m.shortage > 0)
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {client.materials.filter((m: MaterialShortage) => m.shortage > 0).length} Shortages
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <AssignmentsTable assignments={client.assignments} />
-                        <div className="mt-6">
-                          <h4 className="text-sm font-medium mb-3">Material Requirements</h4>
-                          <MaterialTable materials={client.materials} />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+            <TabsContent value="client-wise" className="h-full">
+              <ClientWiseTab
+                data={clientWiseData}
+                vendors={vendors}
+                purchasingQuantities={purchasingQuantities}
+                selectedVendors={selectedVendors}
+                onPurchasingQtyChange={handlePurchasingQtyChange}
+                onVendorChange={handleVendorChange}
+              />
             </TabsContent>
 
-            {/* Assignment Wise Tab */}
-            <TabsContent value="assignment" className="space-y-4">
-              <ScrollArea className="h-[calc(100vh-250px)]">
-                <div className="space-y-4 pr-4">
-                  {(() => {
-                    if (!assignments || !kits) return null;
-
-                    // Filter out completed assignments
-                    const activeAssignments = assignments.filter(
-                      (a) => a.status !== "dispatched" && a.status !== "delivered"
-                    );
-
-                    if (activeAssignments.length === 0) {
-                      return (
-                        <Card>
-                          <CardContent className="py-8">
-                            <div className="text-center text-muted-foreground">
-                              No active assignments found.
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    }
-
-                    return activeAssignments.map((assignment) => {
-                      const kit = kits.find((k) => k._id === assignment.kitId);
-                      const client = assignment.clientType === "b2b"
-                        ? clients?.find((c) => c._id === assignment.clientId)
-                        : b2cClients?.find((c) => c._id === assignment.clientId);
-
-                      if (!kit) return null;
-
-                      // Calculate materials for this specific assignment
-                      const allMaterials = aggregateMaterials(
-                        [assignment],
-                        inventoryByName,
-                        inventoryById,
-                        vendors || [],
-                        approvedMaterialRequests || undefined,
-                        processingJobs || undefined
-                      );
-
-                      // Filter to only show materials with shortages
-                      const materials = allMaterials.filter((m) => m.shortage > 0);
-                      
-                      // Skip assignments with no shortages
-                      if (materials.length === 0) return null;
-
-                      const totalShortages = materials.length;
-
-                      return (
-                        <Card key={assignment._id}>
-                          <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <CardTitle className="text-lg">{kit.name}</CardTitle>
-                                <div className="flex flex-wrap gap-2 mt-2 mb-1">
-                                  <Badge variant="secondary" className="font-normal">
-                                    Program: {assignment.program?.name || "Unknown"}
-                                  </Badge>
-                                  <Badge variant="outline" className="font-normal">
-                                    Category: {kit.category || "Unknown"}
-                                  </Badge>
-                                </div>
-                                <CardDescription>
-                                  Client: {assignment.clientType === "b2b" 
-                                    ? (client as any)?.name 
-                                    : (client as any)?.buyerName || "Unknown"} • 
-                                  Quantity: {assignment.quantity} units • 
-                                  Month: {assignment.productionMonth || "N/A"}
-                                </CardDescription>
-                              </div>
-                              {totalShortages > 0 ? (
-                                <Badge variant="destructive">
-                                  {totalShortages} Shortage{totalShortages !== 1 ? "s" : ""}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">All Available</Badge>
-                              )}
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <MaterialTable materials={materials} />
-                          </CardContent>
-                        </Card>
-                      );
-                    });
-                  })()}
-                </div>
-              </ScrollArea>
+            <TabsContent value="assignment" className="h-full">
+              <AssignmentWiseTab
+                assignments={assignments}
+                kits={kits || []}
+                clients={clients || []}
+                b2cClients={b2cClients || []}
+                inventoryByName={inventoryByName}
+                inventoryById={inventoryById}
+                vendors={vendors}
+                approvedMaterialRequests={approvedMaterialRequests}
+                processingJobs={processingJobs}
+                purchasingQuantities={purchasingQuantities}
+                selectedVendors={selectedVendors}
+                onPurchasingQtyChange={handlePurchasingQtyChange}
+                onVendorChange={handleVendorChange}
+              />
             </TabsContent>
           </div>
         </Tabs>

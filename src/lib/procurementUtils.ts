@@ -25,6 +25,7 @@ export interface Assignment {
   productionMonth?: string;
   _creationTime: number;
   clientType: "b2b" | "b2c";
+  status?: string;
 }
 
 export interface InventoryItem {
@@ -132,12 +133,12 @@ export function calculateAssignmentShortages(
           const compAvailable = compItem.quantity || 0;
           const compMinStockLevel = compItem.minStockLevel || 0;
 
-          let compShortage = 0;
-          if (compAvailable < compMinStockLevel) {
-            compShortage = compRequired + (compMinStockLevel - compAvailable);
-          } else {
-            compShortage = Math.max(0, compRequired - compAvailable);
-          }
+          // Initial calculation for component
+          // We don't calculate shortage here, just requirement. 
+          // Shortage is calculated after aggregation.
+          // But for single assignment view, we need a shortage estimate.
+          
+          const compShortage = Math.max(0, (compRequired - compAvailable) + compMinStockLevel);
 
           if (compShortage > 0 || compRequired > 0) {
             shortages.push({
@@ -161,11 +162,7 @@ export function calculateAssignmentShortages(
       // Regular material
       let shortage = 0;
       if (invItem && invItem.type === "raw") {
-        if (available < minStockLevel) {
-          shortage = required + (minStockLevel - available);
-        } else {
-          shortage = Math.max(0, required - available);
-        }
+         shortage = Math.max(0, (required - available) + minStockLevel);
       } else {
         shortage = Math.max(0, required - available);
       }
@@ -230,32 +227,22 @@ export function aggregateMaterials(
   activeProcessingJobs?: any[]
 ): MaterialShortage[] {
   const materialMap = new Map<string, MaterialShortage>();
-  const receivedFromInventoryMap = new Map<string, number>();
 
-  // First pass: separate received_from_inventory assignments and collect materials
-  const activeAssignments: Assignment[] = [];
-  const receivedAssignments: Assignment[] = [];
-
-  console.log('🔍 Total assignments to process:', assignments.length);
-  
-  assignments.forEach((assignment) => {
-    const status = (assignment as any).status;
-    console.log('📦 Assignment:', assignment._id, 'Status:', status);
-    const isReceivedFromInventory = status === "received_from_inventory";
-    
-    if (isReceivedFromInventory) {
-      console.log('✅ Marking as received from inventory');
-      receivedAssignments.push(assignment);
-    } else {
-      console.log('✅ Marking as active assignment');
-      activeAssignments.push(assignment);
-    }
+  // Filter assignments based on status
+  // Included: assigned, in_production, ready_to_pack, transferred_to_dispatch, ready_for_dispatch
+  // Excluded: received_from_inventory, dispatched, delivered
+  const activeAssignments = assignments.filter((assignment) => {
+    const status = assignment.status;
+    return (
+      status === "assigned" ||
+      status === "in_production" ||
+      status === "ready_to_pack" ||
+      status === "transferred_to_dispatch" ||
+      status === "ready_for_dispatch"
+    );
   });
 
-  console.log('📊 Active assignments:', activeAssignments.length);
-  console.log('📊 Received assignments:', receivedAssignments.length);
-
-  // Second pass: collect materials only from active assignments
+  // Collect materials from active assignments
   activeAssignments.forEach((assignment) => {
     const shortages = calculateAssignmentShortages(
       assignment,
@@ -292,7 +279,7 @@ export function aggregateMaterials(
     });
   });
 
-  // Third pass: BOM explosion for items with shortages
+  // BOM explosion for items with shortages
   const queue = Array.from(materialMap.keys());
   const processed = new Set<string>();
 
@@ -308,11 +295,9 @@ export function aggregateMaterials(
 
     // Recalculate shortage considering min stock
     // Formula: shortage = (order_required - available) + min_stock_level
-    // This ensures procurement covers both order fulfillment AND restocking to min level
     let currentShortage = 0;
     if (invItem && invItem.type === "raw") {
       const minStockLevel = invItem.minStockLevel || 0;
-      // Apply formula: (required - available) + minStockLevel, then ensure non-negative
       currentShortage = Math.max(0, (item.required - item.available) + minStockLevel);
     } else {
       currentShortage = Math.max(0, item.required - item.available);
@@ -348,7 +333,7 @@ export function aggregateMaterials(
               name: compInvItem.name,
               required: qtyNeeded,
               available: compInvItem.quantity,
-              shortage: 0,
+              shortage: 0, // Will be calculated when processed
               unit: compInvItem.unit,
               category: "Raw Material (BOM)",
               subcategory: compInvItem.subcategory || "Uncategorized",
@@ -406,15 +391,6 @@ export function aggregateMaterials(
       }
     });
   }
-
-  // Apply deductions for materials received from inventory
-  materialMap.forEach((item, key) => {
-    const receivedQty = receivedFromInventoryMap.get(key) || 0;
-    if (receivedQty > 0) {
-      // Reduce the shortage by the quantity already received from inventory
-      item.shortage = Math.max(0, item.shortage - receivedQty);
-    }
-  });
 
   // Filter out exploded items and return only raw materials
   return Array.from(materialMap.values()).filter((item) => {
