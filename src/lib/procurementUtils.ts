@@ -64,7 +64,6 @@ export const aggregateMaterials = (
   assignments: any[],
   kits: any[],
   inventory: any[],
-  kitComponents: any[],
   purchasingQuantities: any[],
   vendors: any[]
 ): ProcurementMaterial[] => {
@@ -105,57 +104,36 @@ export const aggregateMaterials = (
     const kit = kits.find(k => k._id === assignment.kitId);
     if (!kit) return;
 
-    // Get components for this kit
-    const components = kitComponents.filter((c: any) => c.kitId === kit._id);
+    // Use kit.components which links to inventory
+    if (kit.components) {
+      kit.components.forEach((kitComp: any) => {
+        const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
+        if (!invItem) return;
 
-    components.forEach((comp: any) => {
-      // Find inventory item by name (since kitComponents store name, not ID directly usually, 
-      // but schema says kitComponents has name. Wait, schema for kitComponents doesn't link to inventory directly?
-      // Ah, schema says: kitComponents: defineTable({ ... name: v.string() ... })
-      // But kits table has: components: v.array(v.object({ inventoryItemId: v.id("inventory") ... }))
-      // We should use the direct link in kits.components if available, or match by name.
-      // The prompt says "BOM Explosion".
-      
-      // Let's use kit.components which links to inventory
-      if (kit.components) {
-        kit.components.forEach((kitComp: any) => {
-          const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
-          if (!invItem) return;
-
-          const requiredQty = kitComp.quantityPerKit * assignment.quantity;
-          
-          // Handle BOM explosion for composite items
-          if (["pre_processed", "finished", "sealed_packet"].includes(invItem.type)) {
-            // Check if this composite item has components defined in inventory
-            if (invItem.components && invItem.components.length > 0) {
-              // Explode to raw materials
-              invItem.components.forEach((subComp: any) => {
-                const rawItem = inventory.find(i => i._id === subComp.rawMaterialId);
-                if (rawItem) {
-                  const entry = getMaterialEntry(rawItem);
-                  const subRequired = subComp.quantityRequired * requiredQty;
-                  entry.orderRequired += subRequired;
-                  
-                  // Add kit info if not present
-                  if (!entry.kits.find(k => k.id === kit._id)) {
-                    entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
-                  }
-                  const kitEntry = entry.kits.find(k => k.id === kit._id)!;
-                  kitEntry.quantity += assignment.quantity; // This is kit quantity, not material quantity
+        const requiredQty = kitComp.quantityPerKit * assignment.quantity;
+        
+        // Handle BOM explosion for composite items
+        if (["pre_processed", "finished", "sealed_packet"].includes(invItem.type)) {
+          // Check if this composite item has components defined in inventory
+          if (invItem.components && invItem.components.length > 0) {
+            // Explode to raw materials
+            invItem.components.forEach((subComp: any) => {
+              const rawItem = inventory.find(i => i._id === subComp.rawMaterialId);
+              if (rawItem) {
+                const entry = getMaterialEntry(rawItem);
+                const subRequired = subComp.quantityRequired * requiredQty;
+                entry.orderRequired += subRequired;
+                
+                // Add kit info if not present
+                if (!entry.kits.find(k => k.id === kit._id)) {
+                  entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
                 }
-              });
-            } else {
-              // No components defined, treat as raw material
-              const entry = getMaterialEntry(invItem);
-              entry.orderRequired += requiredQty;
-              if (!entry.kits.find(k => k.id === kit._id)) {
-                entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
+                const kitEntry = entry.kits.find(k => k.id === kit._id)!;
+                kitEntry.quantity += assignment.quantity; // This is kit quantity, not material quantity
               }
-              const kitEntry = entry.kits.find(k => k.id === kit._id)!;
-              kitEntry.quantity += assignment.quantity;
-            }
+            });
           } else {
-            // Raw material
+            // No components defined, treat as raw material
             const entry = getMaterialEntry(invItem);
             entry.orderRequired += requiredQty;
             if (!entry.kits.find(k => k.id === kit._id)) {
@@ -164,9 +142,18 @@ export const aggregateMaterials = (
             const kitEntry = entry.kits.find(k => k.id === kit._id)!;
             kitEntry.quantity += assignment.quantity;
           }
-        });
-      }
-    });
+        } else {
+          // Raw material
+          const entry = getMaterialEntry(invItem);
+          entry.orderRequired += requiredQty;
+          if (!entry.kits.find(k => k.id === kit._id)) {
+            entry.kits.push({ id: kit._id, name: kit.name, quantity: 0 });
+          }
+          const kitEntry = entry.kits.find(k => k.id === kit._id)!;
+          kitEntry.quantity += assignment.quantity;
+        }
+      });
+    }
   });
 
   // Calculate shortages and costs

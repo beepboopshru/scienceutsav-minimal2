@@ -15,14 +15,13 @@ import { AssignmentWiseTab } from "@/components/procurement/AssignmentWiseTab";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function Procurement() {
-  const assignments = useQuery(api.assignments.getAll) || [];
-  const kits = useQuery(api.kits.get) || [];
-  const inventory = useQuery(api.inventory.get) || [];
-  const kitComponents = useQuery(api.kits.getAllComponents) || [];
+  const assignments = useQuery(api.assignments.list) || [];
+  const kits = useQuery(api.kits.list) || [];
+  const inventory = useQuery(api.inventory.list) || [];
   const purchasingQuantities = useQuery(api.procurement.getPurchasingQuantities) || [];
-  const vendors = useQuery(api.vendors.get) || [];
-  const clients = useQuery(api.clients.get) || [];
-  const b2cClients = useQuery(api.b2cClients.get) || [];
+  const vendors = useQuery(api.vendors.list) || [];
+  const clients = useQuery(api.clients.list) || [];
+  const b2cClients = useQuery(api.b2cClients.list) || [];
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -32,11 +31,10 @@ export default function Procurement() {
       assignments,
       kits,
       inventory,
-      kitComponents,
       purchasingQuantities,
       vendors
     );
-  }, [assignments, kits, inventory, kitComponents, purchasingQuantities, vendors]);
+  }, [assignments, kits, inventory, purchasingQuantities, vendors]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
