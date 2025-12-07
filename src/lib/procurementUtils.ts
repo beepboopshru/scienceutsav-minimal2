@@ -151,22 +151,31 @@ export const aggregateMaterials = (
       kitName: kit.name,
       quantity: assignment.quantity,
       hasComponents: !!kit.components,
-      componentsLength: kit.components?.length || 0
+      componentsLength: kit.components?.length || 0,
+      components: kit.components
     });
 
     processedCount++;
 
     // Process kit components
     if (kit.components && Array.isArray(kit.components)) {
+      console.log('Kit has components:', kit.components.length);
       kit.components.forEach((kitComp: any) => {
+        console.log('Processing kit component:', kitComp);
         const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
+        console.log('Looking for inventory item:', kitComp.inventoryItemId, 'Found:', !!invItem);
         if (!invItem) {
           console.log('Inventory item not found:', kitComp.inventoryItemId);
           return;
         }
 
         const requiredQty = kitComp.quantityPerKit * assignment.quantity;
-        console.log('Processing component:', invItem.name, 'type:', invItem.type, 'required:', requiredQty);
+        console.log('Processing component:', {
+          name: invItem.name,
+          type: invItem.type,
+          required: requiredQty,
+          hasSubComponents: invItem.type === 'sealed_packet' && !!invItem.components
+        });
 
         // Handle BOM explosion for composite items
         if (invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
