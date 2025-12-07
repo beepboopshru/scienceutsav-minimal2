@@ -236,16 +236,24 @@ export function aggregateMaterials(
   const activeAssignments: Assignment[] = [];
   const receivedAssignments: Assignment[] = [];
 
+  console.log('🔍 Total assignments to process:', assignments.length);
+  
   assignments.forEach((assignment) => {
     const status = (assignment as any).status;
+    console.log('📦 Assignment:', assignment._id, 'Status:', status);
     const isReceivedFromInventory = status === "received_from_inventory";
     
     if (isReceivedFromInventory) {
+      console.log('✅ Marking as received from inventory');
       receivedAssignments.push(assignment);
     } else {
+      console.log('✅ Marking as active assignment');
       activeAssignments.push(assignment);
     }
   });
+
+  console.log('📊 Active assignments:', activeAssignments.length);
+  console.log('📊 Received assignments:', receivedAssignments.length);
 
   // Second pass: collect materials only from active assignments
   activeAssignments.forEach((assignment) => {
