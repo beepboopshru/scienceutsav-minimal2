@@ -133,6 +133,54 @@ export const aggregateMaterials = (
     }
   };
 
+  // Helper to process structured packing requirements
+  const processPackingRequirements = (
+    packingRequirements: string,
+    kitId: Id<"kits">,
+    kitName: string,
+    assignmentQty: number
+  ) => {
+    try {
+      const structure = JSON.parse(packingRequirements);
+      
+      // Process pouches
+      if (structure.pouches && Array.isArray(structure.pouches)) {
+        structure.pouches.forEach((pouch: any) => {
+          if (pouch.materials && Array.isArray(pouch.materials)) {
+            pouch.materials.forEach((material: any) => {
+              if (material.inventoryItemId) {
+                const invItem = inventory.find(i => i._id === material.inventoryItemId);
+                if (invItem && invItem.type === "raw") {
+                  const requiredQty = (material.quantity || 0) * assignmentQty;
+                  addRawMaterialRequirement(invItem._id, requiredQty, kitId, kitName, assignmentQty);
+                }
+              }
+            });
+          }
+        });
+      }
+
+      // Process packets
+      if (structure.packets && Array.isArray(structure.packets)) {
+        structure.packets.forEach((packet: any) => {
+          if (packet.materials && Array.isArray(packet.materials)) {
+            packet.materials.forEach((material: any) => {
+              if (material.inventoryItemId) {
+                const invItem = inventory.find(i => i._id === material.inventoryItemId);
+                if (invItem && invItem.type === "raw") {
+                  const requiredQty = (material.quantity || 0) * assignmentQty;
+                  addRawMaterialRequirement(invItem._id, requiredQty, kitId, kitName, assignmentQty);
+                }
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Error parsing packingRequirements:', e);
+    }
+  };
+
   // Process each active assignment
   let processedCount = 0;
   assignments.forEach(assignment => {
@@ -151,9 +199,10 @@ export const aggregateMaterials = (
       kitName: kit.name,
       kitId: kit._id,
       quantity: assignment.quantity,
+      isStructured: kit.isStructured,
+      hasPackingRequirements: !!kit.packingRequirements,
       hasComponents: !!kit.components,
       componentsLength: kit.components?.length || 0,
-      components: kit.components,
       hasSpareKits: !!kit.spareKits,
       spareKitsLength: kit.spareKits?.length || 0,
       hasBulkMaterials: !!kit.bulkMaterials,
@@ -163,6 +212,12 @@ export const aggregateMaterials = (
     });
 
     processedCount++;
+
+    // Process structured kits with packingRequirements
+    if (kit.isStructured && kit.packingRequirements) {
+      console.log('Processing structured kit with packingRequirements');
+      processPackingRequirements(kit.packingRequirements, kit._id, kit.name, assignment.quantity);
+    }
 
     // Process kit components
     if (kit.components && Array.isArray(kit.components) && kit.components.length > 0) {
