@@ -778,6 +778,29 @@ const schema = defineSchema(
       .index("by_status", ["status"])
       .index("by_assignment", ["assignmentId"]),
 
+    // Packing requests for material fulfillment
+    packingRequests: defineTable({
+      assignmentIds: v.array(v.id("assignments")),
+      items: v.array(
+        v.object({
+          inventoryId: v.id("inventory"),
+          name: v.string(),
+          type: v.string(),
+          quantity: v.number(),
+          unit: v.string(),
+        })
+      ),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("done")
+      ),
+      requestedBy: v.id("users"),
+      fulfilledBy: v.optional(v.id("users")),
+      fulfilledAt: v.optional(v.number()),
+    })
+      .index("by_status", ["status"])
+      .index("by_requested_by", ["requestedBy"]),
+
     customDispatches: defineTable({
       description: v.string(),
       status: v.union(v.literal("pending"), v.literal("dispatched"), v.literal("delivered")),

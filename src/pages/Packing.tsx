@@ -51,6 +51,7 @@ export default function Packing() {
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
+  const createPackingRequest = useMutation(api.packingRequests.create);
 
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
@@ -462,6 +463,24 @@ export default function Packing() {
               </span>
             </div>
             <div className="flex gap-2">
+              <Button 
+                variant="default"
+                onClick={async () => {
+                  try {
+                    await createPackingRequest({
+                      assignmentIds: Array.from(selectedAssignments),
+                    });
+                    toast.success("Packing request created successfully");
+                    setSelectedAssignments(new Set());
+                  } catch (error) {
+                    toast.error("Failed to create packing request", {
+                      description: error instanceof Error ? error.message : "Unknown error",
+                    });
+                  }
+                }}
+              >
+                Request Materials for Selected
+              </Button>
               <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
                 Clear Selection
               </Button>

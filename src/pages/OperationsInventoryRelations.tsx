@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, PackageCheck } from "lucide-react";
 import { MaterialRequestsTab } from "@/components/inventory/MaterialRequestsTab";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function OperationsInventoryRelations() {
@@ -36,9 +39,12 @@ export default function OperationsInventoryRelations() {
   
   const canViewMaterialRequests = hasPermission("materialRequests", "view");
   const canCreateMaterialRequests = hasPermission("materialRequests", "create");
+  const canViewPacking = hasPermission("packing", "view");
   
   const inventory = useQuery(api.inventory.list);
+  const packingRequests = useQuery(api.packingRequests.list);
   const createRequest = useMutation(api.materialRequests.create);
+  const fulfillPackingRequest = useMutation(api.packingRequests.fulfill);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [purpose, setPurpose] = useState("");
@@ -113,7 +119,16 @@ export default function OperationsInventoryRelations() {
     }
   };
 
-  if (!canViewMaterialRequests) {
+  const handleFulfillPackingRequest = async (id: any) => {
+    try {
+      await fulfillPackingRequest({ id });
+      toast.success("Packing request fulfilled - Inventory reduced and assignments updated");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to fulfill packing request");
+    }
+  };
+
+  if (!canViewMaterialRequests && !canViewPacking) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center">
@@ -142,9 +157,9 @@ export default function OperationsInventoryRelations() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Material Requests</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Operations & Inventory Relations</h1>
               <p className="text-muted-foreground mt-2">
-                Manage material requests from production
+                Manage material requests and packing operations
               </p>
             </div>
             
@@ -253,7 +268,90 @@ export default function OperationsInventoryRelations() {
           </div>
 
           <div className="mt-6">
-            <MaterialRequestsTab />
+            <Tabs defaultValue="material-requests" className="w-full">
+              <TabsList>
+                {canViewMaterialRequests && (
+                  <TabsTrigger value="material-requests">Material Requests</TabsTrigger>
+                )}
+                {canViewPacking && (
+                  <TabsTrigger value="packing-requests">Packing Requests</TabsTrigger>
+                )}
+              </TabsList>
+
+              {canViewMaterialRequests && (
+                <TabsContent value="material-requests">
+                  <MaterialRequestsTab />
+                </TabsContent>
+              )}
+
+              {canViewPacking && (
+                <TabsContent value="packing-requests">
+                  <div className="space-y-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Request ID</TableHead>
+                          <TableHead>Assignments</TableHead>
+                          <TableHead>Materials</TableHead>
+                          <TableHead>Requested By</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {packingRequests?.map((request) => (
+                          <TableRow key={request._id}>
+                            <TableCell className="font-mono text-xs">
+                              {request._id.slice(-8)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                {request.assignments.map((a: any) => (
+                                  <div key={a._id} className="text-sm">
+                                    {a.kitName} (×{a.quantity})
+                                  </div>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm text-muted-foreground">
+                                {request.items.length} item(s)
+                              </div>
+                            </TableCell>
+                            <TableCell>{request.requesterName}</TableCell>
+                            <TableCell>
+                              {new Date(request._creationTime).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={request.status === "done" ? "default" : "secondary"}>
+                                {request.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {request.status === "pending" && hasPermission("inventory", "editStock") && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleFulfillPackingRequest(request._id)}
+                                >
+                                  <PackageCheck className="h-4 w-4 mr-2" />
+                                  Fulfill & Reduce Stock
+                                </Button>
+                              )}
+                              {request.status === "done" && (
+                                <span className="text-sm text-muted-foreground">
+                                  Fulfilled by {request.fulfillerName}
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+              )}
+            </Tabs>
           </div>
         </motion.div>
       </div>
