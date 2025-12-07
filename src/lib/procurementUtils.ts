@@ -55,9 +55,11 @@ export const shouldIncludeAssignment = (status: string): boolean => {
 export const calculateShortage = (
   required: number,
   available: number,
+  reserved: number,
   minStock: number
 ): number => {
-  return Math.max(0, (required - available) + minStock);
+  const effectiveAvailable = available - reserved;
+  return Math.max(0, (required - effectiveAvailable) + minStock);
 };
 
 // Main function to aggregate materials from assignments
@@ -101,6 +103,29 @@ export const aggregateMaterials = (
     return materialMap.get(invItem._id)!;
   };
 
+  // Helper to add raw material requirement
+  const addRawMaterialRequirement = (
+    rawItemId: string,
+    quantity: number,
+    kitId: Id<"kits">,
+    kitName: string,
+    assignmentQty: number
+  ) => {
+    const rawItem = inventory.find(i => i._id === rawItemId);
+    if (!rawItem || rawItem.type !== "raw") return;
+
+    const entry = getMaterialEntry(rawItem);
+    entry.orderRequired += quantity;
+
+    // Track which kits use this material
+    const existingKit = entry.kits.find(k => k.id === kitId);
+    if (existingKit) {
+      existingKit.quantity += assignmentQty;
+    } else {
+      entry.kits.push({ id: kitId, name: kitName, quantity: assignmentQty });
+    }
+  };
+
   // Process each active assignment
   assignments.forEach(assignment => {
     if (!shouldIncludeAssignment(assignment.status)) return;
@@ -115,37 +140,80 @@ export const aggregateMaterials = (
         if (!invItem) return;
 
         const requiredQty = kitComp.quantityPerKit * assignment.quantity;
-        
+
         // Handle BOM explosion for composite items
         if (invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
           // Explode to raw materials
           invItem.components.forEach((subComp: any) => {
-            const rawItem = inventory.find(i => i._id === subComp.rawMaterialId);
-            if (rawItem && rawItem.type === "raw") {
-              const entry = getMaterialEntry(rawItem);
-              const subRequired = subComp.quantityRequired * requiredQty;
-              entry.orderRequired += subRequired;
-              
-              // Add kit info
-              const existingKit = entry.kits.find(k => k.id === kit._id);
-              if (existingKit) {
-                existingKit.quantity += assignment.quantity;
-              } else {
-                entry.kits.push({ id: kit._id, name: kit.name, quantity: assignment.quantity });
-              }
-            }
+            const subRequired = subComp.quantityRequired * requiredQty;
+            addRawMaterialRequirement(
+              subComp.rawMaterialId,
+              subRequired,
+              kit._id,
+              kit.name,
+              assignment.quantity
+            );
           });
         } else if (invItem.type === "raw") {
           // Direct raw material
-          const entry = getMaterialEntry(invItem);
-          entry.orderRequired += requiredQty;
-          
-          const existingKit = entry.kits.find(k => k.id === kit._id);
-          if (existingKit) {
-            existingKit.quantity += assignment.quantity;
-          } else {
-            entry.kits.push({ id: kit._id, name: kit.name, quantity: assignment.quantity });
-          }
+          addRawMaterialRequirement(
+            invItem._id,
+            requiredQty,
+            kit._id,
+            kit.name,
+            assignment.quantity
+          );
+        }
+      });
+    }
+
+    // Process spare kits
+    if (kit.spareKits && Array.isArray(kit.spareKits)) {
+      kit.spareKits.forEach((spare: any) => {
+        const spareItem = inventory.find(i => i.name === spare.name);
+        if (spareItem && spareItem.type === "raw") {
+          const spareQty = spare.quantity * assignment.quantity;
+          addRawMaterialRequirement(
+            spareItem._id,
+            spareQty,
+            kit._id,
+            kit.name,
+            assignment.quantity
+          );
+        }
+      });
+    }
+
+    // Process bulk materials
+    if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+      kit.bulkMaterials.forEach((bulk: any) => {
+        const bulkItem = inventory.find(i => i.name === bulk.name);
+        if (bulkItem && bulkItem.type === "raw") {
+          const bulkQty = bulk.quantity * assignment.quantity;
+          addRawMaterialRequirement(
+            bulkItem._id,
+            bulkQty,
+            kit._id,
+            kit.name,
+            assignment.quantity
+          );
+        }
+      });
+    }
+
+    // Process miscellaneous items
+    if (kit.miscellaneous && Array.isArray(kit.miscellaneous)) {
+      kit.miscellaneous.forEach((misc: any) => {
+        const miscItem = inventory.find(i => i.name === misc.name);
+        if (miscItem && miscItem.type === "raw") {
+          const miscQty = misc.quantity * assignment.quantity;
+          addRawMaterialRequirement(
+            miscItem._id,
+            miscQty,
+            kit._id,
+            kit.name,
+            assignment.quantity
+          );
         }
       });
     }
@@ -155,9 +223,8 @@ export const aggregateMaterials = (
   processingJobs.forEach(job => {
     if (job.status === "assigned" && job.sources) {
       job.sources.forEach((source: any) => {
-        const invItem = inventory.find(i => i._id === source.sourceItemId);
-        if (invItem) {
-          const entry = getMaterialEntry(invItem);
+        const entry = materialMap.get(source.sourceItemId);
+        if (entry) {
           entry.reserved += source.sourceQuantity;
         }
       });
@@ -168,9 +235,8 @@ export const aggregateMaterials = (
   materialRequests.forEach(req => {
     if (req.status === "approved" && req.items) {
       req.items.forEach((item: any) => {
-        const invItem = inventory.find(i => i._id === item.inventoryId);
-        if (invItem) {
-          const entry = getMaterialEntry(invItem);
+        const entry = materialMap.get(item.inventoryId);
+        if (entry) {
           entry.reserved += item.quantity;
         }
       });
@@ -181,10 +247,14 @@ export const aggregateMaterials = (
   return Array.from(materialMap.values())
     .filter(item => item.type === "raw") // Only raw materials
     .map(item => {
-      const effectiveAvailable = item.available - item.reserved;
-      const shortage = calculateShortage(item.orderRequired, effectiveAvailable, item.minStockLevel);
+      const shortage = calculateShortage(
+        item.orderRequired,
+        item.available,
+        item.reserved,
+        item.minStockLevel
+      );
       const purchasingQty = item.purchasingQty > 0 ? item.purchasingQty : shortage;
-      
+
       return {
         ...item,
         shortage,
