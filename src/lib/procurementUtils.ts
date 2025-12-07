@@ -149,10 +149,14 @@ export const aggregateMaterials = (
 
     console.log('Processing assignment:', {
       kitName: kit.name,
+      kitId: kit._id,
       quantity: assignment.quantity,
       hasComponents: !!kit.components,
       componentsLength: kit.components?.length || 0,
-      components: kit.components
+      components: kit.components,
+      hasSpareKits: !!kit.spareKits,
+      hasBulkMaterials: !!kit.bulkMaterials,
+      hasMiscellaneous: !!kit.miscellaneous
     });
 
     processedCount++;
