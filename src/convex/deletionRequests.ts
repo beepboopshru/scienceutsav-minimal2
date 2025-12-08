@@ -151,22 +151,40 @@ export const reject = mutation({
 async function performDeletion(ctx: MutationCtx, entityType: string, entityId: string) {
   switch (entityType) {
     case "inventory":
-      await ctx.db.delete(entityId as Id<"inventory">);
+      const inventoryItem = await ctx.db.get(entityId as Id<"inventory">);
+      if (inventoryItem) {
+        await ctx.db.delete(entityId as Id<"inventory">);
+      }
       break;
     case "client":
-      await ctx.db.delete(entityId as Id<"clients">);
+      const client = await ctx.db.get(entityId as Id<"clients">);
+      if (client) {
+        await ctx.db.delete(entityId as Id<"clients">);
+      }
       break;
     case "b2cClient":
-      await ctx.db.delete(entityId as Id<"b2cClients">);
+      const b2cClient = await ctx.db.get(entityId as Id<"b2cClients">);
+      if (b2cClient) {
+        await ctx.db.delete(entityId as Id<"b2cClients">);
+      }
       break;
     case "kit":
-      await ctx.db.delete(entityId as Id<"kits">);
+      const kit = await ctx.db.get(entityId as Id<"kits">);
+      if (kit) {
+        await ctx.db.delete(entityId as Id<"kits">);
+      }
       break;
     case "vendor":
-      await ctx.db.delete(entityId as Id<"vendors">);
+      const vendor = await ctx.db.get(entityId as Id<"vendors">);
+      if (vendor) {
+        await ctx.db.delete(entityId as Id<"vendors">);
+      }
       break;
     case "service":
-      await ctx.db.delete(entityId as Id<"services">);
+      const service = await ctx.db.get(entityId as Id<"services">);
+      if (service) {
+        await ctx.db.delete(entityId as Id<"services">);
+      }
       break;
     case "assignment":
       const assignment = await ctx.db.get(entityId as Id<"assignments">);
@@ -308,28 +326,51 @@ async function performDeletion(ctx: MutationCtx, entityType: string, entityId: s
           }
         }
       }
-      await ctx.db.delete(entityId as Id<"processingJobs">);
+      if (job) {
+        await ctx.db.delete(entityId as Id<"processingJobs">);
+      }
       break;
     case "program":
-      await ctx.db.delete(entityId as Id<"programs">);
+      const program = await ctx.db.get(entityId as Id<"programs">);
+      if (program) {
+        await ctx.db.delete(entityId as Id<"programs">);
+      }
       break;
     case "batch":
-      await ctx.db.delete(entityId as Id<"batches">);
+      const batch = await ctx.db.get(entityId as Id<"batches">);
+      if (batch) {
+        await ctx.db.delete(entityId as Id<"batches">);
+      }
       break;
     case "billTracking":
-      await ctx.db.delete(entityId as Id<"billTracking">);
+      const billTracking = await ctx.db.get(entityId as Id<"billTracking">);
+      if (billTracking) {
+        await ctx.db.delete(entityId as Id<"billTracking">);
+      }
       break;
     case "vendorImport":
-      await ctx.db.delete(entityId as Id<"vendorImports">);
+      const vendorImport = await ctx.db.get(entityId as Id<"vendorImports">);
+      if (vendorImport) {
+        await ctx.db.delete(entityId as Id<"vendorImports">);
+      }
       break;
     case "laserFile":
-      await ctx.db.delete(entityId as Id<"laserFiles">);
+      const laserFile = await ctx.db.get(entityId as Id<"laserFiles">);
+      if (laserFile) {
+        await ctx.db.delete(entityId as Id<"laserFiles">);
+      }
       break;
     case "discrepancyTicket":
-      await ctx.db.delete(entityId as Id<"discrepancyTickets">);
+      const discrepancyTicket = await ctx.db.get(entityId as Id<"discrepancyTickets">);
+      if (discrepancyTicket) {
+        await ctx.db.delete(entityId as Id<"discrepancyTickets">);
+      }
       break;
     case "inventoryCategory":
-      await ctx.db.delete(entityId as Id<"inventoryCategories">);
+      const inventoryCategory = await ctx.db.get(entityId as Id<"inventoryCategories">);
+      if (inventoryCategory) {
+        await ctx.db.delete(entityId as Id<"inventoryCategories">);
+      }
       break;
     default:
       throw new Error(`Unknown entity type: ${entityType}`);
