@@ -62,10 +62,7 @@ export function MaterialRequestsTab() {
           {requests.map((request) => (
             <TableRow key={request._id}>
               <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-medium">{request.requesterName}</span>
-                  <span className="text-xs text-muted-foreground">{request.requesterEmail}</span>
-                </div>
+                <span className="text-sm">{request.requesterEmail}</span>
               </TableCell>
               <TableCell>
                 <div className="space-y-1">
