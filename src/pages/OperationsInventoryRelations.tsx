@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Package, Plus, PackageCheck } from "lucide-react";
+import { Package, Plus, PackageCheck, Eye } from "lucide-react";
 import { MaterialRequestsTab } from "@/components/inventory/MaterialRequestsTab";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 export default function OperationsInventoryRelations() {
@@ -54,6 +55,14 @@ export default function OperationsInventoryRelations() {
     quantity: number;
     unit: string;
   }>>([{ inventoryId: "", name: "", quantity: 0, unit: "" }]);
+  
+  const [viewItemsSheet, setViewItemsSheet] = useState<{
+    open: boolean;
+    request: any | null;
+  }>({
+    open: false,
+    request: null,
+  });
   
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -329,20 +338,30 @@ export default function OperationsInventoryRelations() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              {request.status === "pending" && hasPermission("inventory", "editStock") && (
+                              <div className="flex items-center justify-end gap-2">
                                 <Button
+                                  variant="ghost"
                                   size="sm"
-                                  onClick={() => handleFulfillPackingRequest(request._id)}
+                                  onClick={() => setViewItemsSheet({ open: true, request })}
+                                  title="View Items"
                                 >
-                                  <PackageCheck className="h-4 w-4 mr-2" />
-                                  Fulfill & Reduce Stock
+                                  <Eye className="h-4 w-4" />
                                 </Button>
-                              )}
-                              {request.status === "done" && (
-                                <span className="text-sm text-muted-foreground">
-                                  Fulfilled by {request.fulfillerName}
-                                </span>
-                              )}
+                                {request.status === "pending" && hasPermission("inventory", "editStock") && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleFulfillPackingRequest(request._id)}
+                                  >
+                                    <PackageCheck className="h-4 w-4 mr-2" />
+                                    Fulfill & Reduce Stock
+                                  </Button>
+                                )}
+                                {request.status === "done" && (
+                                  <span className="text-sm text-muted-foreground">
+                                    Fulfilled by {request.fulfillerName}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -355,6 +374,77 @@ export default function OperationsInventoryRelations() {
           </div>
         </motion.div>
       </div>
+
+      <Sheet open={viewItemsSheet.open} onOpenChange={(open) => !open && setViewItemsSheet({ open: false, request: null })}>
+        <SheetContent className="w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle>Packing Request Items</SheetTitle>
+            <SheetDescription>
+              Request ID: {viewItemsSheet.request?._id.slice(-8)}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Assignments</h4>
+              <div className="space-y-2">
+                {viewItemsSheet.request?.assignments.map((a: any) => (
+                  <div key={a._id} className="flex justify-between items-center p-2 bg-muted rounded">
+                    <span className="text-sm">{a.kitName}</span>
+                    <Badge variant="outline">×{a.quantity}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-sm font-semibold mb-2">Materials Required</h4>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {viewItemsSheet.request?.items.map((item: any, idx: number) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.quantity} {item.unit}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant={viewItemsSheet.request?.status === "done" ? "default" : "secondary"}>
+                  {viewItemsSheet.request?.status}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between text-sm mt-2">
+                <span className="text-muted-foreground">Requested by:</span>
+                <span className="font-medium">{viewItemsSheet.request?.requesterName}</span>
+              </div>
+              {viewItemsSheet.request?.status === "done" && viewItemsSheet.request?.fulfillerName && (
+                <div className="flex items-center justify-between text-sm mt-2">
+                  <span className="text-muted-foreground">Fulfilled by:</span>
+                  <span className="font-medium">{viewItemsSheet.request?.fulfillerName}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </Layout>
   );
 }
