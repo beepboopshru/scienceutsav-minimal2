@@ -1,20 +1,11 @@
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
-import { useState, useMemo, useEffect } from "react";
-import { Layout } from "@/components/Layout";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -30,95 +21,159 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
+import { useQuery, useMutation, useAction } from "convex/react";
+import { Loader2, Search, ChevronDown, ChevronRight, Eye, Building2, User, Mail, Phone, MapPin, CheckCircle2, MoreVertical, FileText, Check, ChevronsUpDown, X, Pencil, MessageSquare, Truck, Download, Package } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Search,
-  Eye,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  MessageSquare,
-  Truck,
-  Printer,
-  Filter,
-} from "lucide-react";
-import { toast } from "sonner";
-import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
+import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { format } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function Dispatch() {
-  const { user } = useAuth();
+  const { isLoading, isAuthenticated, user } = useAuth();
   const { hasPermission } = usePermissions();
-  
-  const canView = hasPermission("dispatch.view");
-  const canEdit = hasPermission("dispatch.edit");
-  const canEditAssignments = hasPermission("assignments.edit");
-  const canEditPacking = hasPermission("packing.edit");
-
-  // Fetch dispatch checklist configuration from Admin Zone
-  const dispatchChecklistConfig = useQuery(api.dispatchChecklist.list);
-
-  const assignments = useQuery(api.assignments.list);
-  const kits = useQuery(api.kits.list);
-  const clients = useQuery(api.clients.list);
-  const b2cClients = useQuery(api.b2cClients.list);
-  const batches = useQuery(api.batches.list);
+  const navigate = useNavigate();
+  const assignments = useQuery(api.assignments.list, {});
+  const kits = useQuery(api.kits.list, {});
+  const clients = useQuery(api.clients.list, {});
+  const b2cClients = useQuery(api.b2cClients.list, {});
+  const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list);
-  const customDispatches = useQuery(api.customDispatches.list);
-
-  const updateStatus = useMutation(api.assignments.updateStatus);
-  const updateNotes = useMutation(api.assignments.updateNotes);
-  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
-  const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
+  const customDispatches = useQuery(api.customDispatches.list, {});
   const createCustomDispatch = useMutation(api.customDispatches.create);
   const updateCustomDispatchStatus = useMutation(api.customDispatches.updateStatus);
   const deleteCustomDispatch = useMutation(api.customDispatches.deleteCustomDispatch);
-  const getStorageUrl = useMutation(api.storage.getUrl);
+  const updateStatus = useMutation(api.assignments.updateStatus);
   const generateUploadUrl = useMutation(api.storage.generateUploadUrl);
+  const updateNotes = useMutation(api.assignments.updateNotes);
+  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
+  const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
-  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
-  const [viewClientDialog, setViewClientDialog] = useState(false);
-  const [checklistDialog, setChecklistDialog] = useState(false);
-  const [proofPhotoDialog, setProofPhotoDialog] = useState(false);
-  const [checklistItems, setChecklistItems] = useState<Record<string, boolean>>({});
-  const [eWayDocument, setEWayDocument] = useState<File | null>(null);
-  const [dispatchDocument, setDispatchDocument] = useState<File | null>(null);
-  const [eWayNumber, setEWayNumber] = useState("");
-  const [dispatchNumber, setDispatchNumber] = useState("");
-  const [proofPhoto, setProofPhoto] = useState<File | null>(null);
+  // Helper function to convert images to WebP format
+  const convertToWebP = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to convert image to WebP'));
+            }
+          },
+          'image/webp',
+          0.9 // Quality setting (0-1)
+        );
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "b2b" | "b2c">("all");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<"assignments" | "custom">("assignments");
+  const [viewClientDialogOpen, setViewClientDialogOpen] = useState(false);
+  const [selectedClientForView, setSelectedClientForView] = useState<any>(null);
+  
+  const ewayDocUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.ewayDocumentId ? { storageId: (selectedClientForView as any).ewayDocumentId } : "skip");
+  const dispatchDocUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.dispatchDocumentId ? { storageId: (selectedClientForView as any).dispatchDocumentId } : "skip");
+  const proofPhotoUrl = useQuery(api.storage.getUrl, (selectedClientForView as any)?.proofPhotoId ? { storageId: (selectedClientForView as any).proofPhotoId } : "skip");
 
-  // Initialize checklist items when dialog opens
-  useEffect(() => {
-    if (checklistDialog && dispatchChecklistConfig) {
-      const initialChecklist: Record<string, boolean> = {};
-      dispatchChecklistConfig.forEach(item => {
-        initialChecklist[item._id] = false;
-      });
-      setChecklistItems(initialChecklist);
-    }
-  }, [checklistDialog, dispatchChecklistConfig]);
+  const [selectedAssignments, setSelectedAssignments] = useState<Set<Id<"assignments">>>(new Set());
 
-  // Filter assignments: show transferred_to_dispatch, ready_for_dispatch, and dispatched
-  // Only delivered assignments are moved to order history
-  let filteredAssignments = assignments?.filter(
-    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch" || a.status === "dispatched"
-  ) || [];
+  // Client Details Generator state
+  const [clientDetailsDialogOpen, setClientDetailsDialogOpen] = useState(false);
+  const [selectedClientForLabel, setSelectedClientForLabel] = useState<string>("");
+  const [selectedPOC, setSelectedPOC] = useState<string>("");
+  const [customerId, setCustomerId] = useState<string>("");
+  const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
 
-  // Apply customer type filter
-  if (customerTypeFilter !== "all") {
-    filteredAssignments = filteredAssignments.filter(
-      (a) => a.clientType === customerTypeFilter
-    );
-  }
+  // Box Content Generator state
+  const [boxContentDialogOpen, setBoxContentDialogOpen] = useState(false);
+  const [boxKits, setBoxKits] = useState<Array<{
+    kitId: string;
+    clientId: string;
+    phase: string;
+    class: string;
+    section: string;
+    quantity: number;
+    remarks: string;
+  }>>([]);
+  const [kitComboboxOpen, setKitComboboxOpen] = useState<Record<number, boolean>>({});
+  const [clientComboboxOpenBox, setClientComboboxOpenBox] = useState<Record<number, boolean>>({});
 
-  // Apply advanced filters
+  // Checklist dialog state
+  const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
+  const [selectedAssignmentForDispatch, setSelectedAssignmentForDispatch] = useState<Id<"assignments"> | null>(null);
+  const [checklistItems, setChecklistItems] = useState({
+    kitCount: false,
+    bulkMaterials: false,
+    workbookWorksheetConceptMap: false,
+    spareKitsTools: false,
+  });
+  const [ewayNumber, setEwayNumber] = useState("");
+  const [ewayDocument, setEwayDocument] = useState<File | null>(null);
+  const [dispatchNumber, setDispatchNumber] = useState("");
+  const [dispatchDocument, setDispatchDocument] = useState<File | null>(null);
+  const [trackingLink, setTrackingLink] = useState("");
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  
+  // Proof photo state for dispatched status
+  const [proofPhotoDialogOpen, setProofPhotoDialogOpen] = useState(false);
+  const [selectedAssignmentForProof, setSelectedAssignmentForProof] = useState<Id<"assignments"> | null>(null);
+  const [proofPhoto, setProofPhoto] = useState<File | null>(null);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+
+  // Advanced filters
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [selectedKitCategories, setSelectedKitCategories] = useState<string[]>([]);
   const [selectedKits, setSelectedKits] = useState<string[]>([]);
@@ -248,6 +303,9 @@ export default function Dispatch() {
     );
   }
 
+  const canView = hasPermission("dispatch", "view");
+  const canEdit = hasPermission("dispatch", "edit");
+
   if (!canView) {
     return (
       <Layout>
@@ -258,6 +316,19 @@ export default function Dispatch() {
           </div>
         </div>
       </Layout>
+    );
+  }
+
+  // Filter assignments: show transferred_to_dispatch, ready_for_dispatch, and dispatched
+  // Only delivered assignments are moved to order history
+  let filteredAssignments = assignments?.filter(
+    (a) => a.status === "transferred_to_dispatch" || a.status === "ready_for_dispatch" || a.status === "dispatched"
+  ) || [];
+
+  // Apply customer type filter
+  if (customerTypeFilter !== "all") {
+    filteredAssignments = filteredAssignments.filter(
+      (a) => a.clientType === customerTypeFilter
     );
   }
 
@@ -308,8 +379,8 @@ export default function Dispatch() {
   }
 
   // Apply search query
-  if (searchTerm.trim()) {
-    const query = searchTerm.toLowerCase();
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
     filteredAssignments = filteredAssignments.filter((a) => {
       const kitName = a.kit?.name?.toLowerCase() || "";
       const clientName = a.clientType === "b2b"
@@ -341,6 +412,18 @@ export default function Dispatch() {
     });
   };
 
+  const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
+    setSelectedAssignments((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(assignmentId)) {
+        newSet.delete(assignmentId);
+      } else {
+        newSet.add(assignmentId);
+      }
+      return newSet;
+    });
+  };
+
   const handleViewClient = (assignment: any) => {
     // Merge client data with dispatch information from the assignment
     const clientWithDispatchInfo = {
@@ -354,7 +437,7 @@ export default function Dispatch() {
       assignmentId: assignment._id,
     };
     setSelectedClientForView(clientWithDispatchInfo);
-    setViewClientDialog(true);
+    setViewClientDialogOpen(true);
   };
 
   const handleMarkAsDispatched = async (assignmentId: Id<"assignments">) => {
@@ -368,7 +451,7 @@ export default function Dispatch() {
 
   const handleClearAllFilters = () => {
     setCustomerTypeFilter("all");
-    setSearchTerm("");
+    setSearchQuery("");
     setSelectedPrograms([]);
     setSelectedKitCategories([]);
     setSelectedKits([]);
@@ -388,12 +471,12 @@ export default function Dispatch() {
         workbookWorksheetConceptMap: false,
         spareKitsTools: false,
       });
-      setChecklistDialog(true);
+      setChecklistDialogOpen(true);
     } else if (newStatus === "dispatched") {
       // Open proof photo dialog for dispatched status
       setSelectedAssignmentForProof(assignmentId);
       setProofPhoto(null);
-      setProofPhotoDialog(true);
+      setProofPhotoDialogOpen(true);
     } else if (newStatus === "delivered") {
       // Show confirmation dialog for delivered status
       if (window.confirm("Are you sure this order has been delivered? This will move it to order history.")) {
@@ -443,7 +526,7 @@ export default function Dispatch() {
       });
 
       toast.success("Assignment marked as dispatched with proof photo");
-      setProofPhotoDialog(false);
+      setProofPhotoDialogOpen(false);
       setSelectedAssignmentForProof(null);
       setProofPhoto(null);
     } catch (error) {
@@ -461,12 +544,12 @@ export default function Dispatch() {
       return;
     }
 
-    if (!eWayNumber.trim()) {
+    if (!ewayNumber.trim()) {
       toast.error("Please enter the e-way number");
       return;
     }
 
-    if (!eWayDocument) {
+    if (!ewayDocument) {
       toast.error("Please upload the e-way document");
       return;
     }
@@ -512,7 +595,7 @@ export default function Dispatch() {
       await updateStatus({
         id: selectedAssignmentForDispatch,
         status: "ready_for_dispatch",
-        ewayNumber: eWayNumber.trim(),
+        ewayNumber: ewayNumber.trim(),
         ewayDocumentId: ewayStorageId,
         dispatchNumber: dispatchNumber.trim(),
         dispatchDocumentId: dispatchStorageId,
@@ -520,7 +603,7 @@ export default function Dispatch() {
       });
 
       toast.success("Assignment marked as ready for dispatch");
-      setChecklistDialog(false);
+      setChecklistDialogOpen(false);
       setSelectedAssignmentForDispatch(null);
       setChecklistItems({
         kitCount: false,
@@ -528,8 +611,8 @@ export default function Dispatch() {
         workbookWorksheetConceptMap: false,
         spareKitsTools: false,
       });
-      setEWayNumber("");
-      setEWayDocument(null);
+      setEwayNumber("");
+      setEwayDocument(null);
       setDispatchNumber("");
       setDispatchDocument(null);
       setTrackingLink("");
@@ -538,6 +621,188 @@ export default function Dispatch() {
     } finally {
       setIsUploadingDocument(false);
     }
+  };
+
+  const handleGenerateClientLabel = () => {
+    if (!selectedClientForLabel) {
+      toast.error("Please select a client");
+      return;
+    }
+
+    // Find the selected client
+    const allClients = [...(clients || []), ...(b2cClients || [])];
+    const client = allClients.find((c) => c._id === selectedClientForLabel);
+    
+    if (!client) {
+      toast.error("Client not found");
+      return;
+    }
+
+    // Get selected POC
+    const poc = client.pointsOfContact?.find((p: any) => p.name === selectedPOC);
+    
+    if (!poc) {
+      toast.error("Please select a Point of Contact");
+      return;
+    }
+
+    // Determine client name based on type
+    const clientName = (client as any).organization || (client as any).buyerName || (client as any).name;
+
+    // Generate HTML for printing
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Client Address Label</title>
+          <style>
+            @page {
+              size: 297mm 210mm;
+              margin: 0;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              width: 297mm;
+              height: 210mm;
+              max-width: 297mm;
+              max-height: 210mm;
+              padding: 0;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: flex-start;
+              overflow: hidden;
+            }
+            .container {
+              border: 2px solid #000;
+              padding: 15px;
+              display: flex;
+              flex-direction: column;
+              width: 100%;
+              height: 100%;
+              margin: 0;
+            }
+            .logo {
+              text-align: center;
+              margin-bottom: 15px;
+            }
+            .logo img {
+              max-width: 250px;
+              height: auto;
+            }
+            .customer-id {
+              text-align: center;
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 15px;
+              padding: 10px;
+              background-color: #f5f5f5;
+              border: 1px solid #ddd;
+            }
+            .address-section {
+              flex: 1;
+              display: flex;
+              flex-direction: row;
+              gap: 15px;
+            }
+            .address-box {
+              border: 2px solid #000;
+              padding: 12px;
+              flex: 1;
+            }
+            .address-label {
+              font-weight: bold;
+              font-size: 22px;
+              margin-bottom: 10px;
+              text-decoration: underline;
+            }
+            .address-content {
+              font-size: 24px;
+              line-height: 1.7;
+            }
+            .address-content div {
+              margin-bottom: 5px;
+            }
+            .contact-info {
+              margin-top: 10px;
+              font-size: 22px;
+            }
+            @media print {
+              body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="logo">
+              <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
+            </div>
+            
+            ${customerId ? `<div class="customer-id">Customer ID: ${customerId}</div>` : ''}
+            
+            <div class="address-section">
+              <div class="address-box">
+                <div class="address-label">TO:</div>
+                <div class="address-content">
+                  <div><strong>${clientName}</strong></div>
+                  <div><strong>Attn: ${poc.name}${poc.designation ? ' (' + poc.designation + ')' : ''}</strong></div>
+                  ${client.address ? `
+                    <div>${client.address.line1}</div>
+                    ${client.address.line2 ? `<div>${client.address.line2}</div>` : ''}
+                    ${client.address.line3 ? `<div>${client.address.line3}</div>` : ''}
+                    <div>${client.address.state} - ${client.address.pincode}</div>
+                    <div>${client.address.country}</div>
+                  ` : '<div>Address not available</div>'}
+                  <div class="contact-info">
+                    ${poc.phone ? `Phone: ${poc.phone}` : ''}
+                    ${poc.email ? `${poc.phone ? ' | ' : ''}Email: ${poc.email}` : ''}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="address-box">
+                <div class="address-label">FROM:</div>
+                <div class="address-content">
+                  <div><strong>ScienceUtsav Educational Services Pvt Ltd</strong></div>
+                  <div>25/1 9th Cross, 19th A Main Rd</div>
+                  <div>2nd Phase, J. P. Nagar</div>
+                  <div>Bengaluru - 560078</div>
+                  <div>Karnataka, India</div>
+                  <div class="contact-info">Contact: 9739008220, 9029402028</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Open in new window for printing
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    }
+
+    // Reset form
+    setClientDetailsDialogOpen(false);
+    setSelectedClientForLabel("");
+    setSelectedPOC("");
+    setCustomerId("");
+    toast.success("Client label generated");
   };
 
   const totalQuantity = filteredAssignments.reduce((sum, a) => sum + a.quantity, 0);
@@ -601,8 +866,8 @@ export default function Dispatch() {
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Search by kit name or client name..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9"
                     />
                   </div>
@@ -1175,7 +1440,7 @@ export default function Dispatch() {
         </Tabs>
 
         {/* View Client Dialog */}
-        <Dialog open={viewClientDialog} onOpenChange={setViewClientDialog}>
+        <Dialog open={viewClientDialogOpen} onOpenChange={setViewClientDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Dispatch & Client Details</DialogTitle>
@@ -1331,7 +1596,7 @@ export default function Dispatch() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setViewClientDialog(false)}>
+              <Button variant="outline" onClick={() => setViewClientDialogOpen(false)}>
                 Close
               </Button>
             </DialogFooter>
@@ -1339,7 +1604,7 @@ export default function Dispatch() {
         </Dialog>
 
         {/* Dispatch Checklist Dialog */}
-        <Dialog open={checklistDialog} onOpenChange={setChecklistDialog}>
+        <Dialog open={checklistDialogOpen} onOpenChange={setChecklistDialogOpen}>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Ready for Dispatch Checklist</DialogTitle>
@@ -1348,34 +1613,62 @@ export default function Dispatch() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              {dispatchChecklistConfig && dispatchChecklistConfig.length > 0 ? (
-                dispatchChecklistConfig.map((item) => (
-                  <div key={item._id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={item._id}
-                      checked={checklistItems[item._id] || false}
-                      onCheckedChange={(checked) =>
-                        setChecklistItems((prev) => ({ ...prev, [item._id]: checked as boolean }))
-                      }
-                    />
-                    <Label htmlFor={item._id} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                      {item.label}
-                    </Label>
-                  </div>
-                ))
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  No checklist items configured. Please configure them in Admin Zone.
-                </div>
-              )}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="kitCount"
+                  checked={checklistItems.kitCount}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, kitCount: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="kitCount" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Kit count verified
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="bulkMaterials"
+                  checked={checklistItems.bulkMaterials}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, bulkMaterials: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="bulkMaterials" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Bulk materials included
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="workbookWorksheetConceptMap"
+                  checked={checklistItems.workbookWorksheetConceptMap}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, workbookWorksheetConceptMap: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="workbookWorksheetConceptMap" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Workbook, worksheet, concept map included
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="spareKitsTools"
+                  checked={checklistItems.spareKitsTools}
+                  onCheckedChange={(checked) =>
+                    setChecklistItems((prev) => ({ ...prev, spareKitsTools: checked as boolean }))
+                  }
+                />
+                <Label htmlFor="spareKitsTools" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Spare kits and tools included
+                </Label>
+              </div>
 
               <div className="space-y-2 pt-4 border-t">
                 <Label htmlFor="ewayNumber">E-Way Number *</Label>
                 <Input
                   id="ewayNumber"
                   placeholder="Enter e-way number..."
-                  value={eWayNumber}
-                  onChange={(e) => setEWayNumber(e.target.value)}
+                  value={ewayNumber}
+                  onChange={(e) => setEwayNumber(e.target.value)}
                 />
               </div>
 
@@ -1394,13 +1687,13 @@ export default function Dispatch() {
                         e.target.value = '';
                         return;
                       }
-                      setEWayDocument(file);
+                      setEwayDocument(file);
                     }
                   }}
                 />
-                {eWayDocument && (
+                {ewayDocument && (
                   <p className="text-xs text-muted-foreground">
-                    Selected: {eWayDocument.name} (will be converted to WebP)
+                    Selected: {ewayDocument.name} (will be converted to WebP)
                   </p>
                 )}
               </div>
@@ -1454,9 +1747,9 @@ export default function Dispatch() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => {
-                setChecklistDialog(false);
-                setEWayNumber("");
-                setEWayDocument(null);
+                setChecklistDialogOpen(false);
+                setEwayNumber("");
+                setEwayDocument(null);
                 setDispatchNumber("");
                 setDispatchDocument(null);
                 setTrackingLink("");
@@ -1477,8 +1770,415 @@ export default function Dispatch() {
           </DialogContent>
         </Dialog>
 
+        {/* Box Content Generator Dialog */}
+        <Dialog open={boxContentDialogOpen} onOpenChange={setBoxContentDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Generate Box Content Labels</DialogTitle>
+              <DialogDescription>
+                Add kit details to generate printable box content labels (max 2 kits per page)
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {boxKits.map((kit, index) => (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">Kit {index + 1}</h4>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newKits = boxKits.filter((_, i) => i !== index);
+                        setBoxKits(newKits);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Kit Name Combobox */}
+                    <div className="space-y-2">
+                      <Label>Kit Name</Label>
+                      <Popover 
+                        open={kitComboboxOpen[index]} 
+                        onOpenChange={(open) => setKitComboboxOpen({ ...kitComboboxOpen, [index]: open })}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {kit.kitId ? kits?.find((k) => k._id === kit.kitId)?.name || "Select kit..." : "Select kit..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search kits..." />
+                            <CommandList>
+                              <CommandEmpty>No kit found.</CommandEmpty>
+                              <CommandGroup>
+                                {(kits || []).map((k) => (
+                                  <CommandItem
+                                    key={k._id}
+                                    value={k.name}
+                                    onSelect={() => {
+                                      const newKits = [...boxKits];
+                                      newKits[index].kitId = k._id;
+                                      setBoxKits(newKits);
+                                      setKitComboboxOpen({ ...kitComboboxOpen, [index]: false });
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        kit.kitId === k._id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {k.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Client Name Combobox */}
+                    <div className="space-y-2">
+                      <Label>Client Name</Label>
+                      <Popover 
+                        open={clientComboboxOpenBox[index]} 
+                        onOpenChange={(open) => setClientComboboxOpenBox({ ...clientComboboxOpenBox, [index]: open })}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between"
+                          >
+                            {kit.clientId ? (() => {
+                              const allClients = [...(clients || []), ...(b2cClients || [])];
+                              const client = allClients.find((c) => c._id === kit.clientId);
+                              return client ? ((client as any).organization || (client as any).buyerName || (client as any).name) : "Select client...";
+                            })() : "Select client..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search clients..." />
+                            <CommandList>
+                              <CommandEmpty>No client found.</CommandEmpty>
+                              <CommandGroup>
+                                {[...(clients || []), ...(b2cClients || [])].map((c) => {
+                                  const clientName = (c as any).organization || (c as any).buyerName || (c as any).name || "";
+                                  return (
+                                    <CommandItem
+                                      key={c._id}
+                                      value={clientName}
+                                      onSelect={() => {
+                                        const newKits = [...boxKits];
+                                        newKits[index].clientId = c._id;
+                                        setBoxKits(newKits);
+                                        setClientComboboxOpenBox({ ...clientComboboxOpenBox, [index]: false });
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          kit.clientId === c._id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {clientName}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {/* Phase */}
+                    <div className="space-y-2">
+                      <Label>Phase</Label>
+                      <Input
+                        value={kit.phase}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].phase = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter phase..."
+                      />
+                    </div>
+
+                    {/* Class */}
+                    <div className="space-y-2">
+                      <Label>Class</Label>
+                      <Input
+                        value={kit.class}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].class = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter class..."
+                      />
+                    </div>
+
+                    {/* Section */}
+                    <div className="space-y-2">
+                      <Label>Section</Label>
+                      <Input
+                        value={kit.section}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].section = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter section..."
+                      />
+                    </div>
+
+                    {/* Quantity */}
+                    <div className="space-y-2">
+                      <Label>Quantity</Label>
+                      <Input
+                        type="number"
+                        value={kit.quantity}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].quantity = parseInt(e.target.value) || 0;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter quantity..."
+                      />
+                    </div>
+
+                    {/* Remarks */}
+                    <div className="space-y-2 col-span-2">
+                      <Label>Remarks</Label>
+                      <Input
+                        value={kit.remarks}
+                        onChange={(e) => {
+                          const newKits = [...boxKits];
+                          newKits[index].remarks = e.target.value;
+                          setBoxKits(newKits);
+                        }}
+                        placeholder="Enter remarks..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (boxKits.length >= 2) {
+                    toast.error("Maximum 2 kits allowed per box content generator");
+                    return;
+                  }
+                  setBoxKits([...boxKits, {
+                    kitId: "",
+                    clientId: "",
+                    phase: "",
+                    class: "",
+                    section: "",
+                    quantity: 0,
+                    remarks: ""
+                  }]);
+                }}
+                className="w-full"
+                disabled={boxKits.length >= 2}
+              >
+                Add Kit {boxKits.length >= 2 ? "(Maximum reached)" : ""}
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setBoxContentDialogOpen(false);
+                setBoxKits([]);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (boxKits.length === 0) {
+                  toast.error("Please add at least one kit");
+                  return;
+                }
+
+                // Generate HTML pages (2 kits per page)
+                const pages: string[] = [];
+                for (let i = 0; i < boxKits.length; i += 2) {
+                  const kitsOnPage = boxKits.slice(i, i + 2);
+                  
+                const pageHtml = `
+                  <!DOCTYPE html>
+                  <html>
+                    <head>
+                      <meta charset="UTF-8">
+                      <title>Box Content - Page ${Math.floor(i / 2) + 1}</title>
+                      <style>
+                        @page {
+                          size: A4 portrait;
+                          margin: 0;
+                        }
+                        * {
+                          margin: 0;
+                          padding: 0;
+                          box-sizing: border-box;
+                        }
+                        body {
+                          font-family: Arial, sans-serif;
+                          width: 210mm;
+                          height: 297mm;
+                          padding: 15mm;
+                          display: flex;
+                          flex-direction: column;
+                        }
+                        .page-header {
+                          text-align: center;
+                          margin-bottom: 20px;
+                        }
+                        .page-header img {
+                          max-width: 200px;
+                          height: auto;
+                        }
+                        .kits-container {
+                          flex: 1;
+                          display: flex;
+                          flex-direction: column;
+                          gap: 20px;
+                        }
+                        .kit-box {
+                          border: 3px solid #000;
+                          padding: 15px;
+                          flex: 1;
+                          display: flex;
+                          flex-direction: column;
+                          gap: 12px;
+                        }
+                        .field-row {
+                          display: flex;
+                          gap: 10px;
+                        }
+                        .field {
+                          border: 2px solid #333;
+                          padding: 10px;
+                          flex: 1;
+                        }
+                        .field-label {
+                          font-weight: bold;
+                          font-size: 24px;
+                          color: #666;
+                          margin-bottom: 5px;
+                        }
+                        .field-value {
+                          font-size: 28px;
+                          min-height: 20px;
+                        }
+                        @media print {
+                          body {
+                            print-color-adjust: exact;
+                            -webkit-print-color-adjust: exact;
+                          }
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="page-header">
+                        <img src="https://harmless-tapir-303.convex.cloud/api/storage/b4678ea2-dd0d-4c31-820f-c3d431d56cb7" alt="ScienceUtsav Logo" />
+                      </div>
+                      
+                      <div class="kits-container">
+                        ${kitsOnPage.map((kit, idx) => {
+                          const kitData = kits?.find((k) => k._id === kit.kitId);
+                          const allClients = [...(clients || []), ...(b2cClients || [])];
+                          const clientData = allClients.find((c) => c._id === kit.clientId);
+                          const clientName = clientData ? ((clientData as any).organization || (clientData as any).buyerName || (clientData as any).name) : "";
+                          
+                          return `
+                            <div class="kit-box">
+                              <div class="field-row">
+                                <div class="field">
+                                  <div class="field-label">Kit Name</div>
+                                  <div class="field-value">${kitData?.name || ""}</div>
+                                </div>
+                                <div class="field">
+                                  <div class="field-label">Client Name</div>
+                                  <div class="field-value">${clientName}</div>
+                                </div>
+                              </div>
+                              
+                              <div class="field-row">
+                                <div class="field">
+                                  <div class="field-label">Phase</div>
+                                  <div class="field-value">${kit.phase}</div>
+                                </div>
+                                <div class="field">
+                                  <div class="field-label">Class</div>
+                                  <div class="field-value">${kit.class}</div>
+                                </div>
+                                <div class="field">
+                                  <div class="field-label">Section</div>
+                                  <div class="field-value">${kit.section}</div>
+                                </div>
+                              </div>
+                              
+                              <div class="field-row">
+                                <div class="field">
+                                  <div class="field-label">Quantity</div>
+                                  <div class="field-value">${kit.quantity}</div>
+                                </div>
+                              </div>
+                              
+                              <div class="field">
+                                <div class="field-label">Remarks</div>
+                                <div class="field-value">${kit.remarks}</div>
+                              </div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </body>
+                  </html>
+                  `;
+                  
+                  pages.push(pageHtml);
+                }
+
+                // Open all pages in new windows
+                pages.forEach((pageHtml, index) => {
+                  const printWindow = window.open('', '_blank');
+                  if (printWindow) {
+                    printWindow.document.write(pageHtml);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    setTimeout(() => {
+                      printWindow.print();
+                    }, 250 * (index + 1));
+                  }
+                });
+
+                toast.success(`Generated ${pages.length} page(s) for ${boxKits.length} kit(s)`);
+                setBoxContentDialogOpen(false);
+                setBoxKits([]);
+              }}>
+                Generate & Print
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Proof Photo Dialog */}
-        <Dialog open={proofPhotoDialog} onOpenChange={setProofPhotoDialog}>
+        <Dialog open={proofPhotoDialogOpen} onOpenChange={setProofPhotoDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Upload Proof Photo</DialogTitle>
@@ -1515,7 +2215,7 @@ export default function Dispatch() {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => {
-                setProofPhotoDialog(false);
+                setProofPhotoDialogOpen(false);
                 setProofPhoto(null);
               }}>
                 Cancel
