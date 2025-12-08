@@ -89,18 +89,17 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             const compAvailable = compItem.quantity || 0;
             const compShortage = Math.max(0, compRequired - compAvailable);
             
-            if (compShortage > 0) {
-              requirements.push({
-                id: compItem._id,
-                name: compItem.name,
-                required: compRequired,
-                available: compAvailable,
-                shortage: compShortage,
-                unit: comp.unit,
-                category: `${category} (from Sealed Packet: ${name})`,
-                invItem: compItem
-              });
-            }
+            // Always show requirement, even if no shortage (for assignment-specific view)
+            requirements.push({
+              id: compItem._id,
+              name: compItem.name,
+              required: compRequired,
+              available: compAvailable,
+              shortage: compShortage,
+              unit: comp.unit,
+              category: `${category} (from Sealed Packet: ${name})`,
+              invItem: compItem
+            });
           }
         });
       } else if (invItem && invItem.type === "pre_processed") {
@@ -109,18 +108,17 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         const available = invItem.quantity || 0;
         const shortage = Math.max(0, required - available);
         
-        if (shortage > 0) {
-          requirements.push({
-            id: invItem._id,
-            name,
-            required,
-            available,
-            shortage,
-            unit,
-            category,
-            invItem
-          });
-        }
+        // Always show requirement, even if no shortage (for assignment-specific view)
+        requirements.push({
+          id: invItem._id,
+          name,
+          required,
+          available,
+          shortage,
+          unit,
+          category,
+          invItem
+        });
       }
     };
 
@@ -285,13 +283,30 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           "Unknown Client";
       }
       
+      // Calculate requirements for this specific assignment
+      const assignmentReqs = calculateShortages(assignment);
+      
+      // Get active job quantities for this specific assignment
+      const activeJobQty = getActiveJobQuantitiesForAssignments([assignment._id]);
+      
+      // Adjust shortages based on active jobs for this assignment
+      const adjustedReqs = assignmentReqs.map(req => {
+        const jobQty = activeJobQty.get(req.id) || 0;
+        return {
+          ...req,
+          activeJobQty: jobQty,
+          shortage: Math.max(0, req.shortage - jobQty),
+          assignmentIds: [assignment._id]
+        };
+      }).filter(r => r.shortage > 0); // Only show items with actual shortage
+      
       return {
         assignment,
         kitName: kit?.name || "Unknown Kit",
         clientName,
         quantity: assignment.quantity,
         productionMonth: assignment.productionMonth,
-        requirements: aggregateRequirements([assignment])
+        requirements: adjustedReqs
       };
     }).filter(a => a.requirements.length > 0);
   }, [assignments, inventory, refreshTrigger, activeJobs]);
