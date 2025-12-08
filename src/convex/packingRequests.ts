@@ -120,8 +120,8 @@ export const create = mutation({
                 continue;
               }
               
-              // Default to 1 per kit if quantity is not specified (typical for sealed packets)
-              const qtyPerKit = packet.quantity !== undefined && packet.quantity !== null ? packet.quantity : 1;
+              // If quantity is 0, null, or undefined, default to assignment quantity (1 per kit)
+              const qtyPerKit = (packet.quantity !== undefined && packet.quantity !== null && packet.quantity > 0) ? packet.quantity : 1;
               const requiredQty = qtyPerKit * assignment.quantity;
               const key = sealedPacketItem._id;
               
