@@ -527,6 +527,14 @@ export default function ProcessingJobs() {
     setPreProcessingOpen(true);
   };
 
+  // Filter processing jobs to show only pre-processed material jobs (exclude sealed packets)
+  const preProcessingJobs = jobs?.filter(job => {
+    return job.targets.some(target => {
+      const item = inventory.find(i => i._id === target.targetItemId);
+      return item?.type === "pre_processed";
+    });
+  }) || [];
+
   return (
     <Layout>
       <div className="p-8">
@@ -567,14 +575,14 @@ export default function ProcessingJobs() {
                 assignments={assignments} 
                 inventory={inventory} 
                 onStartJob={handleStartRequirementJob}
-                activeJobs={jobs}
+                activeJobs={preProcessingJobs}
                 refreshTrigger={lastRefresh}
               />
             </TabsContent>
 
             <TabsContent value="jobs" className="space-y-4">
               <ProcessingJobsList
-                jobs={jobs}
+                jobs={preProcessingJobs}
                 inventory={inventory}
                 vendors={vendors || []}
                 services={services || []}
