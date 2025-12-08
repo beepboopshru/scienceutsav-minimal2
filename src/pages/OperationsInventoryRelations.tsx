@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Package, Plus, PackageCheck, Eye } from "lucide-react";
+import { Package, Plus, PackageCheck, Eye, Check, ChevronsUpDown } from "lucide-react";
 import { MaterialRequestsTab } from "@/components/inventory/MaterialRequestsTab";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +27,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function OperationsInventoryRelations() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -56,6 +70,8 @@ export default function OperationsInventoryRelations() {
     unit: string;
   }>>([{ inventoryId: "", name: "", quantity: 0, unit: "" }]);
   
+  const [comboboxOpen, setComboboxOpen] = useState<Record<number, boolean>>({});
+
   const [viewItemsSheet, setViewItemsSheet] = useState<{
     open: boolean;
     request: any | null;
@@ -226,21 +242,52 @@ export default function OperationsInventoryRelations() {
                         <div key={index} className="flex gap-2 items-end">
                           <div className="flex-1 space-y-2">
                             <Label>Material</Label>
-                            <Select
-                              value={item.inventoryId}
-                              onValueChange={(value) => handleItemChange(index, "inventoryId", value)}
+                            <Popover
+                              open={comboboxOpen[index]}
+                              onOpenChange={(open) => setComboboxOpen(prev => ({ ...prev, [index]: open }))}
                             >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select material" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {inventory?.map((inv) => (
-                                  <SelectItem key={inv._id} value={inv._id}>
-                                    {inv.name} ({inv.unit})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={comboboxOpen[index]}
+                                  className="w-full justify-between"
+                                >
+                                  {item.inventoryId
+                                    ? inventory?.find((inv) => inv._id === item.inventoryId)?.name
+                                    : "Select material"}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[300px] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search material..." />
+                                  <CommandList>
+                                    <CommandEmpty>No material found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {inventory?.map((inv) => (
+                                        <CommandItem
+                                          key={inv._id}
+                                          value={inv.name}
+                                          onSelect={() => {
+                                            handleItemChange(index, "inventoryId", inv._id);
+                                            setComboboxOpen(prev => ({ ...prev, [index]: false }));
+                                          }}
+                                        >
+                                          <Check
+                                            className={cn(
+                                              "mr-2 h-4 w-4",
+                                              item.inventoryId === inv._id ? "opacity-100" : "opacity-0"
+                                            )}
+                                          />
+                                          {inv.name} ({inv.unit})
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
                           </div>
 
                           <div className="w-32 space-y-2">
