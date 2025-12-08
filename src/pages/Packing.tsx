@@ -221,13 +221,13 @@ export default function Packing() {
 
   const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
     setSelectedAssignments((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(assignmentId)) {
-        newSet.delete(assignmentId);
+      const newSet = new Set<Id<"assignments">>();
+      if (prev.has(assignmentId)) {
+        return newSet;
       } else {
         newSet.add(assignmentId);
+        return newSet;
       }
-      return newSet;
     });
   };
 
@@ -467,7 +467,7 @@ export default function Packing() {
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5" />
               <span className="font-medium">
-                {selectedAssignments.size} assignment{selectedAssignments.size !== 1 ? "s" : ""} selected
+                Assignment selected
               </span>
             </div>
             <div className="flex gap-2">
@@ -482,19 +482,19 @@ export default function Packing() {
 
                     if (assignmentsWithRequests.length > 0) {
                       toast.warning("Request already made", {
-                        description: `${assignmentsWithRequests.length} assignment(s) already have packing requests and will be skipped.`,
+                        description: "This assignment already has a packing request.",
                       });
                     }
 
                     if (assignmentsWithoutRequests.length === 0) {
-                      toast.error("All selected assignments already have packing requests");
+                      toast.error("Selected assignment already has a packing request");
                       return;
                     }
 
                     await createPackingRequest({
                       assignmentIds: assignmentsWithoutRequests,
                     });
-                    toast.success(`Packing request created for ${assignmentsWithoutRequests.length} assignment(s)`);
+                    toast.success("Packing request created");
                     setSelectedAssignments(new Set());
                   } catch (error) {
                     toast.error("Failed to create packing request", {
@@ -503,7 +503,7 @@ export default function Packing() {
                   }
                 }}
               >
-                Request Materials for Selected
+                Request Materials
               </Button>
               <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
                 Clear Selection
