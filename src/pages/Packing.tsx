@@ -52,6 +52,7 @@ export default function Packing() {
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
   const createPackingRequest = useMutation(api.packingRequests.create);
+  const packingRequests = useQuery(api.packingRequests.list);
 
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
@@ -228,6 +229,13 @@ export default function Packing() {
       }
       return newSet;
     });
+  };
+
+  // Check if an assignment already has a packing request
+  const hasPackingRequest = (assignmentId: Id<"assignments">) => {
+    return packingRequests?.some(req => 
+      req.assignmentIds.includes(assignmentId)
+    ) || false;
   };
 
   const filteredAssignments = (assignments || []).filter((assignment) => {
@@ -467,10 +475,26 @@ export default function Packing() {
                 variant="default"
                 onClick={async () => {
                   try {
+                    // Filter out assignments that already have requests
+                    const selectedArray = Array.from(selectedAssignments);
+                    const assignmentsWithRequests = selectedArray.filter(id => hasPackingRequest(id));
+                    const assignmentsWithoutRequests = selectedArray.filter(id => !hasPackingRequest(id));
+
+                    if (assignmentsWithRequests.length > 0) {
+                      toast.warning("Request already made", {
+                        description: `${assignmentsWithRequests.length} assignment(s) already have packing requests and will be skipped.`,
+                      });
+                    }
+
+                    if (assignmentsWithoutRequests.length === 0) {
+                      toast.error("All selected assignments already have packing requests");
+                      return;
+                    }
+
                     await createPackingRequest({
-                      assignmentIds: Array.from(selectedAssignments),
+                      assignmentIds: assignmentsWithoutRequests,
                     });
-                    toast.success("Packing request created successfully");
+                    toast.success(`Packing request created for ${assignmentsWithoutRequests.length} assignment(s)`);
                     setSelectedAssignments(new Set());
                   } catch (error) {
                     toast.error("Failed to create packing request", {
@@ -534,10 +558,17 @@ export default function Packing() {
                         <TableRow key={assignment._id}>
                           {canEdit && (
                             <TableCell>
-                              <Checkbox
-                                checked={selectedAssignments.has(assignment._id)}
-                                onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                              />
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={selectedAssignments.has(assignment._id)}
+                                  onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                />
+                                {hasPackingRequest(assignment._id) && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Requested
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
                           )}
                           {columnVisibility.program && (
@@ -753,10 +784,17 @@ export default function Packing() {
                             <TableCell></TableCell>
                             {canEdit && (
                               <TableCell>
-                                <Checkbox
-                                  checked={selectedAssignments.has(assignment._id)}
-                                  onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
-                                />
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    checked={selectedAssignments.has(assignment._id)}
+                                    onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
+                                  />
+                                  {hasPackingRequest(assignment._id) && (
+                                    <Badge variant="outline" className="text-xs">
+                                      Requested
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                             )}
                             <TableCell>
