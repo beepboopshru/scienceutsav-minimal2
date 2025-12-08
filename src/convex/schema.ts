@@ -767,7 +767,8 @@ const schema = defineSchema(
       status: v.union(
         v.literal("pending"),
         v.literal("approved"),
-        v.literal("rejected")
+        v.literal("rejected"),
+        v.literal("fulfilled")
       ),
       purpose: v.optional(v.string()),
       reviewedBy: v.optional(v.id("users")),

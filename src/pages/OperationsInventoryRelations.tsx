@@ -294,11 +294,12 @@ export default function OperationsInventoryRelations() {
                 {canViewPacking && (
                   <TabsTrigger value="packing-requests">Packing Requests</TabsTrigger>
                 )}
+                <TabsTrigger value="completed-requests">Completed Requests</TabsTrigger>
               </TabsList>
 
               {canViewMaterialRequests && (
                 <TabsContent value="material-requests">
-                  <MaterialRequestsTab />
+                  <MaterialRequestsTab view="active" />
                 </TabsContent>
               )}
 
@@ -318,7 +319,7 @@ export default function OperationsInventoryRelations() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {packingRequests?.map((request) => (
+                        {packingRequests?.filter(r => r.status !== "done").map((request) => (
                           <TableRow key={request._id}>
                             <TableCell className="font-mono text-xs">
                               {request._id.slice(-8)}
@@ -377,11 +378,102 @@ export default function OperationsInventoryRelations() {
                             </TableCell>
                           </TableRow>
                         ))}
+                        {packingRequests?.filter(r => r.status !== "done").length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No active packing requests found.
+                            </TableCell>
+                          </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </div>
                 </TabsContent>
               )}
+
+              <TabsContent value="completed-requests">
+                <div className="space-y-8">
+                  {canViewMaterialRequests && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Completed Material Requests</h3>
+                      <MaterialRequestsTab view="completed" />
+                    </div>
+                  )}
+                  
+                  {canViewPacking && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Completed Packing Requests</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Request ID</TableHead>
+                            <TableHead>Assignments</TableHead>
+                            <TableHead>Materials</TableHead>
+                            <TableHead>Requested By</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {packingRequests?.filter(r => r.status === "done").map((request) => (
+                            <TableRow key={request._id}>
+                              <TableCell className="font-mono text-xs">
+                                {request._id.slice(-8)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="space-y-1">
+                                  {request.assignments.map((a: any) => (
+                                    <div key={a._id} className="text-sm">
+                                      {a.kitName} (×{a.quantity})
+                                    </div>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm text-muted-foreground">
+                                  {request.items.length} item(s)
+                                </div>
+                              </TableCell>
+                              <TableCell>{request.requesterEmail}</TableCell>
+                              <TableCell>
+                                {new Date(request._creationTime).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {request.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setViewItemsSheet({ open: true, request })}
+                                    title="View Items"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <span className="text-sm text-muted-foreground">
+                                    Fulfilled by {request.fulfillerEmail}
+                                  </span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {packingRequests?.filter(r => r.status === "done").length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                No completed packing requests found.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
             </Tabs>
           </div>
         </motion.div>

@@ -101,7 +101,7 @@ export const fulfillRequest = mutation({
     
     // Mark request as fulfilled
     await ctx.db.patch(args.id, {
-      status: "approved" as any, // Keep as approved but we could add "fulfilled" status
+      status: "fulfilled",
       reviewedBy: userId,
       reviewedAt: Date.now(),
     });

@@ -7,7 +7,11 @@ import { Check, X, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/use-permissions";
 
-export function MaterialRequestsTab() {
+interface MaterialRequestsTabProps {
+  view?: "active" | "completed";
+}
+
+export function MaterialRequestsTab({ view = "active" }: MaterialRequestsTabProps) {
   const requests = useQuery(api.materialRequests.list);
   const updateStatus = useMutation(api.materialRequests.updateStatus);
   const fulfillRequest = useMutation(api.materialRequests.fulfillRequest);
@@ -45,6 +49,17 @@ export function MaterialRequestsTab() {
 
   if (!requests) return <div>Loading...</div>;
 
+  const filteredRequests = requests.filter(r => {
+    if (view === "active") {
+      return r.status === "pending" || r.status === "approved";
+    }
+    return r.status === "fulfilled" || r.status === "rejected";
+  });
+
+  if (filteredRequests.length === 0) {
+    return <div className="text-center py-8 text-muted-foreground">No {view} requests found.</div>;
+  }
+
   return (
     <div className="space-y-4">
       <Table>
@@ -59,7 +74,7 @@ export function MaterialRequestsTab() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {requests.map((request) => (
+          {filteredRequests.map((request) => (
             <TableRow key={request._id}>
               <TableCell>
                 <span className="text-sm">{request.requesterEmail}</span>
@@ -77,6 +92,7 @@ export function MaterialRequestsTab() {
               <TableCell>
                 <Badge variant={
                   request.status === "approved" ? "default" :
+                  request.status === "fulfilled" ? "outline" :
                   request.status === "rejected" ? "destructive" : "secondary"
                 }>
                   {request.status}
