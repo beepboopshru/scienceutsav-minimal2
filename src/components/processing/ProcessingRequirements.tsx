@@ -19,7 +19,6 @@ interface ProcessingRequirementsProps {
 }
 
 export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob, refreshTrigger }: ProcessingRequirementsProps) {
-  const [activeTab, setActiveTab] = useState("summary");
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const inventoryByName = useMemo(() => {
@@ -183,88 +182,6 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     }).filter(i => i.shortage > 0);
   };
 
-  const summaryData = aggregateRequirements(assignments);
-
-  const kitWiseData = useMemo(() => {
-    const kitMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      const kitName = assignment.kit?.name || "Unknown";
-      if (!kitMap.has(kitName)) {
-        kitMap.set(kitName, {
-          name: kitName,
-          assignments: [],
-          totalQuantity: 0,
-        });
-      }
-      const entry = kitMap.get(kitName);
-      entry.assignments.push(assignment);
-      entry.totalQuantity += assignment.quantity;
-    });
-    
-    return Array.from(kitMap.values()).map(kit => ({
-      ...kit,
-      requirements: aggregateRequirements(kit.assignments)
-    })).filter(k => k.requirements.length > 0);
-  }, [assignments, inventory, refreshTrigger, activeJobs]);
-
-  const monthWiseData = useMemo(() => {
-    const monthMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      const monthKey = assignment.productionMonth || new Date(assignment._creationTime).toISOString().slice(0, 7);
-      if (!monthMap.has(monthKey)) {
-        monthMap.set(monthKey, {
-          month: monthKey,
-          assignments: [],
-        });
-      }
-      monthMap.get(monthKey).assignments.push(assignment);
-    });
-
-    return Array.from(monthMap.values())
-      .sort((a, b) => b.month.localeCompare(a.month))
-      .map(month => ({
-        ...month,
-        requirements: aggregateRequirements(month.assignments)
-      })).filter(m => m.requirements.length > 0);
-  }, [assignments, inventory, refreshTrigger, activeJobs]);
-
-  const clientWiseData = useMemo(() => {
-    const clientMap = new Map<string, any>();
-    assignments.forEach((assignment) => {
-      // Skip assignments without client data
-      if (!assignment.client) return;
-
-      // Extract client name with better fallback logic
-      let clientName = "Unknown Client";
-      const client = assignment.client as any;
-      
-      if (typeof client === 'string') {
-        clientName = client;
-      } else if (typeof client === 'object') {
-        clientName = 
-          client.organization || 
-          client.name || 
-          client.buyerName || 
-          client.contactPerson ||
-          client.email ||
-          "Unknown Client";
-      }
-
-      if (!clientMap.has(clientName)) {
-        clientMap.set(clientName, {
-          clientName: clientName,
-          assignments: [],
-        });
-      }
-      clientMap.get(clientName).assignments.push(assignment);
-    });
-
-    return Array.from(clientMap.values()).map(client => ({
-      ...client,
-      requirements: aggregateRequirements(client.assignments)
-    })).filter(c => c.requirements.length > 0);
-  }, [assignments, inventory, refreshTrigger, activeJobs]);
-
   const assignmentWiseData = useMemo(() => {
     if (!assignments || !inventory) return [];
     
@@ -416,123 +333,35 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-[800px]">
-          <TabsTrigger value="summary">Summary</TabsTrigger>
-          <TabsTrigger value="kit-wise">Kit Wise</TabsTrigger>
-          <TabsTrigger value="month-wise">Month Wise</TabsTrigger>
-          <TabsTrigger value="client-wise">Client Wise</TabsTrigger>
-          <TabsTrigger value="assignment-wise">Assignment Wise</TabsTrigger>
-        </TabsList>
-
-        <div className="mt-4">
-          <TabsContent value="summary">
-            <Card>
-              <CardHeader>
-                <CardTitle>Total Processing Requirements</CardTitle>
-                <CardDescription>Aggregated list of all pre-processed items needed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {summaryData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
-                ) : (
-                  <RequirementsTable items={summaryData} />
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="kit-wise">
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {kitWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
-                ) : (
-                  kitWiseData.map((kit, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">{kit.name}</CardTitle>
-                        <CardDescription>Total Assigned: {kit.totalQuantity}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <RequirementsTable items={kit.requirements} />
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="month-wise">
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {monthWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
-                ) : (
-                  monthWiseData.map((month, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">
-                          {new Date(month.month + "-01").toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <RequirementsTable items={month.requirements} />
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="client-wise">
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {clientWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
-                ) : (
-                  clientWiseData.map((client, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">{client.clientName}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <RequirementsTable items={client.requirements} />
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="assignment-wise">
-            <ScrollArea className="h-[600px]">
-              <div className="space-y-4">
-                {assignmentWiseData.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
-                ) : (
-                  assignmentWiseData.map((item, idx) => (
-                    <Card key={idx}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">{item.kitName}</CardTitle>
-                        <CardDescription>
-                          Client: {item.clientName} • Quantity: {item.quantity} • Month: {item.productionMonth || "N/A"}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <RequirementsTable items={item.requirements} />
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-        </div>
-      </Tabs>
+      <Card>
+        <CardHeader>
+          <CardTitle>Assignment-Specific Requirements</CardTitle>
+          <CardDescription>Pre-processed items needed for each assignment</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[600px]">
+            <div className="space-y-4">
+              {assignmentWiseData.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+              ) : (
+                assignmentWiseData.map((item, idx) => (
+                  <Card key={idx}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">{item.kitName}</CardTitle>
+                      <CardDescription>
+                        Client: {item.clientName} • Quantity: {item.quantity} • Month: {item.productionMonth || "N/A"}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <RequirementsTable items={item.requirements} />
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 }
