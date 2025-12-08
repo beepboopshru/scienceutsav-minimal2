@@ -48,3 +48,19 @@ export const getPurchasingQuantities = query({
     return await ctx.db.query("procurementPurchasingQuantities").collect();
   },
 });
+
+export const saveVendorSelection = mutation({
+  args: {
+    materialId: v.id("inventory"),
+    vendorId: v.id("vendors"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.auth.getUserIdentity();
+    if (!user) throw new Error("Unauthorized");
+
+    // Update the inventory item's vendorId
+    await ctx.db.patch(args.materialId, {
+      vendorId: args.vendorId,
+    });
+  },
+});

@@ -15,9 +15,14 @@ interface MaterialSummaryTabProps {
 
 export function MaterialSummaryTab({ materials, vendors }: MaterialSummaryTabProps) {
   const saveQuantity = useMutation(api.procurement.savePurchasingQuantity);
+  const saveVendor = useMutation(api.procurement.saveVendorSelection);
 
   const handleQuantityChange = (materialId: any, quantity: number) => {
     saveQuantity({ materialId, quantity });
+  };
+
+  const handleVendorChange = (materialId: any, vendorId: any) => {
+    saveVendor({ materialId, vendorId: vendorId as any });
   };
 
   return (
@@ -66,7 +71,10 @@ export function MaterialSummaryTab({ materials, vendors }: MaterialSummaryTabPro
                   />
                 </TableCell>
                 <TableCell>
-                  <Select defaultValue={item.vendorId}>
+                  <Select 
+                    defaultValue={item.vendorId} 
+                    onValueChange={(value) => handleVendorChange(item.id, value)}
+                  >
                     <SelectTrigger className="h-8">
                       <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
