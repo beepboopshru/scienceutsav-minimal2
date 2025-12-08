@@ -347,19 +347,22 @@ export default function OperationsInventoryRelations() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {request.status === "pending" && hasPermission("inventory", "editStock") && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleFulfillPackingRequest(request._id)}
-                                  >
-                                    <PackageCheck className="h-4 w-4 mr-2" />
-                                    Fulfill & Reduce Stock
-                                  </Button>
-                                )}
-                                {request.status === "done" && (
-                                  <span className="text-sm text-muted-foreground">
-                                    Fulfilled by {request.fulfillerEmail}
-                                  </span>
+                                {hasPermission("inventory", "editStock") && (
+                                  <>
+                                    {request.status === "pending" ? (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleFulfillPackingRequest(request._id)}
+                                      >
+                                        <PackageCheck className="h-4 w-4 mr-2" />
+                                        Fulfill & Reduce Stock
+                                      </Button>
+                                    ) : request.status === "done" ? (
+                                      <span className="text-sm text-muted-foreground">
+                                        Fulfilled by {request.fulfillerEmail}
+                                      </span>
+                                    ) : null}
+                                  </>
                                 )}
                               </div>
                             </TableCell>
