@@ -82,6 +82,17 @@ export const aggregateMaterials = (
     virtualInventory.set(item._id, item.quantity || 0);
   });
 
+  // NEW: Track pre-processed items being manufactured in processing jobs
+  // Add target quantities from assigned/in_progress processing jobs to virtual inventory
+  processingJobs.forEach(job => {
+    if (job.status === "assigned" || job.status === "in_progress") {
+      job.targets.forEach((target: any) => {
+        const currentVirtual = virtualInventory.get(target.targetItemId) || 0;
+        virtualInventory.set(target.targetItemId, currentVirtual + target.targetQuantity);
+      });
+    }
+  });
+
   // Helper to get or create material entry
   const getMaterialEntry = (invItem: any): ProcurementMaterial => {
     if (!materialMap.has(invItem._id)) {
@@ -142,7 +153,7 @@ export const aggregateMaterials = (
     kitName: string,
     assignmentQty: number
   ) => {
-    // Check virtual inventory first
+    // Check virtual inventory first (includes current stock + items being manufactured)
     const currentStock = virtualInventory.get(invItem._id) || 0;
     const qtyToTakeFromStock = Math.min(requiredQty, currentStock);
     const qtyToManufacture = requiredQty - qtyToTakeFromStock;
