@@ -21,6 +21,15 @@ export const list = query({
   },
 });
 
+export const listApproved = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("materialRequests")
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .collect();
+  },
+});
+
 export const create = mutation({
   args: {
     items: v.array(
