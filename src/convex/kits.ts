@@ -109,6 +109,7 @@ export const create = mutation({
       unit: v.string(),
       subcategory: v.optional(v.string()),
       notes: v.optional(v.string()),
+      inventoryItemId: v.optional(v.string()),
     }))),
     bulkMaterials: v.optional(v.array(v.object({
       name: v.string(),
@@ -116,6 +117,7 @@ export const create = mutation({
       unit: v.string(),
       subcategory: v.optional(v.string()),
       notes: v.optional(v.string()),
+      inventoryItemId: v.optional(v.string()),
     }))),
     miscellaneous: v.optional(v.array(v.object({
       name: v.string(),
@@ -209,6 +211,7 @@ export const update = mutation({
       unit: v.string(),
       subcategory: v.optional(v.string()),
       notes: v.optional(v.string()),
+      inventoryItemId: v.optional(v.string()),
     }))),
     bulkMaterials: v.optional(v.array(v.object({
       name: v.string(),
@@ -216,6 +219,7 @@ export const update = mutation({
       unit: v.string(),
       subcategory: v.optional(v.string()),
       notes: v.optional(v.string()),
+      inventoryItemId: v.optional(v.string()),
     }))),
     miscellaneous: v.optional(v.array(v.object({
       name: v.string(),
