@@ -21,7 +21,168 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<"summary" | "kit-wise" | "month-wise" | "client-wise" | "assignment-wise">("summary");
 
+  const activeAssignments = useMemo(() => {
+    if (!assignments) return [];
+    return assignments.filter(a => 
+      a.status !== "received_from_inventory" && 
+      a.status !== "dispatched" && 
+      a.status !== "delivered"
+    );
+  }, [assignments]);
+
   const inventoryByName = useMemo(() => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+  // Material Summary: Aggregate all requirements across all assignments
+  const materialSummaryData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const materialMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+=======
+  // Material Summary: Aggregate all requirements across all assignments
+  const materialSummaryData = useMemo(() => {
+    if (!activeAssignments || !inventory) return [];
+    
+    const materialMap = new Map<string, any>();
+
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    }).filter(i => i.shortage > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  // Kit Wise: Group by kit
+  const kitWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const kitMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+=======
+    }).filter(i => i.shortage > 0);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  // Kit Wise: Group by kit
+  const kitWiseData = useMemo(() => {
+    if (!activeAssignments || !inventory) return [];
+    
+    const kitMap = new Map<string, any>();
+
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      return {
+        ...kitData,
+        requirements
+      };
+    }).filter(k => k.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  // Month Wise: Group by production month
+  const monthWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const monthMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+=======
+      return {
+        ...kitData,
+        requirements
+      };
+    }).filter(k => k.requirements.length > 0);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  // Month Wise: Group by production month
+  const monthWiseData = useMemo(() => {
+    if (!activeAssignments || !inventory) return [];
+    
+    const monthMap = new Map<string, any>();
+
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      return {
+        ...monthData,
+        requirements
+      };
+    }).filter(m => m.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  // Client Wise: Group by client
+  const clientWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const clientMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+=======
+      return {
+        ...monthData,
+        requirements
+      };
+    }).filter(m => m.requirements.length > 0);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  // Client Wise: Group by client
+  const clientWiseData = useMemo(() => {
+    if (!activeAssignments || !inventory) return [];
+    
+    const clientMap = new Map<string, any>();
+
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      return {
+        ...clientData,
+        requirements
+      };
+    }).filter(c => c.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  // Assignment Wise: Individual assignments
+  const assignmentWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    return assignments.map((assignment) => {
+=======
+      return {
+        ...clientData,
+        requirements
+      };
+    }).filter(c => c.requirements.length > 0);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  // Assignment Wise: Individual assignments
+  const assignmentWiseData = useMemo(() => {
+    if (!activeAssignments || !inventory) return [];
+    
+    return activeAssignments.map((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      return {
+        assignment,
+        kitName: kit?.name || "Unknown Kit",
+        clientName,
+        quantity: assignment.quantity,
+        productionMonth: assignment.productionMonth,
+        requirements: adjustedReqs
+      };
+    }).filter(a => a.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+=======
+      return {
+        assignment,
+        kitName: kit?.name || "Unknown Kit",
+        clientName,
+        quantity: assignment.quantity,
+        productionMonth: assignment.productionMonth,
+        requirements: adjustedReqs
+      };
+    }).filter(a => a.requirements.length > 0);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
   }, [inventory, refreshTrigger]);

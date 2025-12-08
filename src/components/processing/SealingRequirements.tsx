@@ -21,7 +21,117 @@ interface SealingRequirementsProps {
 export function SealingRequirements({ assignments, inventory, activeJobs = [], onCreateItem, refreshTrigger }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
+  const activeAssignments = useMemo(() => {
+    if (!assignments) return [];
+    return assignments.filter(a => 
+      a.status !== "received_from_inventory" && 
+      a.status !== "dispatched" && 
+      a.status !== "delivered"
+    );
+  }, [assignments]);
+
   // Normalize string helper: lowercase, trim, single spaces
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+  const summaryData = aggregateRequirements(assignments);
+
+  const kitWiseData = useMemo(() => {
+    const kitMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+=======
+  const summaryData = aggregateRequirements(activeAssignments);
+
+  const kitWiseData = useMemo(() => {
+    const kitMap = new Map<string, any>();
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    return Array.from(kitMap.values()).map(kit => ({
+      ...kit,
+      requirements: aggregateRequirements(kit.assignments)
+    }));
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  const monthWiseData = useMemo(() => {
+    const monthMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+=======
+    return Array.from(kitMap.values()).map(kit => ({
+      ...kit,
+      requirements: aggregateRequirements(kit.assignments)
+    }));
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  const monthWiseData = useMemo(() => {
+    const monthMap = new Map<string, any>();
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      .map(month => ({
+        ...month,
+        requirements: aggregateRequirements(month.assignments)
+      }));
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  const clientWiseData = useMemo(() => {
+    const clientMap = new Map<string, any>();
+    assignments.forEach((assignment) => {
+=======
+      .map(month => ({
+        ...month,
+        requirements: aggregateRequirements(month.assignments)
+      }));
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  const clientWiseData = useMemo(() => {
+    const clientMap = new Map<string, any>();
+    activeAssignments.forEach((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    return Array.from(clientMap.values()).map(client => ({
+      ...client,
+      requirements: aggregateRequirements(client.assignments)
+    }));
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  const assignmentWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    return assignments.map((assignment) => {
+=======
+    return Array.from(clientMap.values()).map(client => ({
+      ...client,
+      requirements: aggregateRequirements(client.assignments)
+    }));
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+
+  const assignmentWiseData = useMemo(() => {
+    if (!activeAssignments || !inventory) return [];
+    
+    return activeAssignments.map((assignment) => {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+      return {
+        assignment,
+        kitName: kit?.name || "Unknown Kit",
+        clientName,
+        quantity: assignment.quantity,
+        productionMonth: assignment.productionMonth,
+        requirements: aggregateRequirements([assignment])
+      };
+    }).filter(a => a.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+=======
+      return {
+        assignment,
+        kitName: kit?.name || "Unknown Kit",
+        clientName,
+        quantity: assignment.quantity,
+        productionMonth: assignment.productionMonth,
+        requirements: aggregateRequirements([assignment])
+      };
+    }).filter(a => a.requirements.length > 0);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
   const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
 
   const inventoryNormalized = useMemo(() => {
