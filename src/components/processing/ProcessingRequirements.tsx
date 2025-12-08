@@ -14,7 +14,7 @@ interface ProcessingRequirementsProps {
   assignments: any[];
   inventory: any[];
   activeJobs?: any[];
-  onStartJob: (targetItemId: Id<"inventory">, quantity: number) => void;
+  onStartJob: (targetItemId: Id<"inventory">, quantity: number, assignmentIds?: Id<"assignments">[]) => void;
   refreshTrigger?: number;
 }
 
@@ -27,21 +27,26 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
   }, [inventory, refreshTrigger]);
 
-  // Calculate active job quantities by target item
-  const activeJobQuantities = useMemo(() => {
+  // Calculate active job quantities by target item, filtered by assignment IDs
+  const getActiveJobQuantitiesForAssignments = (assignmentIds: string[]) => {
     const quantities = new Map<string, number>();
     
     activeJobs.forEach(job => {
       if (job.status === "assigned" || job.status === "in_progress") {
-        job.targets.forEach((target: any) => {
-          const current = quantities.get(target.targetItemId) || 0;
-          quantities.set(target.targetItemId, current + target.targetQuantity);
-        });
+        // Only count this job if it's linked to one of the current assignments
+        const hasMatchingAssignment = job.assignmentIds && job.assignmentIds.some((id: string) => assignmentIds.includes(id));
+        
+        if (hasMatchingAssignment) {
+          job.targets.forEach((target: any) => {
+            const current = quantities.get(target.targetItemId) || 0;
+            quantities.set(target.targetItemId, current + target.targetQuantity);
+          });
+        }
       }
     });
     
     return quantities;
-  }, [activeJobs]);
+  };
 
   const calculateShortages = (assignment: any) => {
     const kit = assignment.kit;
@@ -139,6 +144,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           const existing = materialMap.get(key);
           existing.required += item.required;
           existing.kits.add(assignment.kit?.name || "Unknown");
+          existing.assignmentIds.add(assignment._id);
         } else {
           materialMap.set(key, {
             id: item.id,
@@ -148,6 +154,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             unit: item.unit,
             category: item.category,
             kits: new Set([assignment.kit?.name || "Unknown"]),
+            assignmentIds: new Set([assignment._id]),
             invItem: item.invItem
           });
         }
@@ -155,8 +162,11 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     });
 
     return Array.from(materialMap.values()).map((item) => {
-      // Subtract active job quantities from the shortage
-      const activeJobQty = activeJobQuantities.get(item.id) || 0;
+      // Get assignment IDs for this material requirement
+      const assignmentIds = Array.from(item.assignmentIds) as string[];
+      
+      // Subtract active job quantities that are linked to these specific assignments
+      const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
       const adjustedShortage = Math.max(0, item.required - item.available - activeJobQty);
       
       return {
@@ -164,6 +174,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         shortage: adjustedShortage,
         activeJobQty,
         kits: Array.from(item.kits),
+        assignmentIds,
       };
     }).filter(i => i.shortage > 0);
   };
@@ -335,7 +346,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
                   <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Button size="sm" onClick={() => onStartJob(item.id, item.shortage)}>
+                  <Button size="sm" onClick={() => onStartJob(item.id, item.shortage, item.assignmentIds)}>
                     <Scissors className="mr-2 h-4 w-4" />
                     Start Job
                   </Button>

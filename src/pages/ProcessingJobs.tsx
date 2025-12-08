@@ -100,6 +100,7 @@ export default function ProcessingJobs() {
     processedBy: "",
     processedByType: "in_house" as "vendor" | "service" | "in_house",
     notes: "",
+    assignmentIds: [] as Id<"assignments">[],
   });
 
   const [sealingForm, setSealingForm] = useState({
@@ -476,6 +477,9 @@ export default function ProcessingJobs() {
       if (processingForm.notes) {
         jobData.notes = processingForm.notes;
       }
+      if (processingForm.assignmentIds && processingForm.assignmentIds.length > 0) {
+        jobData.assignmentIds = processingForm.assignmentIds;
+      }
       
       await createProcessingJob(jobData);
       toast.success("Processing job created");
@@ -487,6 +491,7 @@ export default function ProcessingJobs() {
         processedBy: "",
         processedByType: "in_house",
         notes: "",
+        assignmentIds: [],
       });
       setSourceComboboxOpen({});
       setTargetComboboxOpen({});
@@ -495,7 +500,7 @@ export default function ProcessingJobs() {
     }
   };
 
-  const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number) => {
+  const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number, assignmentIds?: Id<"assignments">[]) => {
     const item = inventory.find(i => i._id === targetItemId);
     if (!item) return;
 
@@ -515,6 +520,7 @@ export default function ProcessingJobs() {
       processedBy: "",
       processedByType: "in_house",
       notes: "Auto-generated from requirements",
+      assignmentIds: assignmentIds || [],
     });
     
     setIsFromRequirements(true);
