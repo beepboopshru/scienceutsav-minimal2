@@ -2,7 +2,7 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
-import { Loader2, AlertTriangle, Trash2, Download } from "lucide-react";
+import { Loader2, AlertTriangle, Trash2, Download, Plus, Edit2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -26,6 +28,14 @@ export default function AdminZone() {
     action: () => void;
   }>({ open: false, title: "", description: "", action: () => {} });
   
+  const [checklistDialog, setChecklistDialog] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    id?: Id<"dispatchChecklist">;
+    name: string;
+    label: string;
+  }>({ open: false, mode: "create", name: "", label: "" });
+  
   const [actionTypeFilter, setActionTypeFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [dateRangeFilter, setDateRangeFilter] = useState<string>("all");
@@ -39,10 +49,14 @@ export default function AdminZone() {
     dateRange: dateRangeFilter,
   });
   const allAssignments = useQuery(api.assignments.list, {});
+  const checklistItems = useQuery(api.dispatchChecklist.list, {});
   
   const clearPendingAssignments = useMutation(api.assignments.clearPending);
   const clearAllAssignments = useMutation(api.assignments.clearAll);
   const deleteAllLogs = useMutation(api.activityLogs.deleteAll);
+  const createChecklistItem = useMutation(api.dispatchChecklist.create);
+  const updateChecklistItem = useMutation(api.dispatchChecklist.update);
+  const deleteChecklistItem = useMutation(api.dispatchChecklist.remove);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -57,7 +71,7 @@ export default function AdminZone() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (isLoading || !user || !activityLogs || !allAssignments) {
+  if (isLoading || !user || !activityLogs || !allAssignments || !checklistItems) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
@@ -142,6 +156,50 @@ export default function AdminZone() {
     toast.success("Logs exported successfully");
   };
 
+  const handleSaveChecklistItem = async () => {
+    if (!checklistDialog.name.trim() || !checklistDialog.label.trim()) {
+      toast.error("Name and label are required");
+      return;
+    }
+
+    try {
+      if (checklistDialog.mode === "create") {
+        await createChecklistItem({
+          name: checklistDialog.name.trim(),
+          label: checklistDialog.label.trim(),
+        });
+        toast.success("Checklist item created");
+      } else if (checklistDialog.id) {
+        await updateChecklistItem({
+          id: checklistDialog.id,
+          name: checklistDialog.name.trim(),
+          label: checklistDialog.label.trim(),
+        });
+        toast.success("Checklist item updated");
+      }
+      setChecklistDialog({ open: false, mode: "create", name: "", label: "" });
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save checklist item");
+    }
+  };
+
+  const handleDeleteChecklistItem = (id: Id<"dispatchChecklist">, label: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete Checklist Item",
+      description: `Are you sure you want to delete "${label}"? This action cannot be undone.`,
+      action: async () => {
+        try {
+          await deleteChecklistItem({ id });
+          toast.success("Checklist item deleted");
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error: any) {
+          toast.error(error.message || "Failed to delete checklist item");
+        }
+      },
+    });
+  };
+
   const paginatedLogs = activityLogs.slice(
     (currentPage - 1) * logsPerPage,
     currentPage * logsPerPage
@@ -171,6 +229,68 @@ export default function AdminZone() {
               <strong>Danger Zone:</strong> Actions performed here are powerful and often irreversible. Proceed with caution.
             </AlertDescription>
           </Alert>
+
+          {/* Dispatch Checklist Management */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Dispatch Checklist Management</CardTitle>
+                  <CardDescription>Configure checklist items for dispatch operations</CardDescription>
+                </div>
+                <Button
+                  onClick={() => setChecklistDialog({ open: true, mode: "create", name: "", label: "" })}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {checklistItems.map((item) => (
+                  <div
+                    key={item._id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium">{item.label}</p>
+                      <p className="text-sm text-muted-foreground">Key: {item.name}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setChecklistDialog({
+                            open: true,
+                            mode: "edit",
+                            id: item._id,
+                            name: item.name,
+                            label: item.label,
+                          })
+                        }
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteChecklistItem(item._id, item.label)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {checklistItems.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No checklist items configured. Add your first item to get started.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Assignment Management */}
           <Card className="border-red-500/50">
@@ -345,6 +465,54 @@ export default function AdminZone() {
             </Button>
             <Button variant="destructive" onClick={confirmDialog.action}>
               Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checklist Item Dialog */}
+      <Dialog open={checklistDialog.open} onOpenChange={(open) => setChecklistDialog({ ...checklistDialog, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {checklistDialog.mode === "create" ? "Add Checklist Item" : "Edit Checklist Item"}
+            </DialogTitle>
+            <DialogDescription>
+              Configure a checklist item for dispatch operations
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name (Key)</Label>
+              <Input
+                id="name"
+                placeholder="e.g., kitImages"
+                value={checklistDialog.name}
+                onChange={(e) => setChecklistDialog({ ...checklistDialog, name: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Internal identifier (no spaces, camelCase recommended)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="label">Label</Label>
+              <Input
+                id="label"
+                placeholder="e.g., Kit Images"
+                value={checklistDialog.label}
+                onChange={(e) => setChecklistDialog({ ...checklistDialog, label: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Display name shown to users
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChecklistDialog({ ...checklistDialog, open: false })}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveChecklistItem}>
+              {checklistDialog.mode === "create" ? "Create" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
