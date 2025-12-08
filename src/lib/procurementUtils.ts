@@ -367,7 +367,7 @@ export const aggregateMaterials = (
     }
   });
 
-  // Calculate shortages and costs - return all raw materials for debugging
+  // Calculate shortages and costs - return all raw materials
   const result = Array.from(materialMap.values())
     .filter(item => item.type === "raw")
     .map(item => {
@@ -379,6 +379,18 @@ export const aggregateMaterials = (
       );
       const purchasingQty = item.purchasingQty > 0 ? item.purchasingQty : shortage;
 
+      // Debug logging for specific items
+      if (item.name.includes('Cardboard') || item.name.includes('Battery')) {
+        console.log(`[PROCUREMENT DEBUG] ${item.name}:`, {
+          orderRequired: item.orderRequired,
+          available: item.available,
+          reserved: item.reserved,
+          minStockLevel: item.minStockLevel,
+          calculatedShortage: shortage,
+          formula: `(${item.orderRequired} - (${item.available} - ${item.reserved})) + ${item.minStockLevel} = ${shortage}`
+        });
+      }
+
       return {
         ...item,
         shortage,
@@ -388,7 +400,6 @@ export const aggregateMaterials = (
     });
 
   console.log('Final materials count:', result.length);
-  console.log('Sample material:', result[0]);
   console.log('=== END DEBUG ===');
 
   return result;

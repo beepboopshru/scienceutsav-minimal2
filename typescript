@@ -1,6 +1,9 @@
-// src/components/processing/ProcessingRequirements.tsx
-pnpm install
-
-const hasMatchingAssignment = job.assignmentIds && job.assignmentIds.length > 0
-  ? job.assignmentIds.some((id: string) => assignmentIds.includes(id))
-  : true; // Changed from false to true: count legacy jobs without assignment IDs for all assignments
+export const calculateShortage = (
+  required: number,
+  available: number,
+  reserved: number,
+  minStock: number
+): number => {
+  const effectiveAvailable = available - reserved;
+  return Math.max(0, (required - effectiveAvailable) + minStock);
+};
