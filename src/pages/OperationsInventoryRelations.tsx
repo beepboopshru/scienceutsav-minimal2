@@ -379,7 +379,7 @@ export default function OperationsInventoryRelations() {
       </div>
 
       <Sheet open={viewItemsSheet.open} onOpenChange={(open) => !open && setViewItemsSheet({ open: false, request: null })}>
-        <SheetContent className="w-[400px] sm:w-[540px]">
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>Packing Request Items</SheetTitle>
             <SheetDescription>
@@ -401,30 +401,163 @@ export default function OperationsInventoryRelations() {
             
             <div>
               <h4 className="text-sm font-semibold mb-2">Materials Required</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Quantity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {viewItemsSheet.request?.items.map((item: any, idx: number) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">
-                          {item.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {item.quantity} {item.unit}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-4">
+                {/* Main Pouch Materials */}
+                {viewItemsSheet.request?.items.filter((item: any) => item.category === "main_pouch").length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Main Pouch</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewItemsSheet.request?.items
+                          .filter((item: any) => item.category === "main_pouch")
+                          .map((item: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.quantity} {item.unit}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      All materials reduced directly from inventory
+                    </p>
+                  </div>
+                )}
+
+                {/* Sealed Packets */}
+                {viewItemsSheet.request?.items.filter((item: any) => item.category === "sealed_packet").length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Sealed Packets</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Packet Name</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewItemsSheet.request?.items
+                          .filter((item: any) => item.category === "sealed_packet")
+                          .map((item: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="text-right">
+                                {item.quantity} {item.unit}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      Sealed packet stock reduced directly
+                    </p>
+                  </div>
+                )}
+
+                {/* Bulk Materials */}
+                {viewItemsSheet.request?.items.filter((item: any) => item.category === "bulk").length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Bulk Materials</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewItemsSheet.request?.items
+                          .filter((item: any) => item.category === "bulk")
+                          .map((item: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="text-right">
+                                {item.quantity} {item.unit}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      Reduced directly from inventory
+                    </p>
+                  </div>
+                )}
+
+                {/* Spare Materials */}
+                {viewItemsSheet.request?.items.filter((item: any) => item.category === "spare").length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Spare Materials</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewItemsSheet.request?.items
+                          .filter((item: any) => item.category === "spare")
+                          .map((item: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="text-right">
+                                {item.quantity} {item.unit}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      Reduced directly from inventory
+                    </p>
+                  </div>
+                )}
+
+                {/* Miscellaneous */}
+                {viewItemsSheet.request?.items.filter((item: any) => item.category === "misc").length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Miscellaneous</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Material</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {viewItemsSheet.request?.items
+                          .filter((item: any) => item.category === "misc")
+                          .map((item: any, idx: number) => (
+                            <TableRow key={idx}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell className="text-right">
+                                {item.quantity} {item.unit}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                    <p className="text-xs text-muted-foreground mt-1 italic">
+                      Reduced directly from inventory
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pt-4 border-t">

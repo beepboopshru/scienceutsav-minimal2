@@ -44,8 +44,12 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    // Aggregate materials from all selected assignments
-    const materialMap = new Map<string, { inventoryId: string; name: string; type: string; quantity: number; unit: string }>();
+    // Categorized materials structure
+    const mainPouchMaterials = new Map<string, { inventoryId: string; name: string; type: string; quantity: number; unit: string; category: string }>();
+    const sealedPackets = new Map<string, { inventoryId: string; name: string; type: string; quantity: number; unit: string; category: string }>();
+    const bulkMaterials = new Map<string, { inventoryId: string; name: string; type: string; quantity: number; unit: string; category: string }>();
+    const spareMaterials = new Map<string, { inventoryId: string; name: string; type: string; quantity: number; unit: string; category: string }>();
+    const miscMaterials = new Map<string, { inventoryId: string; name: string; type: string; quantity: number; unit: string; category: string }>();
 
     for (const assignmentId of args.assignmentIds) {
       const assignment = await ctx.db.get(assignmentId);
@@ -59,48 +63,61 @@ export const create = mutation({
         try {
           const structure = JSON.parse(kit.packingRequirements);
           
-          const processMaterial = (material: any) => {
-            if (!material.inventoryItemId) return;
-            
-            const requiredQty = (material.quantity || 0) * assignment.quantity;
-            const key = material.inventoryItemId;
-            
-            if (materialMap.has(key)) {
-              materialMap.get(key)!.quantity += requiredQty;
-            } else {
-              materialMap.set(key, {
-                inventoryId: material.inventoryItemId,
-                name: material.name || "Unknown",
-                type: material.type || "raw",
-                quantity: requiredQty,
-                unit: material.unit || "pcs",
-              });
-            }
-          };
-          
-          // Process pouches
+          // Process main pouch materials
           if (structure.pouches && Array.isArray(structure.pouches)) {
-            structure.pouches.forEach((pouch: any) => {
+            for (const pouch of structure.pouches) {
               if (pouch.materials && Array.isArray(pouch.materials)) {
-                pouch.materials.forEach(processMaterial);
+                for (const material of pouch.materials) {
+                  if (!material.inventoryItemId) continue;
+                  
+                  const requiredQty = (material.quantity || 0) * assignment.quantity;
+                  const key = material.inventoryItemId;
+                  
+                  if (mainPouchMaterials.has(key)) {
+                    mainPouchMaterials.get(key)!.quantity += requiredQty;
+                  } else {
+                    mainPouchMaterials.set(key, {
+                      inventoryId: material.inventoryItemId,
+                      name: material.name || "Unknown",
+                      type: material.type || "raw",
+                      quantity: requiredQty,
+                      unit: material.unit || "pcs",
+                      category: "main_pouch",
+                    });
+                  }
+                }
               }
-            });
+            }
           }
 
-          // Process packets
+          // Process sealed packets
           if (structure.packets && Array.isArray(structure.packets)) {
-            structure.packets.forEach((packet: any) => {
-              if (packet.materials && Array.isArray(packet.materials)) {
-                packet.materials.forEach(processMaterial);
+            for (const packet of structure.packets) {
+              if (!packet.inventoryItemId) continue;
+              
+              const requiredQty = (packet.quantity || 0) * assignment.quantity;
+              const key = packet.inventoryItemId;
+              
+              if (sealedPackets.has(key)) {
+                sealedPackets.get(key)!.quantity += requiredQty;
+              } else {
+                sealedPackets.set(key, {
+                  inventoryId: packet.inventoryItemId,
+                  name: packet.name || "Unknown",
+                  type: "sealed_packet",
+                  quantity: requiredQty,
+                  unit: packet.unit || "pcs",
+                  category: "sealed_packet",
+                });
               }
-            });
+            }
           }
         } catch (e) {
           console.error('Error parsing packingRequirements:', e);
         }
       }
 
-      // Process kit components
+      // Process kit components (if not structured or as fallback)
       if (kit.components && Array.isArray(kit.components)) {
         for (const comp of kit.components) {
           const invItem = await ctx.db.get(comp.inventoryItemId);
@@ -109,24 +126,24 @@ export const create = mutation({
           const requiredQty = comp.quantityPerKit * assignment.quantity;
           const key = invItem._id;
 
-          if (materialMap.has(key)) {
-            materialMap.get(key)!.quantity += requiredQty;
+          if (mainPouchMaterials.has(key)) {
+            mainPouchMaterials.get(key)!.quantity += requiredQty;
           } else {
-            materialMap.set(key, {
+            mainPouchMaterials.set(key, {
               inventoryId: invItem._id,
               name: invItem.name,
               type: invItem.type,
               quantity: requiredQty,
               unit: invItem.unit,
+              category: "main_pouch",
             });
           }
         }
       }
 
-      // Process spare kits, bulk materials, and miscellaneous
-      const processNamedItems = async (items: any[] | undefined) => {
-        if (!items) return;
-        for (const item of items) {
+      // Process spare kits
+      if (kit.spareKits && Array.isArray(kit.spareKits)) {
+        for (const item of kit.spareKits) {
           const invItem = await ctx.db
             .query("inventory")
             .filter((q) => q.eq(q.field("name"), item.name))
@@ -137,31 +154,92 @@ export const create = mutation({
           const requiredQty = item.quantity * assignment.quantity;
           const key = invItem._id;
 
-          if (materialMap.has(key)) {
-            materialMap.get(key)!.quantity += requiredQty;
+          if (spareMaterials.has(key)) {
+            spareMaterials.get(key)!.quantity += requiredQty;
           } else {
-            materialMap.set(key, {
+            spareMaterials.set(key, {
               inventoryId: invItem._id,
               name: invItem.name,
               type: invItem.type,
               quantity: requiredQty,
               unit: invItem.unit,
+              category: "spare",
             });
           }
         }
-      };
+      }
 
-      await processNamedItems(kit.spareKits);
-      await processNamedItems(kit.bulkMaterials);
-      await processNamedItems(kit.miscellaneous);
+      // Process bulk materials
+      if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials)) {
+        for (const item of kit.bulkMaterials) {
+          const invItem = await ctx.db
+            .query("inventory")
+            .filter((q) => q.eq(q.field("name"), item.name))
+            .first();
+          
+          if (!invItem) continue;
+
+          const requiredQty = item.quantity * assignment.quantity;
+          const key = invItem._id;
+
+          if (bulkMaterials.has(key)) {
+            bulkMaterials.get(key)!.quantity += requiredQty;
+          } else {
+            bulkMaterials.set(key, {
+              inventoryId: invItem._id,
+              name: invItem.name,
+              type: invItem.type,
+              quantity: requiredQty,
+              unit: invItem.unit,
+              category: "bulk",
+            });
+          }
+        }
+      }
+
+      // Process miscellaneous
+      if (kit.miscellaneous && Array.isArray(kit.miscellaneous)) {
+        for (const item of kit.miscellaneous) {
+          const invItem = await ctx.db
+            .query("inventory")
+            .filter((q) => q.eq(q.field("name"), item.name))
+            .first();
+          
+          if (!invItem) continue;
+
+          const requiredQty = item.quantity * assignment.quantity;
+          const key = invItem._id;
+
+          if (miscMaterials.has(key)) {
+            miscMaterials.get(key)!.quantity += requiredQty;
+          } else {
+            miscMaterials.set(key, {
+              inventoryId: invItem._id,
+              name: invItem.name,
+              type: invItem.type,
+              quantity: requiredQty,
+              unit: invItem.unit,
+              category: "misc",
+            });
+          }
+        }
+      }
     }
 
-    const items = Array.from(materialMap.values()).map(item => ({
+    // Combine all materials with category information
+    const items = [
+      ...Array.from(mainPouchMaterials.values()),
+      ...Array.from(sealedPackets.values()),
+      ...Array.from(bulkMaterials.values()),
+      ...Array.from(spareMaterials.values()),
+      ...Array.from(miscMaterials.values()),
+    ].map(item => ({
       inventoryId: item.inventoryId as any,
       name: item.name,
       type: item.type,
       quantity: item.quantity,
       unit: item.unit,
+      category: item.category,
     }));
 
     const requestId = await ctx.db.insert("packingRequests", {
@@ -196,26 +274,24 @@ export const fulfill = mutation({
       throw new Error("Only pending requests can be fulfilled");
     }
 
-    // Reduce inventory for each item (top-level only, no BOM explosion)
+    // Reduce inventory based on category
     for (const item of request.items) {
       const inventoryItem = await ctx.db.get(item.inventoryId as any);
       if (!inventoryItem) {
         throw new Error(`Inventory item ${item.name} not found`);
       }
 
-      // Type guard to ensure we have an inventory item
-      if (inventoryItem._id.toString().startsWith("inventory|")) {
-        const invItem = inventoryItem as any;
-        
-        if (invItem.quantity < item.quantity) {
-          throw new Error(`Insufficient stock for ${item.name}. Available: ${invItem.quantity}, Required: ${item.quantity}`);
-        }
-
-        // Reduce only the top-level item
-        await ctx.db.patch(item.inventoryId as any, {
-          quantity: invItem.quantity - item.quantity,
-        });
+      const invItem = inventoryItem as any;
+      
+      if (invItem.quantity < item.quantity) {
+        throw new Error(`Insufficient stock for ${item.name}. Available: ${invItem.quantity}, Required: ${item.quantity}`);
       }
+
+      // Reduce stock directly for all categories
+      // Main pouch materials, sealed packets, bulk, spare, and misc are all reduced directly
+      await ctx.db.patch(item.inventoryId as any, {
+        quantity: invItem.quantity - item.quantity,
+      });
     }
 
     // Mark request as fulfilled
