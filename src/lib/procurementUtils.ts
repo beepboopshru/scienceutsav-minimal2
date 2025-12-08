@@ -345,17 +345,32 @@ export const aggregateMaterials = (
 
   // Process processing jobs (assigned status only - reserves source materials)
   // Skip jobs linked to assignments to avoid double-counting (their requirements are already in orderRequired)
+  console.log('Processing jobs count:', processingJobs.length);
   processingJobs.forEach(job => {
+    console.log('Job:', {
+      name: job.name,
+      status: job.status,
+      hasSources: !!job.sources,
+      sourcesLength: job.sources?.length || 0,
+      hasAssignmentIds: !!job.assignmentIds,
+      assignmentIdsLength: job.assignmentIds?.length || 0
+    });
+    
     if (job.status === "assigned" && job.sources) {
       // Only reserve materials if the job is NOT linked to any assignment
       const isLinkedToAssignment = job.assignmentIds && job.assignmentIds.length > 0;
+      console.log(`Job "${job.name}" linked to assignment:`, isLinkedToAssignment);
+      
       if (!isLinkedToAssignment) {
         job.sources.forEach((source: any) => {
           const entry = materialMap.get(source.sourceItemId);
           if (entry) {
+            console.log(`Reserving ${source.sourceQuantity} of ${entry.name} for job "${job.name}"`);
             entry.reserved += source.sourceQuantity;
           }
         });
+      } else {
+        console.log(`Skipping reservation for job "${job.name}" (linked to assignment)`);
       }
     }
   });
