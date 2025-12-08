@@ -228,8 +228,77 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
 
     if (kit.isStructured && kit.packingRequirements) {
       const structure = parsePackingRequirements(kit.packingRequirements);
-      const totalMaterials = calculateTotalMaterials(structure);
-      totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
+      
+      // Helper to find sealed packet in inventory using various naming conventions
+      const findSealedPacket = (packetName: string) => {
+        const normalize = (s: string) => s.toLowerCase().trim();
+        const pName = normalize(packetName);
+        
+        // 1. Try exact name
+        let item = inventoryByName.get(pName);
+        if (item && item.type === "sealed_packet") return item;
+        
+        // 2. Try [Kit Name] Packet Name (Standard format)
+        const bracketed = normalize(`[${kit.name}] ${packetName}`);
+        item = inventoryByName.get(bracketed);
+        if (item && item.type === "sealed_packet") return item;
+        
+        // 3. Try [Kit Name]Packet Name (No space)
+        const bracketedNoSpace = normalize(`[${kit.name}]${packetName}`);
+        item = inventoryByName.get(bracketedNoSpace);
+        if (item && item.type === "sealed_packet") return item;
+        
+        return null;
+      };
+
+      // 1. Process Packets (Sealed Packets)
+      // Check if we have the sealed packet in stock before exploding into components
+      structure.packets.forEach(packet => {
+        const sealedItem = findSealedPacket(packet.name);
+        const totalSealedNeeded = 1 * requiredQty; // Assuming 1 packet per kit entry in structure
+        let actualSealedNeeded = totalSealedNeeded;
+
+        if (sealedItem) {
+            // Check availability from virtual inventory
+            let currentStock = sealedItem.quantity || 0;
+            if (virtualInventory) {
+                currentStock = virtualInventory.get(sealedItem._id) || 0;
+            }
+
+            // Consume sealed packets from virtual inventory
+            const usedStock = Math.min(currentStock, totalSealedNeeded);
+            if (virtualInventory) {
+                virtualInventory.set(sealedItem._id, currentStock - usedStock);
+            }
+            
+            actualSealedNeeded = totalSealedNeeded - usedStock;
+        }
+
+        // Only process components for the packets we actually need to make
+        if (actualSealedNeeded > 0) {
+            packet.materials.forEach(mat => {
+                // Calculate effective quantity per kit for the shortage
+                // required = qtyPerKit * requiredQty
+                // We want required = mat.quantity * actualSealedNeeded
+                // So effectiveQtyPerKit = (mat.quantity * actualSealedNeeded) / requiredQty
+                const effectiveQtyPerKit = (mat.quantity * actualSealedNeeded) / requiredQty;
+                processMaterial(mat.name, effectiveQtyPerKit, mat.unit, `Component of ${packet.name}`);
+            });
+        }
+      });
+
+      // 2. Process Pouches (Loose Materials)
+      // These are always required as loose items (unless we track pouches as items too, but usually not)
+      structure.pouches.forEach(pouch => {
+          pouch.materials.forEach(mat => {
+              processMaterial(mat.name, mat.quantity, mat.unit, `Pouch: ${pouch.name}`);
+          });
+      });
+    } else if (kit.packingRequirements) {
+        // Fallback for unstructured but parsed requirements (legacy)
+        const structure = parsePackingRequirements(kit.packingRequirements);
+        const totalMaterials = calculateTotalMaterials(structure);
+        totalMaterials.forEach(m => processMaterial(m.name, m.quantity, m.unit, "Main Component"));
     }
 
     kit.spareKits?.forEach((s: any) => processMaterial(s.name, s.quantity, s.unit, "Spare Kit"));
