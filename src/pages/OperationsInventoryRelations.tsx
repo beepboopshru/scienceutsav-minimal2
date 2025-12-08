@@ -401,19 +401,38 @@ export default function OperationsInventoryRelations() {
             <div className="border rounded-lg p-4 bg-muted/50">
               <h4 className="font-semibold mb-3">Items to be Reduced</h4>
               <div className="space-y-2">
-                {fulfillDialog.request?.items.map((item: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between py-2 px-3 bg-background rounded border">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {item.type} • {item.category || 'uncategorized'}
+                {fulfillDialog.request?.items.map((item: any, idx: number) => {
+                  // For sealed packets, calculate the display quantity from assignments
+                  let displayQuantity = item.quantity;
+                  if (item.category === "sealed_packet") {
+                    // Calculate total quantity across all assignments
+                    displayQuantity = 0;
+                    fulfillDialog.request?.assignments.forEach((assignment: any) => {
+                      if (assignment.kitStructure?.packets) {
+                        const matchingPacket = assignment.kitStructure.packets.find(
+                          (p: any) => p.name === item.name
+                        );
+                        if (matchingPacket) {
+                          displayQuantity += assignment.quantity * (matchingPacket.quantity || 1);
+                        }
+                      }
+                    });
+                  }
+                  
+                  return (
+                    <div key={idx} className="flex items-center justify-between py-2 px-3 bg-background rounded border">
+                      <div className="flex-1">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.type} • {item.category || 'uncategorized'}
+                        </div>
                       </div>
+                      <Badge variant="destructive" className="ml-4">
+                        -{displayQuantity} {item.unit}
+                      </Badge>
                     </div>
-                    <Badge variant="destructive" className="ml-4">
-                      -{item.quantity} {item.unit}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             
