@@ -40,6 +40,8 @@ export default function AdminZone() {
   });
   const allAssignments = useQuery(api.assignments.list, {});
   
+  const clearPendingAssignments = useMutation(api.assignments.clearPending);
+  const clearAllAssignments = useMutation(api.assignments.clearAll);
   const deleteAllLogs = useMutation(api.activityLogs.deleteAll);
 
   useEffect(() => {
@@ -62,6 +64,44 @@ export default function AdminZone() {
       </div>
     );
   }
+
+  const handleClearPendingAssignments = () => {
+    const pendingCount = allAssignments.filter(
+      a => a.status !== "dispatched" && a.status !== "delivered"
+    ).length;
+    
+    setConfirmDialog({
+      open: true,
+      title: "Clear Pending Assignments",
+      description: `This will delete ${pendingCount} pending assignments. Dispatched and delivered assignments will not be affected. Continue?`,
+      action: async () => {
+        try {
+          const count = await clearPendingAssignments({});
+          toast.success(`Cleared ${count} pending assignments`);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          toast.error("Failed to clear assignments");
+        }
+      },
+    });
+  };
+
+  const handleClearAllAssignments = () => {
+    setConfirmDialog({
+      open: true,
+      title: "⚠️ Clear ALL Assignments",
+      description: `This will permanently delete ALL ${allAssignments.length} assignments including dispatched ones. This action CANNOT be undone. Are you absolutely sure?`,
+      action: async () => {
+        try {
+          const count = await clearAllAssignments({});
+          toast.success(`Cleared all ${count} assignments`);
+          setConfirmDialog({ ...confirmDialog, open: false });
+        } catch (error) {
+          toast.error("Failed to clear assignments");
+        }
+      },
+    });
+  };
 
   const handleDeleteAllLogs = () => {
     setConfirmDialog({
@@ -136,12 +176,34 @@ export default function AdminZone() {
           <Card className="border-red-500/50">
             <CardHeader>
               <CardTitle className="text-red-600">Assignment Management</CardTitle>
-              <CardDescription>Assignment cleanup tools are currently disabled for safety</CardDescription>
+              <CardDescription>Clear assignment data (use with extreme caution)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Assignment cleanup functionality has been disabled to prevent accidental data loss.
-              </p>
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <p className="font-medium">Clear Pending Assignments</p>
+                  <p className="text-sm text-muted-foreground">
+                    Delete all non-dispatched assignments ({allAssignments.filter(a => a.status !== "dispatched" && a.status !== "delivered").length} total)
+                  </p>
+                </div>
+                <Button variant="destructive" onClick={handleClearPendingAssignments}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Pending
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border-2 border-red-500 rounded-lg bg-red-500/5">
+                <div>
+                  <p className="font-medium text-red-600">Clear ALL Assignments</p>
+                  <p className="text-sm text-muted-foreground">
+                    Delete every assignment including dispatched ({allAssignments.length} total)
+                  </p>
+                </div>
+                <Button variant="destructive" onClick={handleClearAllAssignments}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

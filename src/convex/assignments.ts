@@ -403,3 +403,62 @@ export const notifyOperationsUsers = internalMutation({
     }
   },
 });
+
+export const clearPending = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "admin") throw new Error("Not authorized");
+
+    const assignments = await ctx.db.query("assignments").collect();
+    const pendingAssignments = assignments.filter(
+      a => a.status !== "dispatched" && a.status !== "delivered"
+    );
+
+    let count = 0;
+    for (const assignment of pendingAssignments) {
+      await ctx.db.delete(assignment._id);
+      count++;
+    }
+
+    // Log the action
+    await ctx.db.insert("activityLogs", {
+      userId: userId,
+      actionType: "assignments_cleared",
+      details: `Cleared ${count} pending assignments`,
+    });
+
+    return count;
+  },
+});
+
+export const clearAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "admin") throw new Error("Not authorized");
+
+    const assignments = await ctx.db.query("assignments").collect();
+    let count = 0;
+    
+    for (const assignment of assignments) {
+      await ctx.db.delete(assignment._id);
+      count++;
+    }
+
+    // Log the action
+    await ctx.db.insert("activityLogs", {
+      userId: userId,
+      actionType: "all_assignments_cleared",
+      details: `Cleared all ${count} assignments`,
+    });
+
+    return count;
+  },
+});
