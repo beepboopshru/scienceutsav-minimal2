@@ -56,7 +56,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     return quantities;
   };
 
-  const calculateShortages = (assignment: any) => {
+  const calculateShortages = (assignment: any, virtualInventory?: Map<string, number>) => {
     const kit = assignment.kit;
     if (!kit || !inventory) return [];
 
@@ -82,25 +82,41 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       }
       
       if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
-        invItem.components.forEach((comp: any) => {
-          const compItem = inventory.find(i => i._id === comp.rawMaterialId);
-          if (compItem && compItem.type === "pre_processed") {
-            const compRequired = comp.quantityRequired * qtyPerKit * requiredQty;
-            const compAvailable = compItem.quantity || 0;
-            const compShortage = Math.max(0, compRequired - compAvailable);
-            
-            requirements.push({
-              id: compItem._id,
-              name: compItem.name,
-              required: compRequired,
-              available: compAvailable,
-              shortage: compShortage,
-              unit: comp.unit,
-              category: `${category} (from Sealed Packet: ${name})`,
-              invItem: compItem
+        // Calculate how many sealed packets are needed
+        const totalSealedNeeded = qtyPerKit * requiredQty;
+        let actualSealedNeeded = totalSealedNeeded;
+
+        // If virtual inventory is provided, check if we have stock of the sealed packet
+        if (virtualInventory) {
+            const currentStock = virtualInventory.get(invItem._id) || 0;
+            const usedStock = Math.min(currentStock, totalSealedNeeded);
+            actualSealedNeeded = totalSealedNeeded - usedStock;
+            // Update virtual inventory
+            virtualInventory.set(invItem._id, currentStock - usedStock);
+        }
+
+        // Only explode into components if we actually need to produce more sealed packets
+        if (actualSealedNeeded > 0) {
+            invItem.components.forEach((comp: any) => {
+              const compItem = inventory.find(i => i._id === comp.rawMaterialId);
+              if (compItem && compItem.type === "pre_processed") {
+                const compRequired = comp.quantityRequired * actualSealedNeeded;
+                const compAvailable = compItem.quantity || 0;
+                const compShortage = Math.max(0, compRequired - compAvailable);
+                
+                requirements.push({
+                  id: compItem._id,
+                  name: compItem.name,
+                  required: compRequired,
+                  available: compAvailable,
+                  shortage: compShortage,
+                  unit: comp.unit,
+                  category: `${category} (from Sealed Packet: ${name})`,
+                  invItem: compItem
+                });
+              }
             });
-          }
-        });
+        }
       } else if (invItem && invItem.type === "pre_processed") {
         const required = qtyPerKit * requiredQty;
         const available = invItem.quantity || 0;
@@ -136,10 +152,14 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const materialSummaryData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
+    // Initialize virtual inventory with current stock
+    const virtualInventory = new Map<string, number>();
+    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+
     const materialMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
-      const reqs = calculateShortages(assignment);
+      const reqs = calculateShortages(assignment, virtualInventory);
       reqs.forEach((item: any) => {
         const key = item.name.toLowerCase();
         if (materialMap.has(key)) {
@@ -182,6 +202,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const kitWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
+    // Initialize virtual inventory with current stock
+    const virtualInventory = new Map<string, number>();
+    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+
     const kitMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
@@ -189,7 +213,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       const kitId = kit?._id || "unknown";
       const kitName = kit?.name || "Unknown Kit";
       
-      const reqs = calculateShortages(assignment);
+      const reqs = calculateShortages(assignment, virtualInventory);
       
       if (!kitMap.has(kitId)) {
         kitMap.set(kitId, {
@@ -243,12 +267,16 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const monthWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
+    // Initialize virtual inventory with current stock
+    const virtualInventory = new Map<string, number>();
+    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+
     const monthMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
       const month = assignment.productionMonth || "No Month";
       
-      const reqs = calculateShortages(assignment);
+      const reqs = calculateShortages(assignment, virtualInventory);
       
       if (!monthMap.has(month)) {
         monthMap.set(month, {
@@ -301,6 +329,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const clientWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
+    // Initialize virtual inventory with current stock
+    const virtualInventory = new Map<string, number>();
+    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+
     const clientMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
@@ -322,7 +354,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         clientId = client._id || clientName;
       }
       
-      const reqs = calculateShortages(assignment);
+      const reqs = calculateShortages(assignment, virtualInventory);
       
       if (!clientMap.has(clientId)) {
         clientMap.set(clientId, {
@@ -376,6 +408,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const assignmentWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
+    // Initialize virtual inventory with current stock
+    const virtualInventory = new Map<string, number>();
+    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+
     return activeAssignments.map((assignment) => {
       const kit = assignment.kit;
       const client = assignment.client;
@@ -393,7 +429,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           "Unknown Client";
       }
       
-      const assignmentReqs = calculateShortages(assignment);
+      const assignmentReqs = calculateShortages(assignment, virtualInventory);
       const activeJobQty = getActiveJobQuantitiesForAssignments([assignment._id]);
       
       const adjustedReqs = assignmentReqs.map(req => {
