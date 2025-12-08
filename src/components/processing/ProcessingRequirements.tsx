@@ -20,6 +20,7 @@ interface ProcessingRequirementsProps {
 
 export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob, refreshTrigger }: ProcessingRequirementsProps) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState<"summary" | "kit-wise" | "assignment-wise">("summary");
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
@@ -32,12 +33,9 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     
     activeJobs.forEach(job => {
       if (job.status === "assigned" || job.status === "in_progress") {
-        // Only count this job if:
-        // 1. It has assignmentIds AND they match one of the current assignments, OR
-        // 2. It has no assignmentIds (legacy jobs - count them for all assignments)
         const hasMatchingAssignment = job.assignmentIds && job.assignmentIds.length > 0
           ? job.assignmentIds.some((id: string) => assignmentIds.includes(id))
-          : false; // Don't count legacy jobs without assignment IDs
+          : false;
         
         if (hasMatchingAssignment) {
           job.targets.forEach((target: any) => {
@@ -59,7 +57,6 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     const requiredQty = assignment.quantity;
 
     const processMaterial = (name: string, qtyPerKit: number, unit: string, category: string) => {
-      // First, check if the kit's components array specifies which inventory item to use
       let invItem = null;
       
       if (kit.components && kit.components.length > 0) {
@@ -73,14 +70,11 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         }
       }
       
-      // If not found in kit components, fall back to name lookup
       if (!invItem) {
         invItem = inventoryByName.get(name.toLowerCase());
       }
       
-      // Check if this is a sealed packet - if so, explode its BOM for pre-processed items
       if (invItem && invItem.type === "sealed_packet" && invItem.components && invItem.components.length > 0) {
-        // Look for pre-processed components in the sealed packet BOM
         invItem.components.forEach((comp: any) => {
           const compItem = inventory.find(i => i._id === comp.rawMaterialId);
           if (compItem && compItem.type === "pre_processed") {
@@ -88,7 +82,6 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             const compAvailable = compItem.quantity || 0;
             const compShortage = Math.max(0, compRequired - compAvailable);
             
-            // Always show requirement, even if no shortage (for assignment-specific view)
             requirements.push({
               id: compItem._id,
               name: compItem.name,
@@ -102,12 +95,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           }
         });
       } else if (invItem && invItem.type === "pre_processed") {
-        // Regular pre-processed item (not from sealed packet) - use the exact item from kit definition
         const required = qtyPerKit * requiredQty;
         const available = invItem.quantity || 0;
         const shortage = Math.max(0, required - available);
         
-        // Always show requirement, even if no shortage (for assignment-specific view)
         requirements.push({
           id: invItem._id,
           name,
@@ -134,10 +125,13 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     return requirements;
   };
 
-  const aggregateRequirements = (assignmentList: any[]) => {
+  // Material Summary: Aggregate all requirements across all assignments
+  const materialSummaryData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
     const materialMap = new Map<string, any>();
 
-    assignmentList.forEach((assignment) => {
+    assignments.forEach((assignment) => {
       const reqs = calculateShortages(assignment);
       reqs.forEach((item: any) => {
         const key = item.name.toLowerCase();
@@ -163,13 +157,8 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     });
 
     return Array.from(materialMap.values()).map((item) => {
-      // Get assignment IDs for this material requirement
       const assignmentIds = Array.from(item.assignmentIds) as string[];
-      
-      // Subtract active job quantities that are linked to these specific assignments
       const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
-      
-      // Calculate shortage: required - available - active jobs
       const shortage = Math.max(0, item.required - item.available - activeJobQty);
       
       return {
@@ -180,8 +169,70 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         assignmentIds,
       };
     }).filter(i => i.shortage > 0);
-  };
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
 
+  // Kit Wise: Group by kit
+  const kitWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const kitMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+      const kit = assignment.kit;
+      const kitId = kit?._id || "unknown";
+      const kitName = kit?.name || "Unknown Kit";
+      
+      const reqs = calculateShortages(assignment);
+      
+      if (!kitMap.has(kitId)) {
+        kitMap.set(kitId, {
+          kitId,
+          kitName,
+          assignments: [],
+          requirements: new Map<string, any>()
+        });
+      }
+      
+      const kitData = kitMap.get(kitId);
+      kitData.assignments.push(assignment);
+      
+      reqs.forEach((req: any) => {
+        const key = req.name.toLowerCase();
+        if (kitData.requirements.has(key)) {
+          const existing = kitData.requirements.get(key);
+          existing.required += req.required;
+          existing.assignmentIds.add(assignment._id);
+        } else {
+          kitData.requirements.set(key, {
+            ...req,
+            assignmentIds: new Set([assignment._id])
+          });
+        }
+      });
+    });
+
+    return Array.from(kitMap.values()).map((kitData) => {
+      const requirements = Array.from(kitData.requirements.values()).map((item: any) => {
+        const assignmentIds = Array.from(item.assignmentIds) as string[];
+        const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
+        const shortage = Math.max(0, item.required - item.available - activeJobQty);
+        
+        return {
+          ...item,
+          shortage,
+          activeJobQty,
+          assignmentIds
+        };
+      }).filter((r: any) => r.shortage > 0);
+      
+      return {
+        ...kitData,
+        requirements
+      };
+    }).filter(k => k.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  // Assignment Wise: Individual assignments
   const assignmentWiseData = useMemo(() => {
     if (!assignments || !inventory) return [];
     
@@ -202,13 +253,9 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           "Unknown Client";
       }
       
-      // Calculate requirements for this specific assignment
       const assignmentReqs = calculateShortages(assignment);
-      
-      // Get active job quantities for this specific assignment
       const activeJobQty = getActiveJobQuantitiesForAssignments([assignment._id]);
       
-      // Adjust shortages based on active jobs for this assignment
       const adjustedReqs = assignmentReqs.map(req => {
         const jobQty = activeJobQty.get(req.id) || 0;
         return {
@@ -217,7 +264,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           shortage: Math.max(0, req.shortage - jobQty),
           assignmentIds: [assignment._id]
         };
-      }).filter(r => r.shortage > 0); // Only show items with actual shortage
+      }).filter(r => r.shortage > 0);
       
       return {
         assignment,
@@ -333,35 +380,95 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Assignment-Specific Requirements</CardTitle>
-          <CardDescription>Pre-processed items needed for each assignment</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[600px]">
-            <div className="space-y-4">
-              {assignmentWiseData.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
-              ) : (
-                assignmentWiseData.map((item, idx) => (
-                  <Card key={idx}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{item.kitName}</CardTitle>
-                      <CardDescription>
-                        Client: {item.clientName} • Quantity: {item.quantity} • Month: {item.productionMonth || "N/A"}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <RequirementsTable items={item.requirements} />
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="summary">Material Summary</TabsTrigger>
+          <TabsTrigger value="kit-wise">Kit Wise</TabsTrigger>
+          <TabsTrigger value="assignment-wise">Assignment Wise</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="summary" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Material Summary</CardTitle>
+              <CardDescription>Aggregated pre-processed items needed across all assignments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                {materialSummaryData.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                ) : (
+                  <RequirementsTable items={materialSummaryData} />
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="kit-wise" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Kit Wise Requirements</CardTitle>
+              <CardDescription>Pre-processed items grouped by kit type</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {kitWiseData.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  ) : (
+                    kitWiseData.map((kitData, idx) => (
+                      <Card key={idx}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">{kitData.kitName}</CardTitle>
+                          <CardDescription>
+                            {kitData.assignments.length} assignment(s)
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <RequirementsTable items={kitData.requirements} />
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignment-wise" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Assignment-Specific Requirements</CardTitle>
+              <CardDescription>Pre-processed items needed for each assignment</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {assignmentWiseData.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  ) : (
+                    assignmentWiseData.map((item, idx) => (
+                      <Card key={idx}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">{item.kitName}</CardTitle>
+                          <CardDescription>
+                            Client: {item.clientName} • Quantity: {item.quantity} • Month: {item.productionMonth || "N/A"}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <RequirementsTable items={item.requirements} />
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
