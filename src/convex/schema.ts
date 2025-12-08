@@ -829,6 +829,12 @@ const schema = defineSchema(
       label: v.string(),
     }),
 
+    // Packing checklist items (configurable by admin)
+    packingChecklist: defineTable({
+      name: v.string(),
+      label: v.string(),
+    }),
+
     // Procurement purchasing quantities overrides
     procurementPurchasingQuantities: defineTable({
       materialId: v.id("inventory"),

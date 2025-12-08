@@ -39,6 +39,7 @@ import type * as materialRequestsByAssignment from "../materialRequestsByAssignm
 import type * as notifications from "../notifications.js";
 import type * as operations from "../operations.js";
 import type * as orderHistory from "../orderHistory.js";
+import type * as packingChecklist from "../packingChecklist.js";
 import type * as packingRequests from "../packingRequests.js";
 import type * as permissions from "../permissions.js";
 import type * as processingJobs from "../processingJobs.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   operations: typeof operations;
   orderHistory: typeof orderHistory;
+  packingChecklist: typeof packingChecklist;
   packingRequests: typeof packingRequests;
   permissions: typeof permissions;
   processingJobs: typeof processingJobs;

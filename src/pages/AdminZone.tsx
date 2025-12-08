@@ -31,10 +31,11 @@ export default function AdminZone() {
   const [checklistDialog, setChecklistDialog] = useState<{
     open: boolean;
     mode: "create" | "edit";
-    id?: Id<"dispatchChecklist">;
+    type: "dispatch" | "packing";
+    id?: Id<"dispatchChecklist"> | Id<"packingChecklist">;
     name: string;
     label: string;
-  }>({ open: false, mode: "create", name: "", label: "" });
+  }>({ open: false, mode: "create", type: "dispatch", name: "", label: "" });
   
   const [actionTypeFilter, setActionTypeFilter] = useState<string>("all");
   const [userFilter, setUserFilter] = useState<string>("all");
@@ -49,14 +50,18 @@ export default function AdminZone() {
     dateRange: dateRangeFilter,
   });
   const allAssignments = useQuery(api.assignments.list, {});
-  const checklistItems = useQuery(api.dispatchChecklist.list, {});
+  const dispatchChecklistItems = useQuery(api.dispatchChecklist.list, {});
+  const packingChecklistItems = useQuery(api.packingChecklist.list, {});
   
   const clearPendingAssignments = useMutation(api.assignments.clearPending);
   const clearAllAssignments = useMutation(api.assignments.clearAll);
   const deleteAllLogs = useMutation(api.activityLogs.deleteAll);
-  const createChecklistItem = useMutation(api.dispatchChecklist.create);
-  const updateChecklistItem = useMutation(api.dispatchChecklist.update);
-  const deleteChecklistItem = useMutation(api.dispatchChecklist.remove);
+  const createDispatchChecklistItem = useMutation(api.dispatchChecklist.create);
+  const updateDispatchChecklistItem = useMutation(api.dispatchChecklist.update);
+  const deleteDispatchChecklistItem = useMutation(api.dispatchChecklist.remove);
+  const createPackingChecklistItem = useMutation(api.packingChecklist.create);
+  const updatePackingChecklistItem = useMutation(api.packingChecklist.update);
+  const deletePackingChecklistItem = useMutation(api.packingChecklist.remove);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -71,7 +76,7 @@ export default function AdminZone() {
     }
   }, [isLoading, isAuthenticated, user, navigate]);
 
-  if (isLoading || !user || !activityLogs || !allAssignments || !checklistItems) {
+  if (isLoading || !user || !activityLogs || !allAssignments || !dispatchChecklistItems || !packingChecklistItems) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-foreground" />
@@ -164,33 +169,56 @@ export default function AdminZone() {
 
     try {
       if (checklistDialog.mode === "create") {
-        await createChecklistItem({
-          name: checklistDialog.name.trim(),
-          label: checklistDialog.label.trim(),
-        });
+        if (checklistDialog.type === "dispatch") {
+          await createDispatchChecklistItem({
+            name: checklistDialog.name.trim(),
+            label: checklistDialog.label.trim(),
+          });
+        } else {
+          await createPackingChecklistItem({
+            name: checklistDialog.name.trim(),
+            label: checklistDialog.label.trim(),
+          });
+        }
         toast.success("Checklist item created");
       } else if (checklistDialog.id) {
-        await updateChecklistItem({
-          id: checklistDialog.id,
-          name: checklistDialog.name.trim(),
-          label: checklistDialog.label.trim(),
-        });
+        if (checklistDialog.type === "dispatch") {
+          await updateDispatchChecklistItem({
+            id: checklistDialog.id as Id<"dispatchChecklist">,
+            name: checklistDialog.name.trim(),
+            label: checklistDialog.label.trim(),
+          });
+        } else {
+          await updatePackingChecklistItem({
+            id: checklistDialog.id as Id<"packingChecklist">,
+            name: checklistDialog.name.trim(),
+            label: checklistDialog.label.trim(),
+          });
+        }
         toast.success("Checklist item updated");
       }
-      setChecklistDialog({ open: false, mode: "create", name: "", label: "" });
+      setChecklistDialog({ open: false, mode: "create", type: "dispatch", name: "", label: "" });
     } catch (error: any) {
       toast.error(error.message || "Failed to save checklist item");
     }
   };
 
-  const handleDeleteChecklistItem = (id: Id<"dispatchChecklist">, label: string) => {
+  const handleDeleteChecklistItem = (
+    id: Id<"dispatchChecklist"> | Id<"packingChecklist">,
+    label: string,
+    type: "dispatch" | "packing"
+  ) => {
     setConfirmDialog({
       open: true,
       title: "Delete Checklist Item",
       description: `Are you sure you want to delete "${label}"? This action cannot be undone.`,
       action: async () => {
         try {
-          await deleteChecklistItem({ id });
+          if (type === "dispatch") {
+            await deleteDispatchChecklistItem({ id: id as Id<"dispatchChecklist"> });
+          } else {
+            await deletePackingChecklistItem({ id: id as Id<"packingChecklist"> });
+          }
           toast.success("Checklist item deleted");
           setConfirmDialog({ ...confirmDialog, open: false });
         } catch (error: any) {
@@ -230,16 +258,16 @@ export default function AdminZone() {
             </AlertDescription>
           </Alert>
 
-          {/* Dispatch Checklist Management */}
+          {/* Packing Checklist Management */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Dispatch Checklist Management</CardTitle>
-                  <CardDescription>Configure checklist items for dispatch operations</CardDescription>
+                  <CardTitle>Packing Checklist Management</CardTitle>
+                  <CardDescription>Configure checklist items for packing operations (shown during transfer to dispatch)</CardDescription>
                 </div>
                 <Button
-                  onClick={() => setChecklistDialog({ open: true, mode: "create", name: "", label: "" })}
+                  onClick={() => setChecklistDialog({ open: true, mode: "create", type: "packing", name: "", label: "" })}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Item
@@ -248,7 +276,7 @@ export default function AdminZone() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {checklistItems.map((item) => (
+                {packingChecklistItems.map((item) => (
                   <div
                     key={item._id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -265,6 +293,7 @@ export default function AdminZone() {
                           setChecklistDialog({
                             open: true,
                             mode: "edit",
+                            type: "packing",
                             id: item._id,
                             name: item.name,
                             label: item.label,
@@ -276,16 +305,79 @@ export default function AdminZone() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteChecklistItem(item._id, item.label)}
+                        onClick={() => handleDeleteChecklistItem(item._id, item.label, "packing")}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
-                {checklistItems.length === 0 && (
+                {packingChecklistItems.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No checklist items configured. Add your first item to get started.
+                    No packing checklist items configured. Add your first item to get started.
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dispatch Checklist Management */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Dispatch Checklist Management</CardTitle>
+                  <CardDescription>Configure checklist items for dispatch operations (shown during ready for dispatch)</CardDescription>
+                </div>
+                <Button
+                  onClick={() => setChecklistDialog({ open: true, mode: "create", type: "dispatch", name: "", label: "" })}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {dispatchChecklistItems.map((item) => (
+                  <div
+                    key={item._id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium">{item.label}</p>
+                      <p className="text-sm text-muted-foreground">Key: {item.name}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setChecklistDialog({
+                            open: true,
+                            mode: "edit",
+                            type: "dispatch",
+                            id: item._id,
+                            name: item.name,
+                            label: item.label,
+                          })
+                        }
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteChecklistItem(item._id, item.label, "dispatch")}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {dispatchChecklistItems.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No dispatch checklist items configured. Add your first item to get started.
                   </p>
                 )}
               </div>
@@ -475,10 +567,10 @@ export default function AdminZone() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {checklistDialog.mode === "create" ? "Add Checklist Item" : "Edit Checklist Item"}
+              {checklistDialog.mode === "create" ? "Add" : "Edit"} {checklistDialog.type === "dispatch" ? "Dispatch" : "Packing"} Checklist Item
             </DialogTitle>
             <DialogDescription>
-              Configure a checklist item for dispatch operations
+              Configure a checklist item for {checklistDialog.type} operations
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
