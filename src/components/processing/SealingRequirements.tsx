@@ -216,7 +216,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
     return requirements;
   };
 
-  const aggregateRequirements = (assignmentList: any[]) => {
+  const aggregateRequirements = (assignmentList: any[], onlyShortages: boolean = true) => {
     const materialMap = new Map<string, any>();
 
     assignmentList.forEach((assignment) => {
@@ -268,10 +268,10 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         surplus: Math.max(0, item.available - item.required),
         kits: Array.from(item.kits),
       };
-    }).filter(i => i.shortage > 0); // Only show items with actual shortages
+    }).filter(i => !onlyShortages || i.shortage > 0); // Only show items with actual shortages if requested
   };
 
-  const summaryData = aggregateRequirements(activeAssignments);
+  const summaryData = aggregateRequirements(activeAssignments, true);
 
   const kitWiseData = useMemo(() => {
     const kitMap = new Map<string, any>();
@@ -291,7 +291,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
     
     return Array.from(kitMap.values()).map(kit => ({
       ...kit,
-      requirements: aggregateRequirements(kit.assignments)
+      requirements: aggregateRequirements(kit.assignments, false)
     }));
   }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
 
@@ -312,7 +312,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
       .sort((a, b) => b.month.localeCompare(a.month))
       .map(month => ({
         ...month,
-        requirements: aggregateRequirements(month.assignments)
+        requirements: aggregateRequirements(month.assignments, false)
       }));
   }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
 
@@ -349,7 +349,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
 
     return Array.from(clientMap.values()).map(client => ({
       ...client,
-      requirements: aggregateRequirements(client.assignments)
+      requirements: aggregateRequirements(client.assignments, false)
     }));
   }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
 
@@ -379,7 +379,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
         clientName,
         quantity: assignment.quantity,
         productionMonth: assignment.productionMonth,
-        requirements: aggregateRequirements([assignment])
+        requirements: aggregateRequirements([assignment], false)
       };
     }).filter(a => a.requirements.length > 0);
   }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
