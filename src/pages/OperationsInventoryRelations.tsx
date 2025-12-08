@@ -421,15 +421,12 @@ export default function OperationsInventoryRelations() {
                                 {pouch.materials && pouch.materials.length > 0 && (
                                   <div className="ml-2 space-y-1">
                                     {pouch.materials.map((material: any, matIdx: number) => (
-                                      <div key={matIdx} className="text-sm flex justify-between items-center py-1">
+                                      <div key={matIdx} className="text-sm py-1">
                                         <span className="text-muted-foreground">
                                           • {material.name}
                                           <Badge variant="secondary" className="text-xs ml-2">
                                             {material.type || 'raw'}
                                           </Badge>
-                                        </span>
-                                        <span className="font-mono text-xs">
-                                          {(material.quantity || 0) * assignment.quantity} {material.unit || 'pcs'}
                                         </span>
                                       </div>
                                     ))}
@@ -454,11 +451,8 @@ export default function OperationsInventoryRelations() {
                                 const displayQuantity = packetItem?.quantity || 0;
                                 
                                 return (
-                                  <div key={packetIdx} className="text-sm flex justify-between items-center py-1">
+                                  <div key={packetIdx} className="text-sm py-1">
                                     <span className="text-muted-foreground">• {packet.name}</span>
-                                    <span className="font-mono text-xs">
-                                      {displayQuantity} {packetItem?.unit || packet.unit || 'pcs'}
-                                    </span>
                                   </div>
                                 );
                               })}
@@ -478,9 +472,8 @@ export default function OperationsInventoryRelations() {
                           {viewItemsSheet.request?.items
                             .filter((item: any) => item.category === "bulk")
                             .map((item: any, idx: number) => (
-                              <div key={idx} className="text-sm flex justify-between items-center py-1">
+                              <div key={idx} className="text-sm py-1">
                                 <span className="text-muted-foreground">• {item.name}</span>
-                                <span className="font-mono text-xs">{item.quantity} {item.unit}</span>
                               </div>
                             ))}
                         </div>
@@ -494,9 +487,8 @@ export default function OperationsInventoryRelations() {
                           {viewItemsSheet.request?.items
                             .filter((item: any) => item.category === "spare")
                             .map((item: any, idx: number) => (
-                              <div key={idx} className="text-sm flex justify-between items-center py-1">
+                              <div key={idx} className="text-sm py-1">
                                 <span className="text-muted-foreground">• {item.name}</span>
-                                <span className="font-mono text-xs">{item.quantity} {item.unit}</span>
                               </div>
                             ))}
                         </div>
@@ -510,9 +502,8 @@ export default function OperationsInventoryRelations() {
                           {viewItemsSheet.request?.items
                             .filter((item: any) => item.category === "misc")
                             .map((item: any, idx: number) => (
-                              <div key={idx} className="text-sm flex justify-between items-center py-1">
+                              <div key={idx} className="text-sm py-1">
                                 <span className="text-muted-foreground">• {item.name}</span>
-                                <span className="font-mono text-xs">{item.quantity} {item.unit}</span>
                               </div>
                             ))}
                         </div>
