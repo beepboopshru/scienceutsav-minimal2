@@ -169,11 +169,13 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       
       // Subtract active job quantities that are linked to these specific assignments
       const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
-      const adjustedShortage = Math.max(0, item.required - item.available - activeJobQty);
+      
+      // Calculate shortage: required - available - active jobs
+      const shortage = Math.max(0, item.required - item.available - activeJobQty);
       
       return {
         ...item,
-        shortage: adjustedShortage,
+        shortage,
         activeJobQty,
         kits: Array.from(item.kits),
         assignmentIds,
