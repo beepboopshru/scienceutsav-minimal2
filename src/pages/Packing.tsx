@@ -866,6 +866,7 @@ export default function Packing() {
                                   <SelectContent>
                                     <SelectItem value="assigned">Assigned</SelectItem>
                                     <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="received_from_inventory">Received from Inventory</SelectItem>
                                     <SelectItem value="transferred_to_dispatch">
                                       Transferred to Dispatch
                                     </SelectItem>
