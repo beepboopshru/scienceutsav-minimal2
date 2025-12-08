@@ -344,14 +344,19 @@ export const aggregateMaterials = (
   console.log('Materials in map:', materialMap.size);
 
   // Process processing jobs (assigned status only - reserves source materials)
+  // BUT: Skip jobs linked to assignments to avoid double-counting
   processingJobs.forEach(job => {
     if (job.status === "assigned" && job.sources) {
-      job.sources.forEach((source: any) => {
-        const entry = materialMap.get(source.sourceItemId);
-        if (entry) {
-          entry.reserved += source.sourceQuantity;
-        }
-      });
+      // Only reserve materials if the job is NOT linked to any assignments
+      const isLinkedToAssignment = job.assignmentIds && job.assignmentIds.length > 0;
+      if (!isLinkedToAssignment) {
+        job.sources.forEach((source: any) => {
+          const entry = materialMap.get(source.sourceItemId);
+          if (entry) {
+            entry.reserved += source.sourceQuantity;
+          }
+        });
+      }
     }
   });
 
