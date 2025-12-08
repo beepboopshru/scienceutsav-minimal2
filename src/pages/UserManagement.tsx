@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
+import { UserPermissionsDialog } from "@/components/users/UserPermissionsDialog";
+import { Settings } from "lucide-react";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function UserManagement() {
   const currentUser = useQuery(api.users.currentUser);
@@ -15,6 +18,10 @@ export default function UserManagement() {
   const approveUser = useMutation(api.users.approveUser);
   const updateRole = useMutation(api.users.updateRole);
   const deleteUser = useMutation(api.users.deleteUser);
+
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<Id<"users"> | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState("");
 
   if (!currentUser || currentUser.role !== "admin") {
     return (
@@ -55,6 +62,12 @@ export default function UserManagement() {
     } catch (error) {
       toast.error("Failed to delete user");
     }
+  };
+
+  const openPermissionsDialog = (userId: Id<"users">, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
+    setPermissionsDialogOpen(true);
   };
 
   return (
@@ -155,6 +168,13 @@ export default function UserManagement() {
                             <SelectItem value="content">Content</SelectItem>
                           </SelectContent>
                         </Select>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openPermissionsDialog(user._id, user.name || user.email || "User")}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)}>
                           Delete
                         </Button>
@@ -167,6 +187,15 @@ export default function UserManagement() {
           </div>
         </div>
       </div>
+
+      {selectedUserId && (
+        <UserPermissionsDialog
+          userId={selectedUserId}
+          userName={selectedUserName}
+          open={permissionsDialogOpen}
+          onOpenChange={setPermissionsDialogOpen}
+        />
+      )}
     </Layout>
   );
 }
