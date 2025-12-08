@@ -58,8 +58,7 @@ export const calculateShortage = (
   reserved: number,
   minStock: number
 ): number => {
-  // User requested logic: (order req - Available) + min stock
-  // We ignore reserved quantity in the shortage calculation
+  // Formula: (Order Required - Available) + Min Stock
   return Math.max(0, (required - available) + minStock);
 };
 
@@ -74,13 +73,6 @@ export const aggregateMaterials = (
   materialRequests: any[] = []
 ): ProcurementMaterial[] => {
   const materialMap = new Map<string, ProcurementMaterial>();
-
-  console.log('=== PROCUREMENT DEBUG ===');
-  console.log('Total assignments:', assignments.length);
-  console.log('Total kits:', kits.length);
-  console.log('Total inventory:', inventory.length);
-  console.log('Sample assignment:', assignments[0]);
-  console.log('Sample kit:', kits[0]);
 
   // Helper to get or create material entry
   const getMaterialEntry = (invItem: any): ProcurementMaterial => {
@@ -199,37 +191,18 @@ export const aggregateMaterials = (
   let processedCount = 0;
   assignments.forEach(assignment => {
     if (!shouldIncludeAssignment(assignment.status)) {
-      console.log('Skipping assignment with status:', assignment.status);
       return;
     }
 
     const kit = kits.find(k => k._id === assignment.kitId);
     if (!kit) {
-      console.log('Kit not found for assignment:', assignment.kitId);
       return;
     }
-
-    console.log('Processing assignment:', {
-      kitName: kit.name,
-      kitId: kit._id,
-      quantity: assignment.quantity,
-      isStructured: kit.isStructured,
-      hasPackingRequirements: !!kit.packingRequirements,
-      hasComponents: !!kit.components,
-      componentsLength: kit.components?.length || 0,
-      hasSpareKits: !!kit.spareKits,
-      spareKitsLength: kit.spareKits?.length || 0,
-      hasBulkMaterials: !!kit.bulkMaterials,
-      bulkMaterialsLength: kit.bulkMaterials?.length || 0,
-      hasMiscellaneous: !!kit.miscellaneous,
-      miscellaneousLength: kit.miscellaneous?.length || 0
-    });
 
     processedCount++;
 
     // Process structured kits with packingRequirements (SKIP components if structured)
     if (kit.isStructured && kit.packingRequirements) {
-      console.log('Processing structured kit with packingRequirements - SKIPPING components');
       processPackingRequirements(kit.packingRequirements, kit._id, kit.name, assignment.quantity);
       // Skip processing components for structured kits as they're already in packingRequirements
       return;
@@ -237,24 +210,13 @@ export const aggregateMaterials = (
 
     // Process kit components (only for non-structured kits)
     if (kit.components && Array.isArray(kit.components) && kit.components.length > 0) {
-      console.log('Kit has components:', kit.components.length);
       kit.components.forEach((kitComp: any) => {
-        console.log('Processing kit component:', kitComp);
         const invItem = inventory.find(i => i._id === kitComp.inventoryItemId);
-        console.log('Looking for inventory item:', kitComp.inventoryItemId, 'Found:', !!invItem);
         if (!invItem) {
-          console.log('Inventory item not found:', kitComp.inventoryItemId);
-          console.log('Available inventory IDs:', inventory.map(i => i._id).slice(0, 5));
           return;
         }
 
         const requiredQty = kitComp.quantityPerKit * assignment.quantity;
-        console.log('Processing component:', {
-          name: invItem.name,
-          type: invItem.type,
-          required: requiredQty,
-          hasSubComponents: invItem.type === 'sealed_packet' && !!invItem.components
-        });
 
         // Handle BOM explosion for composite items
         if ((invItem.type === "sealed_packet" || invItem.type === "pre_processed") && 
@@ -285,10 +247,8 @@ export const aggregateMaterials = (
 
     // Process spare kits
     if (kit.spareKits && Array.isArray(kit.spareKits) && kit.spareKits.length > 0) {
-      console.log('Processing spare kits:', kit.spareKits.length);
       kit.spareKits.forEach((spare: any) => {
         const spareItem = inventory.find(i => i.name === spare.name);
-        console.log('Looking for spare:', spare.name, 'Found:', !!spareItem, 'Type:', spareItem?.type);
         if (spareItem && spareItem.type === "raw") {
           const spareQty = spare.quantity * assignment.quantity;
           addRawMaterialRequirement(
@@ -304,10 +264,8 @@ export const aggregateMaterials = (
 
     // Process bulk materials
     if (kit.bulkMaterials && Array.isArray(kit.bulkMaterials) && kit.bulkMaterials.length > 0) {
-      console.log('Processing bulk materials:', kit.bulkMaterials.length);
       kit.bulkMaterials.forEach((bulk: any) => {
         const bulkItem = inventory.find(i => i.name === bulk.name);
-        console.log('Looking for bulk:', bulk.name, 'Found:', !!bulkItem, 'Type:', bulkItem?.type);
         if (bulkItem && bulkItem.type === "raw") {
           const bulkQty = bulk.quantity * assignment.quantity;
           addRawMaterialRequirement(
@@ -323,10 +281,8 @@ export const aggregateMaterials = (
 
     // Process miscellaneous items
     if (kit.miscellaneous && Array.isArray(kit.miscellaneous) && kit.miscellaneous.length > 0) {
-      console.log('Processing miscellaneous:', kit.miscellaneous.length);
       kit.miscellaneous.forEach((misc: any) => {
         const miscItem = inventory.find(i => i.name === misc.name);
-        console.log('Looking for misc:', misc.name, 'Found:', !!miscItem, 'Type:', miscItem?.type);
         if (miscItem && miscItem.type === "raw") {
           const miscQty = misc.quantity * assignment.quantity;
           addRawMaterialRequirement(
@@ -341,37 +297,20 @@ export const aggregateMaterials = (
     }
   });
 
-  console.log('Processed assignments:', processedCount);
-  console.log('Materials in map:', materialMap.size);
-
   // Process processing jobs (assigned status only - reserves source materials)
   // Skip jobs linked to assignments to avoid double-counting (their requirements are already in orderRequired)
-  console.log('Processing jobs count:', processingJobs.length);
   processingJobs.forEach(job => {
-    console.log('Job:', {
-      name: job.name,
-      status: job.status,
-      hasSources: !!job.sources,
-      sourcesLength: job.sources?.length || 0,
-      hasAssignmentIds: !!job.assignmentIds,
-      assignmentIdsLength: job.assignmentIds?.length || 0
-    });
-    
     if (job.status === "assigned" && job.sources) {
       // Only reserve materials if the job is NOT linked to any assignment
       const isLinkedToAssignment = job.assignmentIds && job.assignmentIds.length > 0;
-      console.log(`Job "${job.name}" linked to assignment:`, isLinkedToAssignment);
       
       if (!isLinkedToAssignment) {
         job.sources.forEach((source: any) => {
           const entry = materialMap.get(source.sourceItemId);
           if (entry) {
-            console.log(`Reserving ${source.sourceQuantity} of ${entry.name} for job "${job.name}"`);
             entry.reserved += source.sourceQuantity;
           }
         });
-      } else {
-        console.log(`Skipping reservation for job "${job.name}" (linked to assignment)`);
       }
     }
   });
@@ -407,9 +346,6 @@ export const aggregateMaterials = (
         estCost: purchasingQty * (item.vendorPrice || 0)
       };
     });
-
-  console.log('Final materials count:', result.length);
-  console.log('=== END DEBUG ===');
 
   return result;
 };
