@@ -554,6 +554,7 @@ export default function ProcessingJobs() {
                 assignments={assignments} 
                 inventory={inventory} 
                 activeJobs={preProcessingJobs}
+                allJobs={jobs}
                 refreshTrigger={lastRefresh}
               />
             </TabsContent>

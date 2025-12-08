@@ -13,10 +13,11 @@ interface ProcessingRequirementsProps {
   assignments: any[];
   inventory: any[];
   activeJobs?: any[];
+  allJobs?: any[];
   refreshTrigger?: number;
 }
 
-export function ProcessingRequirements({ assignments, inventory, activeJobs = [], refreshTrigger }: ProcessingRequirementsProps) {
+export function ProcessingRequirements({ assignments, inventory, activeJobs = [], allJobs = [], refreshTrigger }: ProcessingRequirementsProps) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<"summary" | "kit-wise" | "month-wise" | "client-wise" | "assignment-wise">("summary");
 
@@ -33,6 +34,22 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     if (!inventory) return new Map();
     return new Map(inventory.map(i => [i.name.toLowerCase(), i]));
   }, [inventory, refreshTrigger]);
+
+  // Calculate active quantities for all items from all jobs (used for virtual inventory)
+  const activeTargetQuantities = useMemo(() => {
+    const quantities = new Map<string, number>();
+    if (!allJobs) return quantities;
+
+    allJobs.forEach(job => {
+      if (job.status === "assigned" || job.status === "in_progress") {
+        job.targets.forEach((target: any) => {
+          const current = quantities.get(target.targetItemId) || 0;
+          quantities.set(target.targetItemId, current + target.targetQuantity);
+        });
+      }
+    });
+    return quantities;
+  }, [allJobs, refreshTrigger]);
 
   // Calculate active job quantities by target item, filtered by assignment IDs
   const getActiveJobQuantitiesForAssignments = (assignmentIds: string[]) => {
@@ -152,9 +169,12 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   const materialSummaryData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
-    // Initialize virtual inventory with current stock
+    // Initialize virtual inventory with current stock + active production
     const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+    inventory.forEach(i => {
+      const activeQty = activeTargetQuantities.get(i._id) || 0;
+      virtualInventory.set(i._id, i.quantity + activeQty);
+    });
 
     const materialMap = new Map<string, any>();
 
@@ -196,15 +216,18 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         assignmentIds,
       };
     }).filter(i => i.shortage > 0);
-  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Kit Wise: Group by kit
   const kitWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
-    // Initialize virtual inventory with current stock
+    // Initialize virtual inventory with current stock + active production
     const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+    inventory.forEach(i => {
+      const activeQty = activeTargetQuantities.get(i._id) || 0;
+      virtualInventory.set(i._id, i.quantity + activeQty);
+    });
 
     const kitMap = new Map<string, any>();
 
@@ -261,15 +284,18 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         requirements
       };
     }).filter(k => k.requirements.length > 0);
-  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Month Wise: Group by production month
   const monthWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
-    // Initialize virtual inventory with current stock
+    // Initialize virtual inventory with current stock + active production
     const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+    inventory.forEach(i => {
+      const activeQty = activeTargetQuantities.get(i._id) || 0;
+      virtualInventory.set(i._id, i.quantity + activeQty);
+    });
 
     const monthMap = new Map<string, any>();
 
@@ -323,15 +349,18 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         requirements
       };
     }).filter(m => m.requirements.length > 0);
-  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Client Wise: Group by client
   const clientWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
-    // Initialize virtual inventory with current stock
+    // Initialize virtual inventory with current stock + active production
     const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+    inventory.forEach(i => {
+      const activeQty = activeTargetQuantities.get(i._id) || 0;
+      virtualInventory.set(i._id, i.quantity + activeQty);
+    });
 
     const clientMap = new Map<string, any>();
 
@@ -402,15 +431,18 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         requirements
       };
     }).filter(c => c.requirements.length > 0);
-  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Assignment Wise: Individual assignments
   const assignmentWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
-    // Initialize virtual inventory with current stock
+    // Initialize virtual inventory with current stock + active production
     const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => virtualInventory.set(i._id, i.quantity));
+    inventory.forEach(i => {
+      const activeQty = activeTargetQuantities.get(i._id) || 0;
+      virtualInventory.set(i._id, i.quantity + activeQty);
+    });
 
     return activeAssignments.map((assignment) => {
       const kit = assignment.kit;
@@ -451,7 +483,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         requirements: adjustedReqs
       };
     }).filter(a => a.requirements.length > 0);
-  }, [activeAssignments, inventory, refreshTrigger, activeJobs]);
+  }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   const toggleRow = (key: string) => {
     setExpandedRows(prev => ({ ...prev, [key]: !prev[key] }));
