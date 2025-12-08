@@ -420,16 +420,27 @@ export default function OperationsInventoryRelations() {
                                 <div className="font-medium text-sm mb-1">{pouch.name || `Pouch ${pouchIdx + 1}`}</div>
                                 {pouch.materials && pouch.materials.length > 0 && (
                                   <div className="ml-2 space-y-1">
-                                    {pouch.materials.map((material: any, matIdx: number) => (
-                                      <div key={matIdx} className="text-sm py-1">
-                                        <span className="text-muted-foreground">
-                                          • {material.name}
-                                          <Badge variant="secondary" className="text-xs ml-2">
-                                            {material.type || 'raw'}
+                                    {pouch.materials.map((material: any, matIdx: number) => {
+                                      // Find the actual quantity from the packing request items
+                                      const materialItem = viewItemsSheet.request?.items.find(
+                                        (item: any) => item.category === "main_pouch" && item.name === material.name
+                                      );
+                                      const displayQuantity = materialItem?.quantity || 0;
+                                      
+                                      return (
+                                        <div key={matIdx} className="text-sm py-1 flex items-center justify-between">
+                                          <span className="text-muted-foreground">
+                                            • {material.name}
+                                            <Badge variant="secondary" className="text-xs ml-2">
+                                              {material.type || 'raw'}
+                                            </Badge>
+                                          </span>
+                                          <Badge variant="outline" className="text-xs ml-2">
+                                            {displayQuantity} {materialItem?.unit || 'pcs'}
                                           </Badge>
-                                        </span>
-                                      </div>
-                                    ))}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -447,12 +458,14 @@ export default function OperationsInventoryRelations() {
                                 const packetItem = viewItemsSheet.request?.items.find(
                                   (item: any) => item.category === "sealed_packet" && item.name === packet.name
                                 );
-                                // Use the quantity from packing request items, which should already be calculated
                                 const displayQuantity = packetItem?.quantity || 0;
                                 
                                 return (
-                                  <div key={packetIdx} className="text-sm py-1">
+                                  <div key={packetIdx} className="text-sm py-1 flex items-center justify-between">
                                     <span className="text-muted-foreground">• {packet.name}</span>
+                                    <Badge variant="outline" className="text-xs ml-2">
+                                      {displayQuantity} {packetItem?.unit || 'pcs'}
+                                    </Badge>
                                   </div>
                                 );
                               })}
@@ -472,8 +485,11 @@ export default function OperationsInventoryRelations() {
                           {viewItemsSheet.request?.items
                             .filter((item: any) => item.category === "bulk")
                             .map((item: any, idx: number) => (
-                              <div key={idx} className="text-sm py-1">
+                              <div key={idx} className="text-sm py-1 flex items-center justify-between">
                                 <span className="text-muted-foreground">• {item.name}</span>
+                                <Badge variant="outline" className="text-xs ml-2">
+                                  {item.quantity} {item.unit}
+                                </Badge>
                               </div>
                             ))}
                         </div>
@@ -487,8 +503,11 @@ export default function OperationsInventoryRelations() {
                           {viewItemsSheet.request?.items
                             .filter((item: any) => item.category === "spare")
                             .map((item: any, idx: number) => (
-                              <div key={idx} className="text-sm py-1">
+                              <div key={idx} className="text-sm py-1 flex items-center justify-between">
                                 <span className="text-muted-foreground">• {item.name}</span>
+                                <Badge variant="outline" className="text-xs ml-2">
+                                  {item.quantity} {item.unit}
+                                </Badge>
                               </div>
                             ))}
                         </div>
@@ -502,8 +521,11 @@ export default function OperationsInventoryRelations() {
                           {viewItemsSheet.request?.items
                             .filter((item: any) => item.category === "misc")
                             .map((item: any, idx: number) => (
-                              <div key={idx} className="text-sm py-1">
+                              <div key={idx} className="text-sm py-1 flex items-center justify-between">
                                 <span className="text-muted-foreground">• {item.name}</span>
+                                <Badge variant="outline" className="text-xs ml-2">
+                                  {item.quantity} {item.unit}
+                                </Badge>
                               </div>
                             ))}
                         </div>
