@@ -79,6 +79,7 @@ export default function Dispatch() {
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list);
   const customDispatches = useQuery(api.customDispatches.list, {});
+  const dispatchChecklistItems = useQuery(api.dispatchChecklist.list);
   const createCustomDispatch = useMutation(api.customDispatches.create);
   const updateCustomDispatchStatus = useMutation(api.customDispatches.updateStatus);
   const deleteCustomDispatch = useMutation(api.customDispatches.deleteCustomDispatch);
@@ -154,12 +155,7 @@ export default function Dispatch() {
   // Checklist dialog state
   const [checklistDialogOpen, setChecklistDialogOpen] = useState(false);
   const [selectedAssignmentForDispatch, setSelectedAssignmentForDispatch] = useState<Id<"assignments"> | null>(null);
-  const [checklistItems, setChecklistItems] = useState({
-    kitCount: false,
-    bulkMaterials: false,
-    workbookWorksheetConceptMap: false,
-    spareKitsTools: false,
-  });
+  const [checklistItems, setChecklistItems] = useState<Record<string, boolean>>({});
   const [ewayNumber, setEwayNumber] = useState("");
   const [ewayDocument, setEwayDocument] = useState<File | null>(null);
   const [dispatchNumber, setDispatchNumber] = useState("");
@@ -465,12 +461,7 @@ export default function Dispatch() {
     if (newStatus === "ready_for_dispatch") {
       // Open checklist dialog only for ready_for_dispatch
       setSelectedAssignmentForDispatch(assignmentId);
-      setChecklistItems({
-        kitCount: false,
-        bulkMaterials: false,
-        workbookWorksheetConceptMap: false,
-        spareKitsTools: false,
-      });
+        setChecklistItems({});
       setChecklistDialogOpen(true);
     } else if (newStatus === "dispatched") {
       // Open proof photo dialog for dispatched status
@@ -1613,54 +1604,20 @@ export default function Dispatch() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="kitCount"
-                  checked={checklistItems.kitCount}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, kitCount: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="kitCount" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Kit count verified
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="bulkMaterials"
-                  checked={checklistItems.bulkMaterials}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, bulkMaterials: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="bulkMaterials" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Bulk materials included
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="workbookWorksheetConceptMap"
-                  checked={checklistItems.workbookWorksheetConceptMap}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, workbookWorksheetConceptMap: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="workbookWorksheetConceptMap" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Workbook, worksheet, concept map included
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="spareKitsTools"
-                  checked={checklistItems.spareKitsTools}
-                  onCheckedChange={(checked) =>
-                    setChecklistItems((prev) => ({ ...prev, spareKitsTools: checked as boolean }))
-                  }
-                />
-                <Label htmlFor="spareKitsTools" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Spare kits and tools included
-                </Label>
-              </div>
+              {dispatchChecklistItems?.map((item) => (
+                <div key={item._id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={item.name}
+                    checked={checklistItems[item.name] || false}
+                    onCheckedChange={(checked) =>
+                      setChecklistItems((prev) => ({ ...prev, [item.name]: checked as boolean }))
+                    }
+                  />
+                  <Label htmlFor={item.name} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    {item.label}
+                  </Label>
+                </div>
+              ))}
 
               <div className="space-y-2 pt-4 border-t">
                 <Label htmlFor="ewayNumber">E-Way Number *</Label>
