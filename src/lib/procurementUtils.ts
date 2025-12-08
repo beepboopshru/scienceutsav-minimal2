@@ -344,10 +344,10 @@ export const aggregateMaterials = (
   console.log('Materials in map:', materialMap.size);
 
   // Process processing jobs (assigned status only - reserves source materials)
-  // BUT: Skip jobs linked to assignments to avoid double-counting
+  // Skip jobs linked to assignments to avoid double-counting (their requirements are already in orderRequired)
   processingJobs.forEach(job => {
     if (job.status === "assigned" && job.sources) {
-      // Only reserve materials if the job is NOT linked to any assignments
+      // Only reserve materials if the job is NOT linked to any assignment
       const isLinkedToAssignment = job.assignmentIds && job.assignmentIds.length > 0;
       if (!isLinkedToAssignment) {
         job.sources.forEach((source: any) => {
