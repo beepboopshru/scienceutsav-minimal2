@@ -6,9 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parsePackingRequirements, calculateTotalMaterials } from "@/lib/kitPacking";
-import { Scissors, ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface ProcessingRequirementsProps {
   assignments: any[];
@@ -20,7 +19,7 @@ interface ProcessingRequirementsProps {
 
 export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob, refreshTrigger }: ProcessingRequirementsProps) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<"summary" | "kit-wise" | "assignment-wise">("summary");
+  const [activeTab, setActiveTab] = useState<"summary" | "kit-wise" | "month-wise" | "client-wise" | "assignment-wise">("summary");
 
   const inventoryByName = useMemo(() => {
     if (!inventory) return new Map();
@@ -232,6 +231,139 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     }).filter(k => k.requirements.length > 0);
   }, [assignments, inventory, refreshTrigger, activeJobs]);
 
+  // Month Wise: Group by production month
+  const monthWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const monthMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+      const month = assignment.productionMonth || "No Month";
+      
+      const reqs = calculateShortages(assignment);
+      
+      if (!monthMap.has(month)) {
+        monthMap.set(month, {
+          month,
+          assignments: [],
+          requirements: new Map<string, any>()
+        });
+      }
+      
+      const monthData = monthMap.get(month);
+      monthData.assignments.push(assignment);
+      
+      reqs.forEach((req: any) => {
+        const key = req.name.toLowerCase();
+        if (monthData.requirements.has(key)) {
+          const existing = monthData.requirements.get(key);
+          existing.required += req.required;
+          existing.assignmentIds.add(assignment._id);
+        } else {
+          monthData.requirements.set(key, {
+            ...req,
+            assignmentIds: new Set([assignment._id])
+          });
+        }
+      });
+    });
+
+    return Array.from(monthMap.values()).map((monthData) => {
+      const requirements = Array.from(monthData.requirements.values()).map((item: any) => {
+        const assignmentIds = Array.from(item.assignmentIds) as string[];
+        const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
+        const shortage = Math.max(0, item.required - item.available - activeJobQty);
+        
+        return {
+          ...item,
+          shortage,
+          activeJobQty,
+          assignmentIds
+        };
+      }).filter((r: any) => r.shortage > 0);
+      
+      return {
+        ...monthData,
+        requirements
+      };
+    }).filter(m => m.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
+  // Client Wise: Group by client
+  const clientWiseData = useMemo(() => {
+    if (!assignments || !inventory) return [];
+    
+    const clientMap = new Map<string, any>();
+
+    assignments.forEach((assignment) => {
+      const client = assignment.client;
+      let clientName = "Unknown Client";
+      let clientId = "unknown";
+      
+      if (typeof client === 'string') {
+        clientName = client;
+        clientId = client;
+      } else if (typeof client === 'object' && client) {
+        clientName = 
+          client.organization || 
+          client.name || 
+          client.buyerName || 
+          client.contactPerson ||
+          client.email ||
+          "Unknown Client";
+        clientId = client._id || clientName;
+      }
+      
+      const reqs = calculateShortages(assignment);
+      
+      if (!clientMap.has(clientId)) {
+        clientMap.set(clientId, {
+          clientId,
+          clientName,
+          assignments: [],
+          requirements: new Map<string, any>()
+        });
+      }
+      
+      const clientData = clientMap.get(clientId);
+      clientData.assignments.push(assignment);
+      
+      reqs.forEach((req: any) => {
+        const key = req.name.toLowerCase();
+        if (clientData.requirements.has(key)) {
+          const existing = clientData.requirements.get(key);
+          existing.required += req.required;
+          existing.assignmentIds.add(assignment._id);
+        } else {
+          clientData.requirements.set(key, {
+            ...req,
+            assignmentIds: new Set([assignment._id])
+          });
+        }
+      });
+    });
+
+    return Array.from(clientMap.values()).map((clientData) => {
+      const requirements = Array.from(clientData.requirements.values()).map((item: any) => {
+        const assignmentIds = Array.from(item.assignmentIds) as string[];
+        const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
+        const shortage = Math.max(0, item.required - item.available - activeJobQty);
+        
+        return {
+          ...item,
+          shortage,
+          activeJobQty,
+          assignmentIds
+        };
+      }).filter((r: any) => r.shortage > 0);
+      
+      return {
+        ...clientData,
+        requirements
+      };
+    }).filter(c => c.requirements.length > 0);
+  }, [assignments, inventory, refreshTrigger, activeJobs]);
+
   // Assignment Wise: Individual assignments
   const assignmentWiseData = useMemo(() => {
     if (!assignments || !inventory) return [];
@@ -291,7 +423,6 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           <TableHead>Available</TableHead>
           <TableHead>In Progress</TableHead>
           <TableHead>Shortage</TableHead>
-          <TableHead>Action</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -330,16 +461,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
                 <TableCell>
                   <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
                 </TableCell>
-                <TableCell>
-                  <Button size="sm" onClick={() => onStartJob(item.id, item.shortage, item.assignmentIds)}>
-                    <Scissors className="mr-2 h-4 w-4" />
-                    Start Job
-                  </Button>
-                </TableCell>
               </TableRow>
               {hasComponents && expandedRows[rowKey] && (
                 <TableRow>
-                  <TableCell colSpan={7} className="bg-muted/50 p-4">
+                  <TableCell colSpan={6} className="bg-muted/50 p-4">
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Raw Materials Required (per unit):</p>
                       <div className="grid gap-2">
@@ -381,9 +506,11 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       </div>
 
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="summary">Material Summary</TabsTrigger>
           <TabsTrigger value="kit-wise">Kit Wise</TabsTrigger>
+          <TabsTrigger value="month-wise">Month Wise</TabsTrigger>
+          <TabsTrigger value="client-wise">Client Wise</TabsTrigger>
           <TabsTrigger value="assignment-wise">Assignment Wise</TabsTrigger>
         </TabsList>
 
@@ -427,6 +554,70 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
                         </CardHeader>
                         <CardContent>
                           <RequirementsTable items={kitData.requirements} />
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="month-wise" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Month Wise Requirements</CardTitle>
+              <CardDescription>Pre-processed items grouped by production month</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {monthWiseData.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  ) : (
+                    monthWiseData.map((monthData, idx) => (
+                      <Card key={idx}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">{monthData.month}</CardTitle>
+                          <CardDescription>
+                            {monthData.assignments.length} assignment(s)
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <RequirementsTable items={monthData.requirements} />
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="client-wise" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Client Wise Requirements</CardTitle>
+              <CardDescription>Pre-processed items grouped by client</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[600px]">
+                <div className="space-y-4">
+                  {clientWiseData.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
+                  ) : (
+                    clientWiseData.map((clientData, idx) => (
+                      <Card key={idx}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">{clientData.clientName}</CardTitle>
+                          <CardDescription>
+                            {clientData.assignments.length} assignment(s)
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <RequirementsTable items={clientData.requirements} />
                         </CardContent>
                       </Card>
                     ))
