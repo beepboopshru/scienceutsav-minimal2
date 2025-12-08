@@ -1,9 +1,2 @@
-export const calculateShortage = (
-  required: number,
-  available: number,
-  reserved: number,
-  minStock: number
-): number => {
-  const effectiveAvailable = available - reserved;
-  return Math.max(0, (required - effectiveAvailable) + minStock);
-};
+const newStockCount = kit.stockCount - args.quantity;
+await ctx.db.patch(args.kitId, { stockCount: newStockCount, status: newStatus });

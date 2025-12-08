@@ -133,20 +133,7 @@ export const create = mutation({
         batchId,
       });
 
-      // Update kit stock
-      const newStockCount = kit.stockCount - assignment.quantity;
-      let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-      
-      if (newStockCount === 0) {
-        newStatus = "assigned";
-      } else if (newStockCount < 0) {
-        newStatus = "to_be_made";
-      }
-
-      await ctx.db.patch(assignment.kitId, {
-        stockCount: newStockCount,
-        status: newStatus,
-      });
+      // Do NOT update kit stock - inventory is managed separately
     }
 
     return batchId;
@@ -212,25 +199,8 @@ export const deleteBatch = mutation({
       throw new Error("Cannot delete batch with dispatched assignments");
     }
 
-    // Restore stock for all assignments
+    // Delete all assignments (do NOT restore stock - inventory is managed separately)
     for (const assignment of assignments) {
-      const kit = await ctx.db.get(assignment.kitId);
-      if (kit) {
-        const newStockCount = kit.stockCount + assignment.quantity;
-        let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-        
-        if (newStockCount === 0) {
-          newStatus = "assigned";
-        } else if (newStockCount < 0) {
-          newStatus = "to_be_made";
-        }
-
-        await ctx.db.patch(assignment.kitId, {
-          stockCount: newStockCount,
-          status: newStatus,
-        });
-      }
-      
       await ctx.db.delete(assignment._id);
     }
 
@@ -276,20 +246,7 @@ export const addAssignment = mutation({
       batchId: args.batchId,
     });
 
-    // Update kit stock
-    const newStockCount = kit.stockCount - args.quantity;
-    let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-    
-    if (newStockCount === 0) {
-      newStatus = "assigned";
-    } else if (newStockCount < 0) {
-      newStatus = "to_be_made";
-    }
-
-    await ctx.db.patch(args.kitId, {
-      stockCount: newStockCount,
-      status: newStatus,
-    });
+    // Do NOT update kit stock - inventory is managed separately
 
     return assignmentId;
   },
@@ -307,24 +264,7 @@ export const removeAssignment = mutation({
     if (!assignment) throw new Error("Assignment not found");
     if (!assignment.batchId) throw new Error("Assignment is not part of a batch");
 
-    // Restore stock
-    const kit = await ctx.db.get(assignment.kitId);
-    if (kit) {
-      const newStockCount = kit.stockCount + assignment.quantity;
-      let newStatus: "in_stock" | "assigned" | "to_be_made" = "in_stock";
-      
-      if (newStockCount === 0) {
-        newStatus = "assigned";
-      } else if (newStockCount < 0) {
-        newStatus = "to_be_made";
-      }
-
-      await ctx.db.patch(assignment.kitId, {
-        stockCount: newStockCount,
-        status: newStatus,
-      });
-    }
-
+    // Do NOT restore stock - inventory is managed separately
     await ctx.db.delete(args.assignmentId);
   },
 });
