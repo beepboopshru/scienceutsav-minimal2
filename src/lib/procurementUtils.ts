@@ -75,6 +75,13 @@ export const aggregateMaterials = (
 ): ProcurementMaterial[] => {
   const materialMap = new Map<string, ProcurementMaterial>();
 
+  // Track virtual inventory to account for stock usage across assignments
+  // This ensures we use up existing stock of pre-processed items before procuring raw materials
+  const virtualInventory = new Map<string, number>();
+  inventory.forEach(item => {
+    virtualInventory.set(item._id, item.quantity || 0);
+  });
+
   // Helper to get or create material entry
   const getMaterialEntry = (invItem: any): ProcurementMaterial => {
     if (!materialMap.has(invItem._id)) {
@@ -127,6 +134,37 @@ export const aggregateMaterials = (
     }
   };
 
+  // Helper to process composite items (pre_processed/sealed_packet) with stock check
+  const processCompositeItem = (
+    invItem: any,
+    requiredQty: number,
+    kitId: Id<"kits">,
+    kitName: string,
+    assignmentQty: number
+  ) => {
+    // Check virtual inventory first
+    const currentStock = virtualInventory.get(invItem._id) || 0;
+    const qtyToTakeFromStock = Math.min(requiredQty, currentStock);
+    const qtyToManufacture = requiredQty - qtyToTakeFromStock;
+    
+    // Update virtual inventory
+    virtualInventory.set(invItem._id, currentStock - qtyToTakeFromStock);
+    
+    // Only explode the quantity that needs to be manufactured
+    if (qtyToManufacture > 0 && invItem.components && invItem.components.length > 0) {
+      invItem.components.forEach((subComp: any) => {
+        const subRequired = subComp.quantityRequired * qtyToManufacture;
+        addRawMaterialRequirement(
+          subComp.rawMaterialId,
+          subRequired,
+          kitId,
+          kitName,
+          assignmentQty
+        );
+      });
+    }
+  };
+
   // Helper to process structured packing requirements with BOM explosion
   const processPackingRequirements = (
     packingRequirements: string,
@@ -153,16 +191,7 @@ export const aggregateMaterials = (
         // If it's a sealed_packet or pre_processed with components, explode the BOM
         else if ((invItem.type === "sealed_packet" || invItem.type === "pre_processed") && 
                  invItem.components && invItem.components.length > 0) {
-          invItem.components.forEach((subComp: any) => {
-            const subRequired = subComp.quantityRequired * requiredQty;
-            addRawMaterialRequirement(
-              subComp.rawMaterialId,
-              subRequired,
-              kitId,
-              kitName,
-              assignmentQty
-            );
-          });
+          processCompositeItem(invItem, requiredQty, kitId, kitName, assignmentQty);
         }
       };
       
@@ -219,17 +248,7 @@ export const aggregateMaterials = (
         // Handle BOM explosion for composite items
         if ((invItem.type === "sealed_packet" || invItem.type === "pre_processed") && 
             invItem.components && invItem.components.length > 0) {
-          // Explode to raw materials
-          invItem.components.forEach((subComp: any) => {
-            const subRequired = subComp.quantityRequired * requiredQty;
-            addRawMaterialRequirement(
-              subComp.rawMaterialId,
-              subRequired,
-              kit._id,
-              kit.name,
-              assignment.quantity
-            );
-          });
+          processCompositeItem(invItem, requiredQty, kit._id, kit.name, assignment.quantity);
         } else if (invItem.type === "raw") {
           // Direct raw material
           addRawMaterialRequirement(
