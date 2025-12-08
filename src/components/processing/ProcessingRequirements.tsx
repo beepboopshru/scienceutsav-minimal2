@@ -51,7 +51,57 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     return quantities;
   }, [allJobs, refreshTrigger]);
 
-  // Calculate active job quantities by target item, filtered by assignment IDs
+  // Calculate active quantities for sealed packets from active sealing jobs
+  const activeSealingTargetQuantities = useMemo(() => {
+    const quantities = new Map<string, number>();
+    if (!allJobs || !inventory) return quantities;
+
+    allJobs.forEach(job => {
+      // Assuming sealing jobs have a 'type' field or can be identified by their targets being sealed_packet
+      const isSealingJob = job.targets.some((target: any) => {
+        const targetItem = inventory.find(i => i._id === target.targetItemId);
+        return targetItem && targetItem.type === "sealed_packet";
+      });
+
+      if ((job.status === "assigned" || job.status === "in_progress") && isSealingJob) {
+        job.targets.forEach((target: any) => {
+          const targetItem = inventory.find(i => i._id === target.targetItemId);
+          if (targetItem && targetItem.type === "sealed_packet") {
+            const current = quantities.get(target.targetItemId) || 0;
+            quantities.set(target.targetItemId, current + target.targetQuantity);
+          }
+        });
+      }
+    });
+    return quantities;
+  }, [allJobs, inventory, refreshTrigger]);
+
+  // Calculate committed quantities for pre-processed items from ASSIGNED sealing jobs (Inputs)
+  // These items are physically in inventory but reserved for the sealing job
+  const committedSealingSourceQuantities = useMemo(() => {
+    const quantities = new Map<string, number>();
+    if (!allJobs || !inventory) return quantities;
+
+    allJobs.forEach(job => {
+      // Only consider ASSIGNED jobs. In-progress jobs usually have materials deducted already.
+      if (job.status === "assigned") {
+        const isSealingJob = job.targets.some((target: any) => {
+          const targetItem = inventory.find(i => i._id === target.targetItemId);
+          return targetItem && targetItem.type === "sealed_packet";
+        });
+
+        if (isSealingJob && job.sources) {
+          job.sources.forEach((source: any) => {
+            const current = quantities.get(source.sourceItemId) || 0;
+            quantities.set(source.sourceItemId, current + source.sourceQuantity);
+          });
+        }
+      }
+    });
+    return quantities;
+  }, [allJobs, inventory, refreshTrigger]);
+
+  // Active job quantities by target item, filtered by assignment IDs
   const getActiveJobQuantitiesForAssignments = (assignmentIds: string[]) => {
     const quantities = new Map<string, number>();
     
@@ -108,7 +158,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             const currentStock = virtualInventory.get(invItem._id) || 0;
             const usedStock = Math.min(currentStock, totalSealedNeeded);
             actualSealedNeeded = totalSealedNeeded - usedStock;
-            // Update virtual inventory
+            // Update virtual inventory (consume sealed packets)
             virtualInventory.set(invItem._id, currentStock - usedStock);
         }
 
@@ -118,14 +168,26 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
               const compItem = inventory.find(i => i._id === comp.rawMaterialId);
               if (compItem && compItem.type === "pre_processed") {
                 const compRequired = comp.quantityRequired * actualSealedNeeded;
-                const compAvailable = compItem.quantity || 0;
+                
+                // Check availability from virtual inventory (which accounts for committed stock)
+                let compAvailable = compItem.quantity || 0;
+                if (virtualInventory) {
+                    compAvailable = virtualInventory.get(compItem._id) || 0;
+                }
+
+                // Consume pre-processed items from virtual inventory
+                const usedComp = Math.min(compAvailable, compRequired);
+                if (virtualInventory) {
+                    virtualInventory.set(compItem._id, compAvailable - usedComp);
+                }
+
                 const compShortage = Math.max(0, compRequired - compAvailable);
                 
                 requirements.push({
                   id: compItem._id,
                   name: compItem.name,
                   required: compRequired,
-                  available: compAvailable,
+                  available: compAvailable, // This is the available amount BEFORE consumption for this specific req
                   shortage: compShortage,
                   unit: comp.unit,
                   category: `${category} (from Sealed Packet: ${name})`,
@@ -136,14 +198,26 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         }
       } else if (invItem && invItem.type === "pre_processed") {
         const required = qtyPerKit * requiredQty;
-        const available = invItem.quantity || 0;
+        
+        // Check availability from virtual inventory
+        let available = invItem.quantity || 0;
+        if (virtualInventory) {
+            available = virtualInventory.get(invItem._id) || 0;
+        }
+
+        // Consume pre-processed items from virtual inventory
+        const used = Math.min(available, required);
+        if (virtualInventory) {
+            virtualInventory.set(invItem._id, available - used);
+        }
+
         const shortage = Math.max(0, required - available);
         
         requirements.push({
           id: invItem._id,
           name,
           required,
-          available,
+          available, // This is the available amount BEFORE consumption for this specific req
           shortage,
           unit,
           category,
@@ -165,17 +239,37 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     return requirements;
   };
 
+  // Helper to initialize virtual inventory
+  const getInitializedVirtualInventory = () => {
+    const virtualInventory = new Map<string, number>();
+    if (!inventory) return virtualInventory;
+
+    inventory.forEach(i => {
+      let totalAvailable = i.quantity || 0;
+      
+      // Add active pre-processing output (items being made)
+      totalAvailable += activeTargetQuantities.get(i._id) || 0; 
+      
+      // Add active sealing job output for sealed packets (items being made)
+      if (i.type === "sealed_packet") {
+          totalAvailable += activeSealingTargetQuantities.get(i._id) || 0; 
+      }
+
+      // Deduct committed sources for assigned sealing jobs (items reserved)
+      // This prevents double counting items that are about to be used
+      const committed = committedSealingSourceQuantities.get(i._id) || 0;
+      totalAvailable = Math.max(0, totalAvailable - committed);
+
+      virtualInventory.set(i._id, totalAvailable);
+    });
+    return virtualInventory;
+  };
+
   // Material Summary: Aggregate all requirements across all assignments
   const materialSummaryData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
     
-    // Initialize virtual inventory with current stock + active production
-    const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => {
-      const activeQty = activeTargetQuantities.get(i._id) || 0;
-      virtualInventory.set(i._id, i.quantity + activeQty);
-    });
-
+    const virtualInventory = getInitializedVirtualInventory();
     const materialMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
@@ -192,7 +286,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             id: item.id,
             name: item.name,
             required: item.required,
-            available: item.available,
+            available: item.available, // Note: This is the available qty at the time of first encounter
             unit: item.unit,
             category: item.category,
             kits: new Set([assignment.kit?.name || "Unknown"]),
@@ -206,10 +300,26 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     return Array.from(materialMap.values()).map((item) => {
       const assignmentIds = Array.from(item.assignmentIds) as string[];
       const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
-      const shortage = Math.max(0, item.required - item.available - activeJobQty);
+      
+      // Recalculate shortage based on Total Required vs Initial Effective Available
+      // We need the initial effective available for this item to be accurate
+      // Since we consumed it in the loop, we can't just use the map.
+      // However, item.available stores the available amount when the FIRST requirement was processed.
+      // If we process in order, this should be the "Initial Available" for the batch.
+      // A safer way is to re-calculate initial available:
+      
+      let initialAvailable = item.invItem.quantity || 0;
+      initialAvailable += activeTargetQuantities.get(item.id) || 0;
+      if (item.invItem.type === "sealed_packet") {
+         initialAvailable += activeSealingTargetQuantities.get(item.id) || 0;
+      }
+      initialAvailable = Math.max(0, initialAvailable - (committedSealingSourceQuantities.get(item.id) || 0));
+
+      const shortage = Math.max(0, item.required - initialAvailable);
       
       return {
         ...item,
+        available: initialAvailable, // Display the true initial available
         shortage,
         activeJobQty,
         kits: Array.from(item.kits),
@@ -219,34 +329,20 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
   }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Kit Wise: Group by kit
-  const kitWiseData = useMemo(() => {
+  const kitWiseDataFixed = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
-    
-    // Initialize virtual inventory with current stock + active production
-    const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => {
-      const activeQty = activeTargetQuantities.get(i._id) || 0;
-      virtualInventory.set(i._id, i.quantity + activeQty);
-    });
-
+    const virtualInventory = getInitializedVirtualInventory();
     const kitMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
       const kit = assignment.kit;
       const kitId = kit?._id || "unknown";
       const kitName = kit?.name || "Unknown Kit";
-      
       const reqs = calculateShortages(assignment, virtualInventory);
       
       if (!kitMap.has(kitId)) {
-        kitMap.set(kitId, {
-          kitId,
-          kitName,
-          assignments: [],
-          requirements: new Map<string, any>()
-        });
+        kitMap.set(kitId, { kitId, kitName, assignments: [], requirements: new Map<string, any>() });
       }
-      
       const kitData = kitMap.get(kitId);
       kitData.assignments.push(assignment);
       
@@ -255,6 +351,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         if (kitData.requirements.has(key)) {
           const existing = kitData.requirements.get(key);
           existing.required += req.required;
+          existing.shortage += req.shortage; // Sum the shortages!
           existing.assignmentIds.add(assignment._id);
         } else {
           kitData.requirements.set(key, {
@@ -269,49 +366,25 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       const requirements = Array.from(kitData.requirements.values()).map((item: any) => {
         const assignmentIds = Array.from(item.assignmentIds) as string[];
         const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
-        const shortage = Math.max(0, item.required - item.available - activeJobQty);
-        
-        return {
-          ...item,
-          shortage,
-          activeJobQty,
-          assignmentIds
-        };
+        return { ...item, activeJobQty, assignmentIds };
       }).filter((r: any) => r.shortage > 0);
-      
-      return {
-        ...kitData,
-        requirements
-      };
+      return { ...kitData, requirements };
     }).filter(k => k.requirements.length > 0);
   }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Month Wise: Group by production month
-  const monthWiseData = useMemo(() => {
+  const monthWiseDataFixed = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
-    
-    // Initialize virtual inventory with current stock + active production
-    const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => {
-      const activeQty = activeTargetQuantities.get(i._id) || 0;
-      virtualInventory.set(i._id, i.quantity + activeQty);
-    });
-
+    const virtualInventory = getInitializedVirtualInventory();
     const monthMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
       const month = assignment.productionMonth || "No Month";
-      
       const reqs = calculateShortages(assignment, virtualInventory);
       
       if (!monthMap.has(month)) {
-        monthMap.set(month, {
-          month,
-          assignments: [],
-          requirements: new Map<string, any>()
-        });
+        monthMap.set(month, { month, assignments: [], requirements: new Map<string, any>() });
       }
-      
       const monthData = monthMap.get(month);
       monthData.assignments.push(assignment);
       
@@ -320,12 +393,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         if (monthData.requirements.has(key)) {
           const existing = monthData.requirements.get(key);
           existing.required += req.required;
+          existing.shortage += req.shortage;
           existing.assignmentIds.add(assignment._id);
         } else {
-          monthData.requirements.set(key, {
-            ...req,
-            assignmentIds: new Set([assignment._id])
-          });
+          monthData.requirements.set(key, { ...req, assignmentIds: new Set([assignment._id]) });
         }
       });
     });
@@ -334,66 +405,33 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       const requirements = Array.from(monthData.requirements.values()).map((item: any) => {
         const assignmentIds = Array.from(item.assignmentIds) as string[];
         const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
-        const shortage = Math.max(0, item.required - item.available - activeJobQty);
-        
-        return {
-          ...item,
-          shortage,
-          activeJobQty,
-          assignmentIds
-        };
+        return { ...item, activeJobQty, assignmentIds };
       }).filter((r: any) => r.shortage > 0);
-      
-      return {
-        ...monthData,
-        requirements
-      };
+      return { ...monthData, requirements };
     }).filter(m => m.requirements.length > 0);
   }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Client Wise: Group by client
-  const clientWiseData = useMemo(() => {
+  const clientWiseDataFixed = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
-    
-    // Initialize virtual inventory with current stock + active production
-    const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => {
-      const activeQty = activeTargetQuantities.get(i._id) || 0;
-      virtualInventory.set(i._id, i.quantity + activeQty);
-    });
-
+    const virtualInventory = getInitializedVirtualInventory();
     const clientMap = new Map<string, any>();
 
     activeAssignments.forEach((assignment) => {
       const client = assignment.client;
       let clientName = "Unknown Client";
       let clientId = "unknown";
-      
-      if (typeof client === 'string') {
-        clientName = client;
-        clientId = client;
-      } else if (typeof client === 'object' && client) {
-        clientName = 
-          client.organization || 
-          client.name || 
-          client.buyerName || 
-          client.contactPerson ||
-          client.email ||
-          "Unknown Client";
+      if (typeof client === 'string') { clientName = client; clientId = client; }
+      else if (typeof client === 'object' && client) {
+        clientName = client.organization || client.name || client.buyerName || client.contactPerson || client.email || "Unknown Client";
         clientId = client._id || clientName;
       }
       
       const reqs = calculateShortages(assignment, virtualInventory);
       
       if (!clientMap.has(clientId)) {
-        clientMap.set(clientId, {
-          clientId,
-          clientName,
-          assignments: [],
-          requirements: new Map<string, any>()
-        });
+        clientMap.set(clientId, { clientId, clientName, assignments: [], requirements: new Map<string, any>() });
       }
-      
       const clientData = clientMap.get(clientId);
       clientData.assignments.push(assignment);
       
@@ -402,12 +440,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         if (clientData.requirements.has(key)) {
           const existing = clientData.requirements.get(key);
           existing.required += req.required;
+          existing.shortage += req.shortage;
           existing.assignmentIds.add(assignment._id);
         } else {
-          clientData.requirements.set(key, {
-            ...req,
-            assignmentIds: new Set([assignment._id])
-          });
+          clientData.requirements.set(key, { ...req, assignmentIds: new Set([assignment._id]) });
         }
       });
     });
@@ -416,49 +452,24 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
       const requirements = Array.from(clientData.requirements.values()).map((item: any) => {
         const assignmentIds = Array.from(item.assignmentIds) as string[];
         const activeJobQty = getActiveJobQuantitiesForAssignments(assignmentIds).get(item.id) || 0;
-        const shortage = Math.max(0, item.required - item.available - activeJobQty);
-        
-        return {
-          ...item,
-          shortage,
-          activeJobQty,
-          assignmentIds
-        };
+        return { ...item, activeJobQty, assignmentIds };
       }).filter((r: any) => r.shortage > 0);
-      
-      return {
-        ...clientData,
-        requirements
-      };
+      return { ...clientData, requirements };
     }).filter(c => c.requirements.length > 0);
   }, [activeAssignments, inventory, refreshTrigger, activeJobs, allJobs]);
 
   // Assignment Wise: Individual assignments
   const assignmentWiseData = useMemo(() => {
     if (!activeAssignments || !inventory) return [];
-    
-    // Initialize virtual inventory with current stock + active production
-    const virtualInventory = new Map<string, number>();
-    inventory.forEach(i => {
-      const activeQty = activeTargetQuantities.get(i._id) || 0;
-      virtualInventory.set(i._id, i.quantity + activeQty);
-    });
+    const virtualInventory = getInitializedVirtualInventory();
 
     return activeAssignments.map((assignment) => {
       const kit = assignment.kit;
       const client = assignment.client;
-      
       let clientName = "Unknown Client";
-      if (typeof client === 'string') {
-        clientName = client;
-      } else if (typeof client === 'object' && client) {
-        clientName = 
-          client.organization || 
-          client.name || 
-          client.buyerName || 
-          client.contactPerson ||
-          client.email ||
-          "Unknown Client";
+      if (typeof client === 'string') { clientName = client; }
+      else if (typeof client === 'object' && client) {
+        clientName = client.organization || client.name || client.buyerName || client.contactPerson || client.email || "Unknown Client";
       }
       
       const assignmentReqs = calculateShortages(assignment, virtualInventory);
@@ -469,6 +480,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
         return {
           ...req,
           activeJobQty: jobQty,
+          // shortage is already calculated with consumption in calculateShortages
+          // but we should subtract active job qty if it wasn't already?
+          // activeJobQty is usually for "In Progress" jobs for THIS assignment.
+          // If we have an active job, it reduces the shortage.
           shortage: Math.max(0, req.shortage - jobQty),
           assignmentIds: [assignment._id]
         };
@@ -617,10 +632,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             <CardContent>
               <ScrollArea className="h-[600px]">
                 <div className="space-y-4">
-                  {kitWiseData.length === 0 ? (
+                  {kitWiseDataFixed.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
                   ) : (
-                    kitWiseData.map((kitData, idx) => (
+                    kitWiseDataFixed.map((kitData, idx) => (
                       <Card key={idx}>
                         <CardHeader className="pb-3">
                           <CardTitle className="text-lg">{kitData.kitName}</CardTitle>
@@ -649,10 +664,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             <CardContent>
               <ScrollArea className="h-[600px]">
                 <div className="space-y-4">
-                  {monthWiseData.length === 0 ? (
+                  {monthWiseDataFixed.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
                   ) : (
-                    monthWiseData.map((monthData, idx) => (
+                    monthWiseDataFixed.map((monthData, idx) => (
                       <Card key={idx}>
                         <CardHeader className="pb-3">
                           <CardTitle className="text-lg">{monthData.month}</CardTitle>
@@ -681,10 +696,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
             <CardContent>
               <ScrollArea className="h-[600px]">
                 <div className="space-y-4">
-                  {clientWiseData.length === 0 ? (
+                  {clientWiseDataFixed.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">No processing requirements found.</p>
                   ) : (
-                    clientWiseData.map((clientData, idx) => (
+                    clientWiseDataFixed.map((clientData, idx) => (
                       <Card key={idx}>
                         <CardHeader className="pb-3">
                           <CardTitle className="text-lg">{clientData.clientName}</CardTitle>
