@@ -84,6 +84,49 @@ export const create = mutation({
   },
 });
 
+export const update = mutation({
+  args: {
+    id: v.id("assignments"),
+    clientId: v.optional(v.string()),
+    kitId: v.optional(v.id("kits")),
+    quantity: v.optional(v.number()),
+    grade: v.optional(v.union(
+      v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+      v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+    )),
+    notes: v.optional(v.string()),
+    productionMonth: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const canUpdate = await hasPermission(ctx, userId, "assignments", "edit");
+    if (!canUpdate) throw new Error("Permission denied");
+
+    const assignment = await ctx.db.get(args.id);
+    if (!assignment) throw new Error("Assignment not found");
+
+    const { id, ...updateData } = args;
+    
+    // Filter out undefined values
+    const filteredData = Object.fromEntries(
+      Object.entries(updateData).filter(([_, value]) => value !== undefined)
+    );
+
+    await ctx.db.patch(id, filteredData);
+
+    // Log the update
+    await ctx.db.insert("activityLogs", {
+      userId: userId,
+      actionType: "assignment_updated",
+      details: `Assignment ${id} updated`,
+    });
+
+    return id;
+  },
+});
+
 export const updateStatus = mutation({
   args: {
     id: v.id("assignments"),
