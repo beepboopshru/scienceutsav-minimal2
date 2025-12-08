@@ -788,6 +788,7 @@ const schema = defineSchema(
           type: v.string(),
           quantity: v.number(),
           unit: v.string(),
+          category: v.optional(v.string()),
         })
       ),
       status: v.union(
