@@ -8,7 +8,9 @@ import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
 import { Loader2, Package, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SealingRequirements } from "@/components/processing/SealingRequirements";
 import { ProcessingJobsList } from "@/components/processing/ProcessingJobsList";
@@ -33,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { QuickAddInventoryDialog } from "@/components/research/QuickAddInventoryDialog";
+import { parsePackingRequirements } from "@/lib/kitPacking";
 
 export default function SealingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -52,19 +55,14 @@ export default function SealingJobs() {
   const b2cClients = useQuery(api.b2cClients.list);
   
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
-  const [createJobOpen, setCreateJobOpen] = useState(false);
+  const [generateJobsOpen, setGenerateJobsOpen] = useState(false);
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
-  const [selectedTarget, setSelectedTarget] = useState<{ id: Id<"inventory">; quantity: number } | null>(null);
-  const [selectedComponents, setSelectedComponents] = useState<any[]>([]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   
-  const [jobName, setJobName] = useState("");
-  const [processedBy, setProcessedBy] = useState("");
-  const [processedByType, setProcessedByType] = useState<"in_house" | "vendor" | "service">("in_house");
-  const [notes, setNotes] = useState("");
-
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [allRequirements, setAllRequirements] = useState<any[]>([]);
 
   const createProcessingJob = useMutation(api.processingJobs.create);
   const startJob = useMutation(api.processingJobs.startJob);
@@ -119,49 +117,10 @@ export default function SealingJobs() {
     );
   }
 
-  const handleStartRequirementJob = (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => {
-    // Check if target is a placeholder (missing from inventory)
-    if (typeof targetItemId === 'string' && targetItemId.startsWith('missing_')) {
-      const packetName = targetItemId.replace('missing_', '');
-      
-      // Try to find it in inventory by name (exact or normalized) as a fallback
-      // This handles cases where the item was just created or slight naming mismatches
-      const normalizedTarget = packetName.toLowerCase().replace(/\s+/g, ' ').trim();
-      const foundItem = inventory.find(i => i.name.toLowerCase().replace(/\s+/g, ' ').trim() === normalizedTarget);
-      
-      if (foundItem) {
-         // Found it! Proceed with this item.
-         targetItemId = foundItem._id;
-      } else {
-          toast.error(`Sealed packet not found in inventory. Please create an item named "${packetName}" (or similar) in inventory first.`);
-          return;
-      }
-    }
-
-    const targetItem = inventory.find(i => i._id === targetItemId);
-    if (!targetItem) {
-      toast.error("Sealed packet not found in inventory");
-      return;
-    }
-
-    // Validate that the sealed packet has a BOM defined (components list is not empty)
-    if (components.length === 0) {
-      toast.error(`The sealed packet "${targetItem.name}" has no components defined in its Inventory BOM. Please edit the item in Inventory to add components.`);
-      return;
-    }
-
-    // Validate components exist in inventory
-    const missingComponents = components.filter(c => !c.inventoryId);
-    if (missingComponents.length > 0) {
-      toast.error(`Some components for this packet are missing from inventory: ${missingComponents.map(c => c.name).join(", ")}`);
-      return;
-    }
-
-    setSelectedTarget({ id: targetItemId as Id<"inventory">, quantity });
-    setSelectedComponents(components);
-    const packetName = targetItem.name;
-    setJobName(`Seal ${packetName} - ${quantity} units`);
-    setCreateJobOpen(true);
+  const handleGenerateJobs = () => {
+    // Collect all requirements with shortages from the SealingRequirements component
+    // This will be populated when the component calculates requirements
+    setGenerateJobsOpen(true);
   };
 
   const handleCreateItem = (name: string) => {
@@ -169,65 +128,77 @@ export default function SealingJobs() {
     setCreateItemOpen(true);
   };
 
-  const handleCreateJob = async () => {
-    if (!selectedTarget || !jobName) {
-      toast.error("Please fill in all required fields");
+  const handleBatchCreateJobs = async () => {
+    if (selectedItems.size === 0) {
+      toast.error("Please select at least one item to create jobs for");
       return;
     }
 
     try {
-      const targetItem = inventory.find(i => i._id === selectedTarget.id);
-      if (!targetItem) {
-        toast.error("Target sealed packet not found in inventory");
-        return;
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const itemId of selectedItems) {
+        const requirement = allRequirements.find(r => r.id === itemId);
+        if (!requirement) continue;
+
+        // Skip missing items
+        if (typeof requirement.id === 'string' && requirement.id.startsWith('missing_')) {
+          failCount++;
+          continue;
+        }
+
+        const targetItem = inventory.find(i => i._id === requirement.id);
+        if (!targetItem || !requirement.components || requirement.components.length === 0) {
+          failCount++;
+          continue;
+        }
+
+        const sources = requirement.components.map((comp: any) => ({
+          sourceItemId: comp.inventoryId,
+          sourceQuantity: comp.totalRequired,
+        }));
+
+        // Validate stock
+        let hasStock = true;
+        for (const source of sources) {
+          const sourceItem = inventory.find(i => i._id === source.sourceItemId);
+          if (!sourceItem || sourceItem.quantity < source.sourceQuantity) {
+            hasStock = false;
+            break;
+          }
+        }
+
+        if (!hasStock) {
+          failCount++;
+          continue;
+        }
+
+        await createProcessingJob({
+          name: `Seal ${targetItem.name} - ${requirement.shortage} units`,
+          sources,
+          targets: [{
+            targetItemId: requirement.id,
+            targetQuantity: requirement.shortage,
+          }],
+          processedByType: "in_house",
+        });
+
+        successCount++;
       }
 
-      // Use the components passed from the requirement (Kit Definition)
-      const sources = selectedComponents.map(comp => ({
-        sourceItemId: comp.inventoryId,
-        sourceQuantity: comp.totalRequired, // This is the total required for the job quantity
-      }));
-
-      // Validate all source materials have sufficient stock
-      for (const source of sources) {
-        const sourceItem = inventory.find(i => i._id === source.sourceItemId);
-        if (!sourceItem) {
-          toast.error(`Source material not found in inventory`);
-          return;
-        }
-        if (sourceItem.quantity < source.sourceQuantity) {
-          toast.error(`Insufficient stock for ${sourceItem.name}. Required: ${source.sourceQuantity} ${sourceItem.unit}, Available: ${sourceItem.quantity} ${sourceItem.unit}`);
-          return;
-        }
+      if (successCount > 0) {
+        toast.success(`Successfully created ${successCount} sealing job(s)`);
+      }
+      if (failCount > 0) {
+        toast.warning(`Failed to create ${failCount} job(s) due to missing items or insufficient stock`);
       }
 
-      await createProcessingJob({
-        name: jobName,
-        sources,
-        targets: [{
-          targetItemId: selectedTarget.id,
-          targetQuantity: selectedTarget.quantity,
-        }],
-        processedBy: processedBy || undefined,
-        processedByType: processedByType,
-        notes: notes || undefined,
-      });
-
-      toast.success("Sealing job created successfully");
-      setCreateJobOpen(false);
-      resetForm();
+      setGenerateJobsOpen(false);
+      setSelectedItems(new Set());
     } catch (error: any) {
-      toast.error(error.message || "Failed to create sealing job");
+      toast.error(error.message || "Failed to create sealing jobs");
     }
-  };
-
-  const resetForm = () => {
-    setJobName("");
-    setProcessedBy("");
-    setProcessedByType("in_house");
-    setNotes("");
-    setSelectedTarget(null);
-    setSelectedComponents([]);
   };
 
   const handleStartJob = async (id: Id<"processingJobs">) => {
@@ -289,10 +260,16 @@ export default function SealingJobs() {
                 Track sealed packet requirements and production
               </p>
             </div>
-            <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleGenerateJobs} disabled={!canEdit}>
+                <Package className="mr-2 h-4 w-4" />
+                Generate Jobs
+              </Button>
+              <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           <Tabs value={viewMode} onValueChange={(v: any) => setViewMode(v)} className="space-y-4">
@@ -306,7 +283,6 @@ export default function SealingJobs() {
                 assignments={assignments} 
                 inventory={inventory} 
                 activeJobs={sealingJobs}
-                onStartJob={handleStartRequirementJob}
                 onCreateItem={handleCreateItem}
                 refreshTrigger={lastRefresh}
               />
@@ -417,111 +393,128 @@ export default function SealingJobs() {
             </TabsContent>
           </Tabs>
 
-          {/* Create Sealing Job Dialog */}
-          <Dialog open={createJobOpen} onOpenChange={setCreateJobOpen}>
-            <DialogContent className="max-w-2xl">
+          {/* Generate Jobs Dialog */}
+          <Dialog open={generateJobsOpen} onOpenChange={setGenerateJobsOpen}>
+            <DialogContent className="max-w-4xl max-h-[80vh]">
               <DialogHeader>
-                <DialogTitle>Create Sealing Job</DialogTitle>
+                <DialogTitle>Generate Sealing Jobs</DialogTitle>
                 <DialogDescription>
-                  Create a new job to seal packets. Source materials are calculated based on the Kit's packing requirements.
+                  Select sealed packets to create jobs for. Only items with sufficient stock will be processed.
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="jobName">Job Name *</Label>
-                  <Input
-                    id="jobName"
-                    value={jobName}
-                    onChange={(e) => setJobName(e.target.value)}
-                    placeholder="Enter job name"
-                  />
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-2">
+                  {(() => {
+                    // Calculate requirements for display
+                    const reqs: any[] = [];
+                    assignments?.forEach((assignment) => {
+                      const kit = assignment.kit;
+                      if (!kit || !kit.packingRequirements) return;
+
+                      const structure = parsePackingRequirements(kit.packingRequirements);
+                      if (structure.packets) {
+                        structure.packets.forEach((packet: any) => {
+                          const packetName = packet.name.trim();
+                          const foundItem = inventory?.find(i => 
+                            i.type === "sealed_packet" && 
+                            (i.name.toLowerCase().includes(packetName.toLowerCase()) || 
+                             packetName.toLowerCase().includes(i.name.toLowerCase()))
+                          );
+
+                          if (foundItem) {
+                            const required = assignment.quantity;
+                            const available = foundItem.quantity || 0;
+                            const shortage = Math.max(0, required - available);
+
+                            if (shortage > 0) {
+                              const existing = reqs.find(r => r.id === foundItem._id);
+                              if (existing) {
+                                existing.shortage += shortage;
+                              } else {
+                                reqs.push({
+                                  id: foundItem._id,
+                                  name: foundItem.name,
+                                  shortage,
+                                  unit: foundItem.unit,
+                                  components: foundItem.components || []
+                                });
+                              }
+                            }
+                          }
+                        });
+                      }
+                    });
+
+                    // Update allRequirements for batch creation
+                    if (reqs.length > 0 && allRequirements.length === 0) {
+                      setAllRequirements(reqs);
+                    }
+
+                    return reqs.map((req) => {
+                      const isSelected = selectedItems.has(req.id);
+                      const isMissing = typeof req.id === 'string' && req.id.startsWith('missing_');
+                      const hasComponents = req.components && req.components.length > 0;
+
+                      return (
+                        <div
+                          key={req.id}
+                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                            isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                          } ${isMissing || !hasComponents ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          onClick={() => {
+                            if (isMissing || !hasComponents) return;
+                            setSelectedItems(prev => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(req.id)) {
+                                newSet.delete(req.id);
+                              } else {
+                                newSet.add(req.id);
+                              }
+                              return newSet;
+                            });
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  disabled={isMissing || !hasComponents}
+                                  onChange={() => {}}
+                                  className="h-4 w-4"
+                                />
+                                <h4 className="font-medium">{req.name}</h4>
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Shortage: {req.shortage} {req.unit}
+                              </p>
+                              {isMissing && (
+                                <Badge variant="destructive" className="mt-2">Missing from Inventory</Badge>
+                              )}
+                              {!hasComponents && !isMissing && (
+                                <Badge variant="destructive" className="mt-2">No BOM Defined</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
-
-                <div>
-                  <Label htmlFor="processedByType">Processed By Type *</Label>
-                  <Select value={processedByType} onValueChange={(v: any) => setProcessedByType(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="in_house">In-House</SelectItem>
-                      <SelectItem value="vendor">Vendor</SelectItem>
-                      <SelectItem value="service">Service</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {processedByType === "vendor" && vendors && (
-                  <div>
-                    <Label htmlFor="vendor">Select Vendor</Label>
-                    <Select value={processedBy} onValueChange={setProcessedBy}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vendor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {vendors.map((vendor) => (
-                          <SelectItem key={vendor._id} value={vendor.name}>
-                            {vendor.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {processedByType === "service" && services && (
-                  <div>
-                    <Label htmlFor="service">Select Service</Label>
-                    <Select value={processedBy} onValueChange={setProcessedBy}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {services.map((service) => (
-                          <SelectItem key={service._id} value={service.name}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add any additional notes"
-                    rows={3}
-                  />
-                </div>
-                
-                {/* Show components summary */}
-                {selectedComponents.length > 0 && (
-                  <div className="bg-muted/50 p-3 rounded-md text-sm">
-                    <p className="font-medium mb-2">Required Components:</p>
-                    <ul className="space-y-1">
-                      {selectedComponents.map((comp, idx) => (
-                        <li key={idx} className="flex justify-between">
-                          <span>{comp.name}</span>
-                          <span>{comp.totalRequired} {comp.unit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              </ScrollArea>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateJobOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  setGenerateJobsOpen(false);
+                  setSelectedItems(new Set());
+                }}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreateJob}>
+                <Button onClick={handleBatchCreateJobs} disabled={selectedItems.size === 0}>
                   <Package className="mr-2 h-4 w-4" />
-                  Create Job
+                  Create {selectedItems.size} Job(s)
                 </Button>
               </DialogFooter>
             </DialogContent>

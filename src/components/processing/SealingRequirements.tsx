@@ -14,12 +14,11 @@ interface SealingRequirementsProps {
   assignments: any[];
   inventory: any[];
   activeJobs?: any[];
-  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
   onCreateItem?: (name: string) => void;
   refreshTrigger?: number;
 }
 
-export function SealingRequirements({ assignments, inventory, activeJobs = [], onStartJob, onCreateItem, refreshTrigger }: SealingRequirementsProps) {
+export function SealingRequirements({ assignments, inventory, activeJobs = [], onCreateItem, refreshTrigger }: SealingRequirementsProps) {
   const [activeTab, setActiveTab] = useState("summary");
 
   // Normalize string helper: lowercase, trim, single spaces
@@ -406,7 +405,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
                 {summaryData.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No sealing requirements found.</p>
                 ) : (
-                  <RequirementsTable items={summaryData} onStartJob={onStartJob} onCreateItem={onCreateItem} />
+                  <RequirementsTable items={summaryData} onCreateItem={onCreateItem} showActions={true} />
                 )}
               </CardContent>
             </Card>
@@ -425,7 +424,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
                         <CardDescription>Total Assigned: {kit.totalQuantity}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={kit.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
+                          <RequirementsTable items={kit.requirements} onCreateItem={onCreateItem} showActions={true} />
                       </CardContent>
                     </Card>
                   ))
@@ -448,7 +447,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={month.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
+                          <RequirementsTable items={month.requirements} onCreateItem={onCreateItem} showActions={true} />
                       </CardContent>
                     </Card>
                   ))
@@ -469,7 +468,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
                         <CardTitle className="text-lg">{client.clientName}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={client.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
+                          <RequirementsTable items={client.requirements} onCreateItem={onCreateItem} showActions={true} />
                       </CardContent>
                     </Card>
                   ))
@@ -493,7 +492,7 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <RequirementsTable items={item.requirements} onStartJob={onStartJob} onCreateItem={onCreateItem} />
+                          <RequirementsTable items={item.requirements} onCreateItem={onCreateItem} showActions={true} />
                       </CardContent>
                     </Card>
                   ))

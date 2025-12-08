@@ -7,11 +7,11 @@ import { Id } from "@/convex/_generated/dataModel";
 
 interface RequirementsTableProps {
   items: any[];
-  onStartJob: (targetItemId: Id<"inventory"> | string, quantity: number, components: any[]) => void;
   onCreateItem?: (name: string) => void;
+  showActions?: boolean;
 }
 
-export function RequirementsTable({ items, onStartJob, onCreateItem }: RequirementsTableProps) {
+export function RequirementsTable({ items, onCreateItem, showActions = true }: RequirementsTableProps) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
 
   const toggleRow = (key: string) => {
@@ -27,7 +27,7 @@ export function RequirementsTable({ items, onStartJob, onCreateItem }: Requireme
           <TableHead>Required</TableHead>
           <TableHead>In Stock</TableHead>
           <TableHead>Deficit/Surplus</TableHead>
-          <TableHead>Action</TableHead>
+          {showActions && <TableHead>Action</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -74,9 +74,9 @@ export function RequirementsTable({ items, onStartJob, onCreateItem }: Requireme
                     <Badge variant="outline">Exact Match</Badge>
                   )}
                 </TableCell>
-                <TableCell>
-                  {isMissing ? (
-                    onCreateItem && (
+                {showActions && (
+                  <TableCell>
+                    {isMissing && onCreateItem && (
                       <Button 
                         size="sm" 
                         variant="outline"
@@ -85,19 +85,9 @@ export function RequirementsTable({ items, onStartJob, onCreateItem }: Requireme
                         <Package className="mr-2 h-4 w-4" />
                         Create Item
                       </Button>
-                    )
-                  ) : (
-                    hasDeficit && (
-                      <Button 
-                        size="sm" 
-                        onClick={() => onStartJob(item.id, item.shortage, item.components)}
-                      >
-                        <Package className="mr-2 h-4 w-4" />
-                        Start Job
-                      </Button>
-                    )
-                  )}
-                </TableCell>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
               {expandedRows[rowKey] && (
                 <TableRow>
