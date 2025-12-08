@@ -196,17 +196,6 @@ export default function B2BAssignments() {
   // Popover states for batch creation
   const [batchClientPopoverOpen, setBatchClientPopoverOpen] = useState<Record<string, boolean>>({});
 
-  // Edit mode states
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [editRowProgram, setEditRowProgram] = useState<string>("");
-  const [editRowKit, setEditRowKit] = useState<string>("");
-  const [editRowClient, setEditRowClient] = useState<string>("");
-  const [editRowQuantity, setEditRowQuantity] = useState<string>("1");
-  const [editRowGrade, setEditRowGrade] = useState<string>("");
-  const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
-  const [editRowNotes, setEditRowNotes] = useState<string>("");
-  const [editRowProductionMonth, setEditRowProductionMonth] = useState<string>("");
-
   // Import curriculum states
   const [importCurriculumOpen, setImportCurriculumOpen] = useState(false);
   const [importedAssignments, setImportedAssignments] = useState<any[]>([]);
@@ -326,13 +315,6 @@ export default function B2BAssignments() {
     : [];
 
   const newRowSelectedKit = kits.find((k) => k._id === newRowKit);
-
-  // Get filtered kits for edit row
-  const editRowFilteredKits = editRowProgram
-    ? kits.filter((kit) => kit.programId === editRowProgram)
-    : [];
-
-  const editRowSelectedKit = kits.find((k) => k._id === editRowKit);
 
   // Group assignments by batch
   const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
@@ -693,18 +675,6 @@ export default function B2BAssignments() {
     setIsAddingNewRow(false);
   };
 
-  const handleStartEditRow = (assignment: any) => {
-    setEditingAssignmentId(assignment._id);
-    setEditRowProgram(assignment.kit?.programId || "");
-    setEditRowKit(assignment.kitId);
-    setEditRowClient(assignment.clientId);
-    setEditRowQuantity(assignment.quantity.toString());
-    setEditRowGrade(assignment.grade || "");
-    setEditRowDispatchDate(assignment.dispatchedAt ? new Date(assignment.dispatchedAt) : undefined);
-    setEditRowNotes(assignment.notes || "");
-    setEditRowProductionMonth(assignment.productionMonth || "");
-  };
-
   const handleOpenNotesDialog = (
     assignmentId: Id<"assignments">,
     type: "assignment" | "packing" | "dispatch",
@@ -749,39 +719,6 @@ export default function B2BAssignments() {
         description: error instanceof Error ? error.message : "Unknown error",
       });
     }
-  };
-
-  const handleSaveEditRow = async (assignmentId: Id<"assignments">) => {
-    if (!editRowKit || !editRowClient || !editRowQuantity) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    try {
-      // Note: You'll need to create an update mutation in assignments.ts
-      // For now, we'll delete and recreate
-      await deleteAssignment({ id: assignmentId });
-      await createAssignment({
-        kitId: editRowKit as Id<"kits">,
-        clientId: editRowClient,
-        clientType: "b2b",
-        quantity: parseInt(editRowQuantity),
-        grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
-        notes: editRowNotes || undefined,
-        dispatchedAt: editRowDispatchDate ? editRowDispatchDate.getTime() : undefined,
-        productionMonth: editRowProductionMonth || undefined,
-      });
-
-      toast.success("Assignment updated successfully");
-      setEditingAssignmentId(null);
-    } catch (error) {
-      toast.error("Failed to update assignment");
-      console.error(error);
-    }
-  };
-
-  const handleCancelEditRow = () => {
-    setEditingAssignmentId(null);
   };
 
   const getStatusBadge = (status: string) => {
@@ -1615,177 +1552,7 @@ export default function B2BAssignments() {
                               className="hover:bg-muted/50"
                             >
                               <TableCell></TableCell>
-                              {editingAssignmentId === assignment._id ? (
-                                <>
-                                  {/* Edit mode */}
-                                  <TableCell>
-                                    <Select value={editRowProgram} onValueChange={(val) => {
-                                      setEditRowProgram(val);
-                                      setEditRowKit("");
-                                    }}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {programs.map((program) => (
-                                          <SelectItem key={program._id} value={program._id}>
-                                            {program.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {editRowFilteredKits.map((kit) => (
-                                          <SelectItem key={kit._id} value={kit._id}>
-                                            {kit.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">
-                                      {editRowSelectedKit?.category || "-"}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowClient} onValueChange={setEditRowClient}>
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {clients.map((client) => (
-                                          <SelectItem key={client._id} value={client._id}>
-                                            {client.organization || client.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={editRowQuantity}
-                                      onChange={(e) => setEditRowQuantity(e.target.value)}
-                                      className="w-20"
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowGrade} onValueChange={setEditRowGrade}>
-                                      <SelectTrigger className="w-24">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">None</SelectItem>
-                                        {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                          <SelectItem key={g} value={g.toString()}>
-                                            {g}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>{getStatusBadge(assignment.status)}</TableCell>
-                                  <TableCell>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                          <CalendarIcon className="mr-2 h-4 w-4" />
-                                          {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                          mode="single"
-                                          selected={editRowDispatchDate}
-                                          onSelect={setEditRowDispatchDate}
-                                          initialFocus
-                                        />
-                                      </PopoverContent>
-                                    </Popover>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                          <CalendarIcon className="mr-2 h-4 w-4" />
-                                          {editRowProductionMonth
-                                            ? format(new Date(editRowProductionMonth + "-01"), "MMM yyyy")
-                                            : "Pick month"}
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0">
-                                        <div className="p-3 space-y-2">
-                                          <Select
-                                            value={editRowProductionMonth ? editRowProductionMonth.split("-")[1] : ""}
-                                            onValueChange={(month) => {
-                                              const year = editRowProductionMonth ? editRowProductionMonth.split("-")[0] : new Date().getFullYear().toString();
-                                              setEditRowProductionMonth(`${year}-${month}`);
-                                            }}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Month" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                                <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                                                  {format(new Date(2000, m - 1, 1), "MMM")}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                          <Select
-                                            value={editRowProductionMonth ? editRowProductionMonth.split("-")[0] : ""}
-                                            onValueChange={(year) => {
-                                              const month = editRowProductionMonth ? editRowProductionMonth.split("-")[1] : "01";
-                                              setEditRowProductionMonth(`${year}-${month}`);
-                                            }}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Year" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                                                <SelectItem key={y} value={y.toString()}>
-                                                  {y}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </TableCell>
-                                  <TableCell>
-                                    {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      value={editRowNotes}
-                                      onChange={(e) => setEditRowNotes(e.target.value)}
-                                      placeholder="Notes..."
-                                    />
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                        <Save className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </>
-                              ) : (
-                                <>
+                              <>
                                   {/* View mode */}
                                   <TableCell className="font-medium">
                                     {assignment.program?.name || "Unknown"}
@@ -1878,13 +1645,6 @@ export default function B2BAssignments() {
                                     <div className="flex items-center justify-end gap-2">
                                       {canEdit && (
                                         <>
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleStartEditRow(assignment)}
-                                          >
-                                            <Edit2 className="h-4 w-4" />
-                                          </Button>
                                           {assignment.status === "in_progress" && (
                                             <Button
                                               size="sm"
@@ -1904,8 +1664,6 @@ export default function B2BAssignments() {
                                       )}
                                     </div>
                                   </TableCell>
-                                </>
-                              )}
                             </motion.tr>
                           ))}
                       </React.Fragment>
@@ -1922,133 +1680,7 @@ export default function B2BAssignments() {
                       className="hover:bg-muted/50"
                     >
                       <TableCell>-</TableCell>
-                      {editingAssignmentId === assignment._id ? (
-                        <>
-                          {/* Edit mode */}
-                          <TableCell>
-                            <Select value={editRowProgram} onValueChange={(val) => {
-                              setEditRowProgram(val);
-                              setEditRowKit("");
-                            }}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {programs.map((program) => (
-                                  <SelectItem key={program._id} value={program._id}>
-                                    {program.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {editRowFilteredKits.map((kit) => (
-                                  <SelectItem key={kit._id} value={kit._id}>
-                                    {kit.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {editRowSelectedKit?.category || "-"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowClient} onValueChange={setEditRowClient}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {clients.map((client) => (
-                                  <SelectItem key={client._id} value={client._id}>
-                                    {client.organization || client.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={editRowQuantity}
-                              onChange={(e) => setEditRowQuantity(e.target.value)}
-                              className="w-20"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowGrade} onValueChange={setEditRowGrade}>
-                              <SelectTrigger className="w-24">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                  <SelectItem key={g} value={g.toString()}>
-                                    {g}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(assignment.status)}</TableCell>
-                          <TableCell>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                  mode="single"
-                                  selected={editRowDispatchDate}
-                                  onSelect={setEditRowDispatchDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="month"
-                              value={editRowProductionMonth}
-                              onChange={(e) => setEditRowProductionMonth(e.target.value)}
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(assignment._creationTime), "MMM dd, yyyy")}
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={editRowNotes}
-                              onChange={(e) => setEditRowNotes(e.target.value)}
-                              placeholder="Notes..."
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </>
-                      ) : (
-                        <>
+                      <>
                           {/* View mode */}
                           <TableCell className="font-medium">
                             {assignment.program?.name || "Unknown"}
@@ -2161,13 +1793,6 @@ export default function B2BAssignments() {
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    onClick={() => handleStartEditRow(assignment)}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
                                     onClick={() => handleDeleteClick(assignment)}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -2176,8 +1801,6 @@ export default function B2BAssignments() {
                               )}
                             </div>
                           </TableCell>
-                        </>
-                      )}
                     </motion.tr>
                   ));
                 })

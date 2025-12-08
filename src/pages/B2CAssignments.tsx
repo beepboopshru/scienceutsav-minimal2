@@ -135,8 +135,17 @@ export default function Assignments() {
   const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
 
   // Inline editing states
-  const [editingNotes, setEditingNotes] = useState<string | null>(null);
-  const [editNotesValue, setEditNotesValue] = useState<string>("");
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [editRowProgram, setEditRowProgram] = useState<string>("");
+  const [editRowKit, setEditRowKit] = useState<string>("");
+  const [editRowClient, setEditRowClient] = useState<string>("");
+  const [editRowQuantity, setEditRowQuantity] = useState<string>("");
+  const [editRowGrade, setEditRowGrade] = useState<string>("");
+  const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
+  const [editRowNotes, setEditRowNotes] = useState<string>("");
+  const [editRowProductionMonth, setEditRowProductionMonth] = useState<string>("");
+  const [editRowFilteredKits, setEditRowFilteredKits] = useState<any[]>([]);
+  const [editRowSelectedKit, setEditRowSelectedKit] = useState<any>(null);
 
   // Inline row creation states
   const [isAddingNewRow, setIsAddingNewRow] = useState(false);
@@ -180,17 +189,6 @@ export default function Assignments() {
   
   // Popover states for batch creation
   const [batchClientPopoverOpen, setBatchClientPopoverOpen] = useState<Record<string, boolean>>({});
-
-  // Edit mode states
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [editRowProgram, setEditRowProgram] = useState<string>("");
-  const [editRowKit, setEditRowKit] = useState<string>("");
-  const [editRowClient, setEditRowClient] = useState<string>("");
-  const [editRowQuantity, setEditRowQuantity] = useState<string>("1");
-  const [editRowGrade, setEditRowGrade] = useState<string>("");
-  const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
-  const [editRowNotes, setEditRowNotes] = useState<string>("");
-  const [editRowProductionMonth, setEditRowProductionMonth] = useState<string>("");
 
   // Column visibility state
   const [columnVisibility, setColumnVisibility] = useState({
@@ -321,13 +319,6 @@ export default function Assignments() {
     : [];
 
   const newRowSelectedKit = kits.find((k) => k._id === newRowKit);
-
-  // Get filtered kits for edit row
-  const editRowFilteredKits = editRowProgram
-    ? kits.filter((kit) => kit.programId === editRowProgram)
-    : [];
-
-  const editRowSelectedKit = kits.find((k) => k._id === editRowKit);
 
   // Group assignments by batch
   const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
@@ -1472,11 +1463,8 @@ export default function Assignments() {
                         {/* Batch Assignment Rows */}
                         {isExpanded &&
                           batchAssignments.map((assignment, index) => {
-                            const isEditing = editingAssignmentId === assignment._id;
-                            
-                            if (isEditing) {
-                              return (
-                                <TableRow key={assignment._id} className="bg-muted/50">
+                            return (
+                              <TableRow key={assignment._id} className="hover:bg-muted/50">
                                   <TableCell>
                                     <Badge variant="outline">{batch?.batchId || "-"}</Badge>
                                   </TableCell>
@@ -1609,25 +1597,6 @@ export default function Assignments() {
                                     <span className="text-sm text-muted-foreground">{format(assignment._creationTime, "MMM dd, yyyy")}</span>
                                   </TableCell>
                                   {columnVisibility.notes && (
-                                    <TableCell>
-                                      <Input value={editRowNotes} onChange={(e) => setEditRowNotes(e.target.value)} placeholder="Notes..." className="w-full" />
-                                    </TableCell>
-                                  )}
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                        <Save className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            }
-                            
-                            return (
                               <motion.tr
                                 key={assignment._id}
                                 initial={{ opacity: 0, y: 10 }}
@@ -1775,13 +1744,6 @@ export default function Assignments() {
                                         <Button
                                           size="icon"
                                           variant="ghost"
-                                          onClick={() => handleStartEditRow(assignment)}
-                                        >
-                                          <Edit2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
                                           onClick={() => handleDeleteClick(assignment)}
                                         >
                                           <Trash2 className="h-4 w-4" />
@@ -1790,7 +1752,7 @@ export default function Assignments() {
                                     )}
                                   </div>
                                 </TableCell>
-                              </motion.tr>
+                            </motion.tr>
                             );
                           })}
                       </React.Fragment>
@@ -1799,11 +1761,8 @@ export default function Assignments() {
 
                   // Standalone assignments
                   return batchAssignments.map((assignment, index) => {
-                    const isEditing = editingAssignmentId === assignment._id;
-                    
-                    if (isEditing) {
-                      return (
-                        <TableRow key={assignment._id} className="bg-muted/50">
+                    return (
+                      <TableRow key={assignment._id} className="hover:bg-muted/50">
                           <TableCell>
                             <span className="text-sm text-muted-foreground">-</span>
                           </TableCell>
@@ -1936,25 +1895,6 @@ export default function Assignments() {
                             <span className="text-sm text-muted-foreground">{format(assignment._creationTime, "MMM dd, yyyy")}</span>
                           </TableCell>
                           {columnVisibility.notes && (
-                            <TableCell>
-                              <Input value={editRowNotes} onChange={(e) => setEditRowNotes(e.target.value)} placeholder="Notes..." className="w-full" />
-                            </TableCell>
-                          )}
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-                    
-                    return (
                       <motion.tr
                         key={assignment._id}
                         initial={{ opacity: 0, y: 10 }}
@@ -2102,13 +2042,6 @@ export default function Assignments() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  onClick={() => handleStartEditRow(assignment)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
                                   onClick={() => handleDeleteClick(assignment)}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -2117,7 +2050,7 @@ export default function Assignments() {
                             )}
                           </div>
                         </TableCell>
-                      </motion.tr>
+                    </motion.tr>
                     );
                   });
                 })
