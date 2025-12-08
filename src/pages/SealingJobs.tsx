@@ -158,6 +158,7 @@ export default function SealingJobs() {
       
       setSealingForm({
         ...sealingForm,
+        name: `Sealing ${selectedItem.name}`,
         targetItemId: itemId,
         sources: autoFilledSources,
       });
@@ -165,6 +166,7 @@ export default function SealingJobs() {
     } else {
       setSealingForm({
         ...sealingForm,
+        name: selectedItem ? `Sealing ${selectedItem.name}` : sealingForm.name,
         targetItemId: itemId,
         sources: [],
       });
