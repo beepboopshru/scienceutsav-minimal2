@@ -58,7 +58,8 @@ export const calculateShortage = (
   reserved: number,
   minStock: number
 ): number => {
-  // Formula: (Order Required - Available) + Min Stock
+  // User requested logic: (order req - Available) + min stock
+  // We ignore reserved quantity in the shortage calculation
   return Math.max(0, (required - available) + minStock);
 };
 
@@ -188,7 +189,6 @@ export const aggregateMaterials = (
   };
 
   // Process each active assignment
-  let processedCount = 0;
   assignments.forEach(assignment => {
     if (!shouldIncludeAssignment(assignment.status)) {
       return;
@@ -198,8 +198,6 @@ export const aggregateMaterials = (
     if (!kit) {
       return;
     }
-
-    processedCount++;
 
     // Process structured kits with packingRequirements (SKIP components if structured)
     if (kit.isStructured && kit.packingRequirements) {
