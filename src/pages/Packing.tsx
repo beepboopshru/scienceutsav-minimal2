@@ -736,35 +736,44 @@ export default function Packing() {
                   // Render batch header row
                   return (
                     <>
-                      <TableRow key={`batch-${batchKey}`} className="cursor-pointer hover:bg-muted/50" onClick={() => toggleBatch(batchKey)}>
+                      <TableRow key={`batch-${batchKey}`} className="cursor-pointer hover:bg-muted/50 bg-muted/30" onClick={() => toggleBatch(batchKey)}>
                         {canEdit && <TableCell></TableCell>}
-                        <TableCell>
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={firstAssignment.clientType === "b2b" ? "default" : "secondary"}>
-                            {firstAssignment.clientType?.toUpperCase() || "N/A"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm font-semibold">
-                          {batch?.batchId || "Unknown Batch"}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {firstAssignment.clientType === "b2b" 
-                            ? (client as any)?.name || "Unknown"
-                            : (client as any)?.buyerName || "Unknown"}
-                        </TableCell>
-                        <TableCell className="text-sm" colSpan={2}>
-                          {batchAssignments.length} assignment{batchAssignments.length !== 1 ? "s" : ""}
-                        </TableCell>
-                        <TableCell className="text-sm" colSpan={2}>
-                          Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
-                        </TableCell>
-                        <TableCell colSpan={canEdit ? 7 : 6}></TableCell>
+                        {columnVisibility.program && (
+                          <TableCell>
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </TableCell>
+                        )}
+                        {columnVisibility.kit && (
+                          <TableCell className="text-sm font-semibold">
+                            {batch?.batchId || "Unknown Batch"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.client && (
+                          <TableCell className="text-sm">
+                            {firstAssignment.clientType === "b2b" 
+                              ? (client as any)?.name || "Unknown"
+                              : (client as any)?.buyerName || "Unknown"}
+                          </TableCell>
+                        )}
+                        {columnVisibility.quantity && (
+                          <TableCell className="text-sm">
+                            Total: {batchAssignments.reduce((sum, a) => sum + a.quantity, 0)}
+                          </TableCell>
+                        )}
+                        {columnVisibility.grade && <TableCell></TableCell>}
+                        {columnVisibility.status && (
+                          <TableCell className="text-sm">
+                            {batchAssignments.length} assignment{batchAssignments.length !== 1 ? "s" : ""}
+                          </TableCell>
+                        )}
+                        {columnVisibility.dispatchDate && <TableCell></TableCell>}
+                        {columnVisibility.productionMonth && <TableCell></TableCell>}
+                        {columnVisibility.notes && <TableCell></TableCell>}
+                        {canEdit && <TableCell></TableCell>}
                       </TableRow>
                       {isExpanded && batchAssignments.map((assignment, index) => {
                         const kit = kits?.find((k) => k._id === assignment.kitId);
@@ -780,8 +789,7 @@ export default function Packing() {
                           : "Unknown";
 
                         return (
-                          <TableRow key={assignment._id}>
-                            <TableCell></TableCell>
+                          <TableRow key={assignment._id} className="bg-background">
                             {canEdit && (
                               <TableCell>
                                 <div className="flex items-center gap-2">
@@ -797,19 +805,33 @@ export default function Packing() {
                                 </div>
                               </TableCell>
                             )}
-                            <TableCell>
-                              <Badge variant={assignment.clientType === "b2b" ? "default" : "secondary"}>
-                                {assignment.clientType?.toUpperCase() || "N/A"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm">{batch?.batchId || "—"}</TableCell>
-                            <TableCell className="text-sm">{clientName}</TableCell>
-                            <TableCell className="text-sm">{program?.name || "—"}</TableCell>
-                            <TableCell className="text-sm">{kit?.name || "Unknown Kit"}</TableCell>
-                            <TableCell className="text-sm">{kit?.category || "—"}</TableCell>
-                            <TableCell className="text-sm">{assignment.quantity}</TableCell>
-                            <TableCell className="text-sm">{assignment.grade || "—"}</TableCell>
-                            <TableCell>
+                            {columnVisibility.program && (
+                              <TableCell>
+                                <span className="text-sm">{program?.name || "—"}</span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.kit && (
+                              <TableCell>
+                                <span className="text-sm">{kit?.name || "Unknown Kit"}</span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.client && (
+                              <TableCell>
+                                <span className="text-sm">{clientName}</span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.quantity && (
+                              <TableCell>
+                                <span className="text-sm">{assignment.quantity}</span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.grade && (
+                              <TableCell>
+                                <span className="text-sm">{assignment.grade || "—"}</span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.status && (
+                              <TableCell>
                               {canEdit ? (
                                 <Select
                                   value={assignment.status || "assigned"}
@@ -849,85 +871,95 @@ export default function Packing() {
                                     </SelectItem>
                                   </SelectContent>
                                 </Select>
-                              ) : (
-                                <Badge variant={
-                                  assignment.status === "dispatched" ? "default" :
-                                  assignment.status === "in_progress" ? "secondary" : "outline"
-                                }>
-                                  {assignment.status}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {assignment.dispatchedAt 
-                                ? new Date(assignment.dispatchedAt).toLocaleDateString()
-                                : "—"}
-                            </TableCell>
-                            <TableCell className="text-sm">{assignment.productionMonth || "—"}</TableCell>
-                            <TableCell className="text-sm">
-                              {new Date(assignment._creationTime).toLocaleDateString()}
-                            </TableCell>
-                          {columnVisibility.notes && (
-                            <TableCell className="text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
-                                  title="Assignment Notes"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <FileText className="h-4 w-4 text-blue-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
-                                  title="Packing Notes"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <MessageSquare className="h-4 w-4 text-green-600" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
-                                  title="Dispatch Notes"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Truck className="h-4 w-4 text-orange-600" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          )}
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (kit) {
-                                      setFileViewerDialog({
-                                        open: true,
-                                        kitId: kit._id,
-                                        kitName: kit.name,
-                                      });
-                                    }
-                                  }}
-                                  title="View Kit Files"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => kit && handleDownloadKitSheet(kit._id)}
-                                  title="Download Kit Sheet"
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                                ) : (
+                                  <Badge variant={
+                                    assignment.status === "dispatched" ? "default" :
+                                    assignment.status === "in_progress" ? "secondary" : "outline"
+                                  }>
+                                    {assignment.status}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                            )}
+                            {columnVisibility.dispatchDate && (
+                              <TableCell>
+                                <span className="text-sm">
+                                  {assignment.dispatchedAt ? format(new Date(assignment.dispatchedAt), "MMM dd, yyyy") : "—"}
+                                </span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.productionMonth && (
+                              <TableCell>
+                                <span className="text-sm">
+                                  {assignment.productionMonth
+                                    ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
+                                    : "—"}
+                                </span>
+                              </TableCell>
+                            )}
+                            {columnVisibility.notes && (
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenNotesDialog(assignment._id, "assignment", assignment.notes || "", false)}
+                                    title="Assignment Notes"
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenNotesDialog(assignment._id, "packing", assignment.packingNotes || "", canEdit)}
+                                    title="Packing Notes"
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <MessageSquare className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenNotesDialog(assignment._id, "dispatch", assignment.dispatchNotes || "", false)}
+                                    title="Dispatch Notes"
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Truck className="h-4 w-4 text-orange-600" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
+                            {canEdit && (
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (kit) {
+                                        setFileViewerDialog({
+                                          open: true,
+                                          kitId: kit._id,
+                                          kitName: kit.name,
+                                        });
+                                      }
+                                    }}
+                                    title="View Kit Files"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => kit && handleDownloadKitSheet(kit._id)}
+                                    title="Download Kit Sheet"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
                           </TableRow>
                         );
                       })}
