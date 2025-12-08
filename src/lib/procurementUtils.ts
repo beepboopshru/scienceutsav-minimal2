@@ -226,13 +226,15 @@ export const aggregateMaterials = (
 
     processedCount++;
 
-    // Process structured kits with packingRequirements
+    // Process structured kits with packingRequirements (SKIP components if structured)
     if (kit.isStructured && kit.packingRequirements) {
-      console.log('Processing structured kit with packingRequirements');
+      console.log('Processing structured kit with packingRequirements - SKIPPING components');
       processPackingRequirements(kit.packingRequirements, kit._id, kit.name, assignment.quantity);
+      // Skip processing components for structured kits as they're already in packingRequirements
+      return;
     }
 
-    // Process kit components
+    // Process kit components (only for non-structured kits)
     if (kit.components && Array.isArray(kit.components) && kit.components.length > 0) {
       console.log('Kit has components:', kit.components.length);
       kit.components.forEach((kitComp: any) => {
