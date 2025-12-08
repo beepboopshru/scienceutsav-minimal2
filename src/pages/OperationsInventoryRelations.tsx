@@ -450,13 +450,14 @@ export default function OperationsInventoryRelations() {
                                 const packetItem = viewItemsSheet.request?.items.find(
                                   (item: any) => item.category === "sealed_packet" && item.name === packet.name
                                 );
-                                const actualQuantity = packetItem ? packetItem.quantity : (packet.quantity || 0) * assignment.quantity;
+                                // Use the quantity from packing request items, which should already be calculated
+                                const displayQuantity = packetItem?.quantity || 0;
                                 
                                 return (
                                   <div key={packetIdx} className="text-sm flex justify-between items-center py-1">
                                     <span className="text-muted-foreground">• {packet.name}</span>
                                     <span className="font-mono text-xs">
-                                      {actualQuantity} {packetItem?.unit || packet.unit || 'pcs'}
+                                      {displayQuantity} {packetItem?.unit || packet.unit || 'pcs'}
                                     </span>
                                   </div>
                                 );
