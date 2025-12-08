@@ -93,20 +93,33 @@ export const create = mutation({
           // Process sealed packets
           if (structure.packets && Array.isArray(structure.packets)) {
             for (const packet of structure.packets) {
-              if (!packet.inventoryItemId) continue;
+              // Check for both inventoryItemId and name
+              const packetName = packet.name;
+              if (!packetName) continue;
+              
+              // Find the sealed packet in inventory by name
+              const sealedPacketItem = await ctx.db
+                .query("inventory")
+                .withIndex("by_name", (q: any) => q.eq("name", packetName))
+                .first();
+              
+              if (!sealedPacketItem) {
+                console.log(`Sealed packet not found in inventory: ${packetName}`);
+                continue;
+              }
               
               const requiredQty = (packet.quantity || 0) * assignment.quantity;
-              const key = packet.inventoryItemId;
+              const key = sealedPacketItem._id;
               
               if (sealedPackets.has(key)) {
                 sealedPackets.get(key)!.quantity += requiredQty;
               } else {
                 sealedPackets.set(key, {
-                  inventoryId: packet.inventoryItemId,
-                  name: packet.name || "Unknown",
+                  inventoryId: sealedPacketItem._id,
+                  name: sealedPacketItem.name,
                   type: "sealed_packet",
                   quantity: requiredQty,
-                  unit: packet.unit || "pcs",
+                  unit: packet.unit || sealedPacketItem.unit || "pcs",
                   category: "sealed_packet",
                 });
               }
