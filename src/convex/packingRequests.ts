@@ -110,18 +110,26 @@ export const create = mutation({
               if (!packetName) continue;
               
               // Find the sealed packet in inventory by name
-              const sealedPacketItem = await ctx.db
+              let sealedPacketItem = await ctx.db
                 .query("inventory")
                 .withIndex("by_name", (q: any) => q.eq("name", packetName))
                 .first();
               
+              // If not found by name, try to find a generic sealed_packet item as fallback
               if (!sealedPacketItem) {
-                console.log(`Sealed packet not found in inventory: ${packetName}`);
-                continue;
+                sealedPacketItem = await ctx.db
+                  .query("inventory")
+                  .withIndex("by_type", (q: any) => q.eq("type", "sealed_packet"))
+                  .first();
+                
+                if (!sealedPacketItem) {
+                  console.log(`Sealed packet not found in inventory: ${packetName}`);
+                  continue;
+                }
               }
               
-              // If quantity is 0, null, or undefined, default to assignment quantity (1 per kit)
-              const qtyPerKit = (packet.quantity !== undefined && packet.quantity !== null && packet.quantity > 0) ? packet.quantity : 1;
+              // Default to 1 per kit if quantity is not specified, 0, null, or undefined
+              const qtyPerKit = (packet.quantity && packet.quantity > 0) ? packet.quantity : 1;
               const requiredQty = qtyPerKit * assignment.quantity;
               const key = sealedPacketItem._id;
               
@@ -130,7 +138,7 @@ export const create = mutation({
               } else {
                 sealedPackets.set(key, {
                   inventoryId: sealedPacketItem._id,
-                  name: sealedPacketItem.name,
+                  name: packetName, // Use the original packet name from kit structure
                   type: "sealed_packet",
                   quantity: requiredQty,
                   unit: packet.unit || sealedPacketItem.unit || "pcs",
