@@ -1,8 +1,48 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAllPermissions } from "./permissions";
+
+export const getEffective = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const adminId = await getAuthUserId(ctx);
+    if (!adminId) throw new Error("Not authenticated");
+    return await getAllPermissions(ctx, args.userId);
+  },
+});
 
 export const get = query({
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+    processingJobs: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          complete: v.boolean(),
+          delete: v.boolean(),
+        editBOM: v.optional(v.boolean()),
+        editTargets: v.optional(v.boolean()),
+      })),
+      packing: v.optional(v.object({
+=======
+    processingJobs: v.optional(v.object({
+          view: v.boolean(),
+          create: v.boolean(),
+          edit: v.boolean(),
+          complete: v.boolean(),
+          delete: v.boolean(),
+        editBOM: v.optional(v.boolean()),
+        editTargets: v.optional(v.boolean()),
+      })),
+      procurementJobs: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        edit: v.boolean(),
+        complete: v.boolean(),
+        delete: v.boolean(),
+      })),
+      packing: v.optional(v.object({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     return await ctx.db

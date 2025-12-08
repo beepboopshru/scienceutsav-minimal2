@@ -8,8 +8,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useState } from "react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { UserPermissionsDialog } from "@/components/users/UserPermissionsDialog";
 
 export default function UserManagement() {
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)} disabled={!canDelete}>
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+=======
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)} disabled={!canDelete}>
+                          Delete
+                        </Button>
+                        {canManageRoles && (
+                          <UserPermissionsDialog userId={user._id} userName={user.name || user.email} />
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
   const { hasPermission } = usePermissions();
   const canView = hasPermission("userManagement", "view");
   const canApprove = hasPermission("userManagement", "approveUsers");
