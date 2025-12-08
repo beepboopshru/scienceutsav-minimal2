@@ -4,6 +4,8 @@ import { api } from "@/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { RefreshCw, FileDown, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { aggregateMaterials } from "@/lib/procurementUtils";
@@ -26,8 +28,9 @@ export default function Procurement() {
   const materialRequests = useQuery(api.materialRequests.list) || [];
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [shortageFilter, setShortageFilter] = useState<"all" | "shortages">("shortages");
 
-  const materials = useMemo(() => {
+  const allMaterials = useMemo(() => {
     if (!assignments.length || !kits.length || !inventory.length) return [];
     
     // Filter to only approved material requests
@@ -43,6 +46,13 @@ export default function Procurement() {
       approvedMaterialRequests
     );
   }, [assignments, kits, inventory, purchasingQuantities, vendors, processingJobs, materialRequests]);
+
+  const materials = useMemo(() => {
+    if (shortageFilter === "all") {
+      return allMaterials;
+    }
+    return allMaterials.filter(m => m.shortage > 0);
+  }, [allMaterials, shortageFilter]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -66,7 +76,19 @@ export default function Procurement() {
               Material shortages for active assignments (raw materials only)
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Filter:</Label>
+              <Select value={shortageFilter} onValueChange={(value: "all" | "shortages") => setShortageFilter(value)}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="shortages">Only Shortages</SelectItem>
+                  <SelectItem value="all">Show All</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button
               variant="outline"
               onClick={handleRefresh}
