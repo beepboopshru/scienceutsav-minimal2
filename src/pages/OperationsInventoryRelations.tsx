@@ -328,7 +328,7 @@ export default function OperationsInventoryRelations() {
                                 {request.items.length} item(s)
                               </div>
                             </TableCell>
-                            <TableCell>{request.requesterName}</TableCell>
+                            <TableCell>{request.requesterEmail}</TableCell>
                             <TableCell>
                               {new Date(request._creationTime).toLocaleDateString()}
                             </TableCell>
@@ -358,7 +358,7 @@ export default function OperationsInventoryRelations() {
                                 )}
                                 {request.status === "done" && (
                                   <span className="text-sm text-muted-foreground">
-                                    Fulfilled by {request.fulfillerName}
+                                    Fulfilled by {request.fulfillerEmail}
                                   </span>
                                 )}
                               </div>
@@ -433,12 +433,12 @@ export default function OperationsInventoryRelations() {
               </div>
               <div className="flex items-center justify-between text-sm mt-2">
                 <span className="text-muted-foreground">Requested by:</span>
-                <span className="font-medium">{viewItemsSheet.request?.requesterName}</span>
+                <span className="font-medium">{viewItemsSheet.request?.requesterEmail}</span>
               </div>
-              {viewItemsSheet.request?.status === "done" && viewItemsSheet.request?.fulfillerName && (
+              {viewItemsSheet.request?.status === "done" && viewItemsSheet.request?.fulfillerEmail && (
                 <div className="flex items-center justify-between text-sm mt-2">
                   <span className="text-muted-foreground">Fulfilled by:</span>
-                  <span className="font-medium">{viewItemsSheet.request?.fulfillerName}</span>
+                  <span className="font-medium">{viewItemsSheet.request?.fulfillerEmail}</span>
                 </div>
               )}
             </div>
