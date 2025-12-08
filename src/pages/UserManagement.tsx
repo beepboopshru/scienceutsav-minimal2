@@ -7,34 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useState } from "react";
-import { usePermissions } from "@/hooks/use-permissions";
-import { UserPermissionsDialog } from "@/components/users/UserPermissionsDialog";
 
 export default function UserManagement() {
->>>>>>> REPLACE
-<<<<<<< SEARCH
-                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)} disabled={!canDelete}>
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-=======
-                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)} disabled={!canDelete}>
-                          Delete
-                        </Button>
-                        {canManageRoles && (
-                          <UserPermissionsDialog userId={user._id} userName={user.name || user.email} />
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-  const { hasPermission } = usePermissions();
-  const canView = hasPermission("userManagement", "view");
-  const canApprove = hasPermission("userManagement", "approveUsers");
-  const canManageRoles = hasPermission("userManagement", "manageRoles");
-  const canDelete = hasPermission("userManagement", "deleteUsers");
-
   const currentUser = useQuery(api.users.currentUser);
   const pendingUsers = useQuery(api.users.listPending) || [];
   const approvedUsers = useQuery(api.users.listApproved) || [];
@@ -42,19 +16,7 @@ export default function UserManagement() {
   const updateRole = useMutation(api.users.updateRole);
   const deleteUser = useMutation(api.users.deleteUser);
 
-  if (currentUser === undefined) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center h-[80vh]">
-          <div className="text-center">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (!canView) {
+  if (!currentUser || currentUser.role !== "admin") {
     return (
       <Layout>
         <div className="flex items-center justify-center h-[80vh]">
@@ -133,7 +95,7 @@ export default function UserManagement() {
                       <TableCell>{new Date(user._creationTime).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Select onValueChange={(value) => handleApprove(user._id, value)} disabled={!canApprove}>
+                          <Select onValueChange={(value) => handleApprove(user._id, value)}>
                             <SelectTrigger className="w-[180px]">
                               <SelectValue placeholder="Approve as..." />
                             </SelectTrigger>
@@ -144,7 +106,7 @@ export default function UserManagement() {
                               <SelectItem value="content">Content</SelectItem>
                             </SelectContent>
                           </Select>
-                          <Button variant="destructive" size="sm" onClick={() => handleDelete(user._id)} disabled={!canDelete}>
+                          <Button variant="destructive" size="sm" onClick={() => handleDelete(user._id)}>
                             Reject
                           </Button>
                         </div>
@@ -182,7 +144,7 @@ export default function UserManagement() {
                     <TableCell>{new Date(user._creationTime).toLocaleDateString()}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Select defaultValue={user.role} onValueChange={(value) => handleUpdateRole(user._id, value)} disabled={!canManageRoles}>
+                        <Select defaultValue={user.role} onValueChange={(value) => handleUpdateRole(user._id, value)}>
                           <SelectTrigger className="w-[140px]">
                             <SelectValue />
                           </SelectTrigger>
@@ -193,7 +155,7 @@ export default function UserManagement() {
                             <SelectItem value="content">Content</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)} disabled={!canDelete}>
+                        <Button variant="ghost" size="sm" className="text-red-600" onClick={() => handleDelete(user._id)}>
                           Delete
                         </Button>
                       </div>
