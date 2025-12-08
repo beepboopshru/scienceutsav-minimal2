@@ -313,6 +313,7 @@ export const fulfill = mutation({
     for (const item of request.items) {
       const inventoryItem = await ctx.db.get(item.inventoryId as any);
       if (!inventoryItem) {
+        console.error(`Inventory item not found: ${item.name} (ID: ${item.inventoryId})`);
         throw new Error(`Inventory item ${item.name} not found`);
       }
 
@@ -324,8 +325,11 @@ export const fulfill = mutation({
 
       // Reduce stock directly for all categories
       // Main pouch materials, sealed packets, bulk, spare, and misc are all reduced directly
+      const newQuantity = invItem.quantity - item.quantity;
+      console.log(`Reducing ${item.name}: ${invItem.quantity} - ${item.quantity} = ${newQuantity}`);
+      
       await ctx.db.patch(item.inventoryId as any, {
-        quantity: invItem.quantity - item.quantity,
+        quantity: newQuantity,
       });
     }
 
