@@ -46,7 +46,7 @@ export default function Packing() {
   const batches = useQuery(api.batches.list, {});
   const programs = useQuery(api.programs.list, {});
   const inventory = useQuery(api.inventory.list, {});
-  const checklistItems = useQuery(api.dispatchChecklist.list, {});
+  const checklistItems = useQuery(api.packingChecklist.list, {});
 
   const updatePackingStatus = useMutation(api.assignments.updatePackingStatus);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
