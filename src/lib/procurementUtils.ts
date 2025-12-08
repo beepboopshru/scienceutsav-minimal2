@@ -58,8 +58,9 @@ export const calculateShortage = (
   reserved: number,
   minStock: number
 ): number => {
-  const effectiveAvailable = available - reserved;
-  return Math.max(0, (required - effectiveAvailable) + minStock);
+  // User requested logic: (order req - Available) + min stock
+  // We ignore reserved quantity in the shortage calculation
+  return Math.max(0, (required - available) + minStock);
 };
 
 // Main function to aggregate materials from assignments
@@ -398,18 +399,6 @@ export const aggregateMaterials = (
         item.minStockLevel
       );
       const purchasingQty = item.purchasingQty > 0 ? item.purchasingQty : shortage;
-
-      // Debug logging for specific items
-      if (item.name.includes('Cardboard') || item.name.includes('Battery')) {
-        console.log(`[PROCUREMENT DEBUG] ${item.name}:`, {
-          orderRequired: item.orderRequired,
-          available: item.available,
-          reserved: item.reserved,
-          minStockLevel: item.minStockLevel,
-          calculatedShortage: shortage,
-          formula: `(${item.orderRequired} - (${item.available} - ${item.reserved})) + ${item.minStockLevel} = ${shortage}`
-        });
-      }
 
       return {
         ...item,
