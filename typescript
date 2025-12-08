@@ -1,1 +1,6 @@
-requesterEmail: requester?.email || "Unknown"
+// src/components/processing/ProcessingRequirements.tsx
+pnpm install
+
+const hasMatchingAssignment = job.assignmentIds && job.assignmentIds.length > 0
+  ? job.assignmentIds.some((id: string) => assignmentIds.includes(id))
+  : true; // Changed from false to true: count legacy jobs without assignment IDs for all assignments

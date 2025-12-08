@@ -33,8 +33,12 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
     
     activeJobs.forEach(job => {
       if (job.status === "assigned" || job.status === "in_progress") {
-        // Only count this job if it's linked to one of the current assignments
-        const hasMatchingAssignment = job.assignmentIds && job.assignmentIds.some((id: string) => assignmentIds.includes(id));
+        // Only count this job if:
+        // 1. It has assignmentIds AND they match one of the current assignments, OR
+        // 2. It has no assignmentIds (legacy jobs - count them for all assignments)
+        const hasMatchingAssignment = job.assignmentIds && job.assignmentIds.length > 0
+          ? job.assignmentIds.some((id: string) => assignmentIds.includes(id))
+          : false; // Don't count legacy jobs without assignment IDs
         
         if (hasMatchingAssignment) {
           job.targets.forEach((target: any) => {
