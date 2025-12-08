@@ -28,7 +28,7 @@ export const list = query({
         return {
           ...r,
           requesterEmail: requester?.email || "Unknown",
-          fulfillerEmail: fulfiller?.email,
+          fulfillerEmail: fulfiller?.email || undefined,
           assignments: assignments.filter(a => a !== null),
         };
       })
