@@ -35,7 +35,7 @@ export default function Procurement() {
   const canEdit = hasPermission("procurementJobs", "edit");
 
   const materials = useMemo(() => {
-    return aggregateMaterials(
+    const allMaterials = aggregateMaterials(
       assignments,
       kits,
       inventory,
@@ -44,7 +44,14 @@ export default function Procurement() {
       processingJobs,
       approvedMaterialRequests
     );
-  }, [assignments, kits, inventory, purchasingQuantities, vendors, processingJobs, approvedMaterialRequests]);
+    
+    // Apply shortage filter
+    if (shortageFilter === "shortages") {
+      return allMaterials.filter(m => m.shortage > 0);
+    }
+    
+    return allMaterials;
+  }, [assignments, kits, inventory, purchasingQuantities, vendors, processingJobs, approvedMaterialRequests, shortageFilter]);
 
   const handleRefresh = () => {
     if (isRefreshing) return;
