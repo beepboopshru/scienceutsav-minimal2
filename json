@@ -1,1 +1,3 @@
-{"file_paths":["src/components/inventory/MaterialRequestsTab.tsx","src/pages/OperationsInventoryRelations.tsx","src/pages/Packing.tsx"],"replace_files_in_context":true}
+{
+  "plan": "1. Verify the changes by checking if the type checker passes.\n2. Confirm that the permissions are correctly applied in both frontend and backend code."
+}

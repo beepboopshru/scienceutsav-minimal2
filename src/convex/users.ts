@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { auth } from "./auth";
+import { checkPermission } from "./permissions";
 
 export const currentUser = query({
   args: {},
@@ -39,6 +40,7 @@ export const approveUser = mutation({
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    await checkPermission(ctx, userId, "userManagement", "approveUsers");
     await ctx.db.patch(args.id, { role: args.role as any });
   },
 });
@@ -48,6 +50,7 @@ export const updateRole = mutation({
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    await checkPermission(ctx, userId, "userManagement", "manageRoles");
     await ctx.db.patch(args.id, { role: args.role as any });
   },
 });
@@ -57,6 +60,7 @@ export const deleteUser = mutation({
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);
     if (!userId) throw new Error("Unauthorized");
+    await checkPermission(ctx, userId, "userManagement", "deleteUsers");
     await ctx.db.delete(args.id);
   },
 });
