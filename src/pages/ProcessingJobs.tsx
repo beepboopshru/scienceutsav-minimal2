@@ -171,6 +171,12 @@ export default function ProcessingJobs() {
     const newTargets = [...processingForm.targets];
     newTargets[targetIndex].targetItemId = itemId;
     
+    // Auto-fill name if empty
+    let newName = processingForm.name;
+    if (selectedItem && (!processingForm.name || processingForm.name.trim() === "")) {
+      newName = `Process ${selectedItem.name}`;
+    }
+
     // If the selected item has BOM components, auto-fill sources
     if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
       const newSources = selectedItem.components.map((component) => ({
@@ -181,11 +187,12 @@ export default function ProcessingJobs() {
       setProcessingForm({ 
         ...processingForm, 
         targets: newTargets,
-        sources: newSources.length > 0 ? newSources : processingForm.sources
+        sources: newSources.length > 0 ? newSources : processingForm.sources,
+        name: newName
       });
       toast.success("BOM materials auto-filled in sources");
     } else {
-      setProcessingForm({ ...processingForm, targets: newTargets });
+      setProcessingForm({ ...processingForm, targets: newTargets, name: newName });
     }
     
     setTargetComboboxOpen({ ...targetComboboxOpen, [targetIndex]: false });

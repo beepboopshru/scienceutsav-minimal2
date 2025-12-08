@@ -432,6 +432,7 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           <TableHead>Available</TableHead>
           <TableHead>In Progress</TableHead>
           <TableHead>Shortage</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -470,10 +471,18 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
                 <TableCell>
                   <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
                 </TableCell>
+                <TableCell className="text-right">
+                  <Button 
+                    size="sm" 
+                    onClick={() => onStartJob(item.id, item.shortage, item.assignmentIds)}
+                  >
+                    Start Job
+                  </Button>
+                </TableCell>
               </TableRow>
               {hasComponents && expandedRows[rowKey] && (
                 <TableRow>
-                  <TableCell colSpan={6} className="bg-muted/50 p-4">
+                  <TableCell colSpan={7} className="bg-muted/50 p-4">
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Raw Materials Required (per unit):</p>
                       <div className="grid gap-2">
