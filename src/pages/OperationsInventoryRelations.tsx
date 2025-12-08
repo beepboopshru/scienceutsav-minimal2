@@ -455,16 +455,20 @@ export default function OperationsInventoryRelations() {
                             <div className="ml-2 space-y-1">
                               {assignment.kitStructure.packets.map((packet: any, packetIdx: number) => {
                                 // Find the actual quantity from the packing request items
+                                // Match by name and category
                                 const packetItem = viewItemsSheet.request?.items.find(
                                   (item: any) => item.category === "sealed_packet" && item.name === packet.name
                                 );
-                                const displayQuantity = packetItem?.quantity || 0;
+                                
+                                // If not found by exact match, calculate default quantity
+                                const displayQuantity = packetItem?.quantity || (assignment.quantity * (packet.quantity || 1));
+                                const displayUnit = packetItem?.unit || packet.unit || 'pcs';
                                 
                                 return (
                                   <div key={packetIdx} className="text-sm py-1 flex items-center justify-between">
                                     <span className="text-muted-foreground">• {packet.name}</span>
                                     <Badge variant="outline" className="text-xs ml-2">
-                                      {displayQuantity} {packetItem?.unit || 'pcs'}
+                                      {displayQuantity} {displayUnit}
                                     </Badge>
                                   </div>
                                 );
