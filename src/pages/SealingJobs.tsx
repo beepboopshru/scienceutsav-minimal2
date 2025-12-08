@@ -6,7 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Loader2, Package, Plus, RefreshCw } from "lucide-react";
+import { Loader2, Package, Plus, RefreshCw, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +35,9 @@ import {
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { QuickAddInventoryDialog } from "@/components/research/QuickAddInventoryDialog";
-import { parsePackingRequirements } from "@/lib/kitPacking";
+import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 export default function SealingJobs() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -55,14 +57,23 @@ export default function SealingJobs() {
   const b2cClients = useQuery(api.b2cClients.list);
   
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
-  const [generateJobsOpen, setGenerateJobsOpen] = useState(false);
+  const [sealingJobOpen, setSealingJobOpen] = useState(false);
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [newItemName, setNewItemName] = useState("");
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [sealingPacketComboboxOpen, setSealingPacketComboboxOpen] = useState(false);
   
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [allRequirements, setAllRequirements] = useState<any[]>([]);
+
+  const [sealingForm, setSealingForm] = useState({
+    name: "",
+    targetItemId: "" as Id<"inventory">,
+    targetQuantity: 1,
+    sources: [] as Array<{ sourceItemId: Id<"inventory">; sourceQuantity: number }>,
+    processedBy: "",
+    processedByType: "in_house" as "vendor" | "service" | "in_house",
+    notes: "",
+  });
 
   const createProcessingJob = useMutation(api.processingJobs.create);
   const startJob = useMutation(api.processingJobs.startJob);
@@ -117,87 +128,106 @@ export default function SealingJobs() {
     );
   }
 
-  const handleGenerateJobs = () => {
-    // Collect all requirements with shortages from the SealingRequirements component
-    // This will be populated when the component calculates requirements
-    setGenerateJobsOpen(true);
-  };
-
   const handleCreateItem = (name: string) => {
     setNewItemName(name);
     setCreateItemOpen(true);
   };
 
-  const handleBatchCreateJobs = async () => {
-    if (selectedItems.size === 0) {
-      toast.error("Please select at least one item to create jobs for");
+  const handleSealingPacketSelection = (itemId: Id<"inventory">) => {
+    const selectedItem = inventory?.find((i) => i._id === itemId);
+    
+    if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
+      const autoFilledSources = selectedItem.components.map((component: any) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * sealingForm.targetQuantity,
+      }));
+      
+      setSealingForm({
+        ...sealingForm,
+        targetItemId: itemId,
+        sources: autoFilledSources,
+      });
+      toast.success(`Source materials auto-filled from sealed packet BOM (${selectedItem.components.length} items)`);
+    } else {
+      setSealingForm({
+        ...sealingForm,
+        targetItemId: itemId,
+        sources: [],
+      });
+      const errorMsg = selectedItem 
+        ? `Selected sealed packet "${selectedItem.name}" has no BOM defined. Please check the kit's packing requirements.`
+        : "Selected sealed packet has no BOM defined";
+      toast.error(errorMsg);
+    }
+    
+    setSealingPacketComboboxOpen(false);
+  };
+
+  const handleSealingQuantityChange = (quantity: number) => {
+    const selectedItem = inventory?.find((i) => i._id === sealingForm.targetItemId);
+    
+    if (selectedItem && selectedItem.components && selectedItem.components.length > 0) {
+      const updatedSources = selectedItem.components.map((component: any) => ({
+        sourceItemId: component.rawMaterialId,
+        sourceQuantity: component.quantityRequired * quantity,
+      }));
+      
+      setSealingForm({
+        ...sealingForm,
+        targetQuantity: quantity,
+        sources: updatedSources,
+      });
+    } else {
+      setSealingForm({
+        ...sealingForm,
+        targetQuantity: quantity,
+      });
+    }
+  };
+
+  const handleCreateSealingJob = async () => {
+    if (!sealingForm.targetItemId) {
+      toast.error("Please select a sealed packet");
+      return;
+    }
+    
+    if (sealingForm.sources.length === 0) {
+      toast.error("No source materials defined. Please select a sealed packet with BOM.");
       return;
     }
 
     try {
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const itemId of selectedItems) {
-        const requirement = allRequirements.find(r => r.id === itemId);
-        if (!requirement) continue;
-
-        // Skip missing items
-        if (typeof requirement.id === 'string' && requirement.id.startsWith('missing_')) {
-          failCount++;
-          continue;
-        }
-
-        const targetItem = inventory.find(i => i._id === requirement.id);
-        if (!targetItem || !requirement.components || requirement.components.length === 0) {
-          failCount++;
-          continue;
-        }
-
-        const sources = requirement.components.map((comp: any) => ({
-          sourceItemId: comp.inventoryId,
-          sourceQuantity: comp.totalRequired,
-        }));
-
-        // Validate stock
-        let hasStock = true;
-        for (const source of sources) {
-          const sourceItem = inventory.find(i => i._id === source.sourceItemId);
-          if (!sourceItem || sourceItem.quantity < source.sourceQuantity) {
-            hasStock = false;
-            break;
-          }
-        }
-
-        if (!hasStock) {
-          failCount++;
-          continue;
-        }
-
-        await createProcessingJob({
-          name: `Seal ${targetItem.name} - ${requirement.shortage} units`,
-          sources,
-          targets: [{
-            targetItemId: requirement.id,
-            targetQuantity: requirement.shortage,
-          }],
-          processedByType: "in_house",
-        });
-
-        successCount++;
+      const jobData: any = {
+        name: sealingForm.name,
+        sources: sealingForm.sources,
+        targets: [{ targetItemId: sealingForm.targetItemId, targetQuantity: sealingForm.targetQuantity }],
+      };
+      
+      if (sealingForm.processedBy) {
+        jobData.processedBy = sealingForm.processedBy;
       }
-
-      if (successCount > 0) {
-        toast.success(`Successfully created ${successCount} sealing job(s)`);
+      if (sealingForm.processedByType) {
+        jobData.processedByType = sealingForm.processedByType;
       }
-      if (failCount > 0) {
-        toast.warning(`Failed to create ${failCount} job(s) due to missing items or insufficient stock`);
+      if (sealingForm.notes) {
+        jobData.notes = sealingForm.notes;
       }
-
-      setGenerateJobsOpen(false);
-      setSelectedItems(new Set());
+      
+      await createProcessingJob(jobData);
+      toast.success("Sealing packet job created");
+      setSealingJobOpen(false);
+      setSealingForm({
+        name: "",
+        targetItemId: "" as Id<"inventory">,
+        targetQuantity: 1,
+        sources: [],
+        processedBy: "",
+        processedByType: "in_house",
+        notes: "",
+      });
+      setSealingPacketComboboxOpen(false);
     } catch (error: any) {
-      toast.error(error.message || "Failed to create sealing jobs");
+      toast.error(error.message || "Failed to create sealing packet job");
     }
   };
 
@@ -261,14 +291,16 @@ export default function SealingJobs() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleGenerateJobs} disabled={!canEdit}>
-                <Package className="mr-2 h-4 w-4" />
-                Generate Jobs
-              </Button>
               <Button onClick={handleRefresh} variant="outline" disabled={isRefreshing}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
+              {canEdit && (
+                <Button onClick={() => setSealingJobOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Start Sealing Job
+                </Button>
+              )}
             </div>
           </div>
 
@@ -393,128 +425,169 @@ export default function SealingJobs() {
             </TabsContent>
           </Tabs>
 
-          {/* Generate Jobs Dialog */}
-          <Dialog open={generateJobsOpen} onOpenChange={setGenerateJobsOpen}>
-            <DialogContent className="max-w-4xl max-h-[80vh]">
+          {/* Sealing Job Creation Dialog */}
+          <Dialog open={sealingJobOpen} onOpenChange={setSealingJobOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Generate Sealing Jobs</DialogTitle>
+                <DialogTitle>Create Sealing Packet Job</DialogTitle>
                 <DialogDescription>
-                  Select sealed packets to create jobs for. Only items with sufficient stock will be processed.
+                  Seal raw materials into packets
                 </DialogDescription>
               </DialogHeader>
 
-              <ScrollArea className="h-[400px] pr-4">
-                <div className="space-y-2">
-                  {(() => {
-                    // Calculate requirements for display
-                    const reqs: any[] = [];
-                    assignments?.forEach((assignment) => {
-                      const kit = assignment.kit;
-                      if (!kit || !kit.packingRequirements) return;
-
-                      const structure = parsePackingRequirements(kit.packingRequirements);
-                      if (structure.packets) {
-                        structure.packets.forEach((packet: any) => {
-                          const packetName = packet.name.trim();
-                          const foundItem = inventory?.find(i => 
-                            i.type === "sealed_packet" && 
-                            (i.name.toLowerCase().includes(packetName.toLowerCase()) || 
-                             packetName.toLowerCase().includes(i.name.toLowerCase()))
-                          );
-
-                          if (foundItem) {
-                            const required = assignment.quantity;
-                            const available = foundItem.quantity || 0;
-                            const shortage = Math.max(0, required - available);
-
-                            if (shortage > 0) {
-                              const existing = reqs.find(r => r.id === foundItem._id);
-                              if (existing) {
-                                existing.shortage += shortage;
-                              } else {
-                                reqs.push({
-                                  id: foundItem._id,
-                                  name: foundItem.name,
-                                  shortage,
-                                  unit: foundItem.unit,
-                                  components: foundItem.components || []
-                                });
-                              }
-                            }
-                          }
-                        });
-                      }
-                    });
-
-                    // Update allRequirements for batch creation
-                    if (reqs.length > 0 && allRequirements.length === 0) {
-                      setAllRequirements(reqs);
-                    }
-
-                    return reqs.map((req) => {
-                      const isSelected = selectedItems.has(req.id);
-                      const isMissing = typeof req.id === 'string' && req.id.startsWith('missing_');
-                      const hasComponents = req.components && req.components.length > 0;
-
-                      return (
-                        <div
-                          key={req.id}
-                          className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                            isSelected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                          } ${isMissing || !hasComponents ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          onClick={() => {
-                            if (isMissing || !hasComponents) return;
-                            setSelectedItems(prev => {
-                              const newSet = new Set(prev);
-                              if (newSet.has(req.id)) {
-                                newSet.delete(req.id);
-                              } else {
-                                newSet.add(req.id);
-                              }
-                              return newSet;
-                            });
-                          }}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  disabled={isMissing || !hasComponents}
-                                  onChange={() => {}}
-                                  className="h-4 w-4"
-                                />
-                                <h4 className="font-medium">{req.name}</h4>
-                              </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                Shortage: {req.shortage} {req.unit}
-                              </p>
-                              {isMissing && (
-                                <Badge variant="destructive" className="mt-2">Missing from Inventory</Badge>
-                              )}
-                              {!hasComponents && !isMissing && (
-                                <Badge variant="destructive" className="mt-2">No BOM Defined</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="jobName">Job Name *</Label>
+                  <Input
+                    id="jobName"
+                    value={sealingForm.name}
+                    onChange={(e) => setSealingForm({ ...sealingForm, name: e.target.value })}
+                    placeholder="Enter job name"
+                  />
                 </div>
-              </ScrollArea>
+
+                <div>
+                  <Label>Target Sealed Packet *</Label>
+                  <Popover open={sealingPacketComboboxOpen} onOpenChange={setSealingPacketComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between">
+                        {sealingForm.targetItemId
+                          ? inventory?.find((i) => i._id === sealingForm.targetItemId)?.name
+                          : "Select sealed packet"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search sealed packets..." />
+                        <CommandList>
+                          <CommandEmpty>No sealed packet found.</CommandEmpty>
+                          <CommandGroup>
+                            {inventory?.filter(i => i.type === "sealed_packet").map((item) => (
+                              <CommandItem
+                                key={item._id}
+                                onSelect={() => handleSealingPacketSelection(item._id)}
+                              >
+                                {item.name} ({item.quantity} {item.unit})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <Label htmlFor="targetQuantity">Target Quantity *</Label>
+                  <Input
+                    id="targetQuantity"
+                    type="number"
+                    value={sealingForm.targetQuantity}
+                    onChange={(e) => handleSealingQuantityChange(parseFloat(e.target.value) || 1)}
+                    min={1}
+                  />
+                </div>
+
+                {sealingForm.sources.length > 0 && (
+                  <div>
+                    <Label>Source Materials (Auto-calculated from BOM)</Label>
+                    <div className="border rounded-lg p-4 space-y-2 bg-muted/50">
+                      {sealingForm.sources.map((source, idx) => {
+                        const item = inventory?.find(i => i._id === source.sourceItemId);
+                        return (
+                          <div key={idx} className="flex justify-between items-center text-sm">
+                            <span className="font-medium">{item?.name || "Unknown"}</span>
+                            <Badge variant="secondary">
+                              {source.sourceQuantity} {item?.unit}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                <div>
+                  <Label htmlFor="processedByType">Processed By Type *</Label>
+                  <Select
+                    value={sealingForm.processedByType}
+                    onValueChange={(v: any) => setSealingForm({ ...sealingForm, processedByType: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_house">In-House</SelectItem>
+                      <SelectItem value="vendor">Vendor</SelectItem>
+                      <SelectItem value="service">Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {sealingForm.processedByType === "vendor" && vendors && (
+                  <div>
+                    <Label htmlFor="vendor">Select Vendor</Label>
+                    <Select
+                      value={sealingForm.processedBy}
+                      onValueChange={(v) => setSealingForm({ ...sealingForm, processedBy: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select vendor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vendors.map((vendor) => (
+                          <SelectItem key={vendor._id} value={vendor.name}>
+                            {vendor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {sealingForm.processedByType === "service" && services && (
+                  <div>
+                    <Label htmlFor="service">Select Service</Label>
+                    <Select
+                      value={sealingForm.processedBy}
+                      onValueChange={(v) => setSealingForm({ ...sealingForm, processedBy: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map((service) => (
+                          <SelectItem key={service._id} value={service.name}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    value={sealingForm.notes}
+                    onChange={(e) => setSealingForm({ ...sealingForm, notes: e.target.value })}
+                    placeholder="Add any additional notes"
+                    rows={3}
+                  />
+                </div>
+              </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => {
-                  setGenerateJobsOpen(false);
-                  setSelectedItems(new Set());
-                }}>
+                <Button variant="outline" onClick={() => setSealingJobOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleBatchCreateJobs} disabled={selectedItems.size === 0}>
+                <Button onClick={handleCreateSealingJob}>
                   <Package className="mr-2 h-4 w-4" />
-                  Create {selectedItems.size} Job(s)
+                  Create Job
                 </Button>
               </DialogFooter>
             </DialogContent>
