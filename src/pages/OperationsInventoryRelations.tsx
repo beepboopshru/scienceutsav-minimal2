@@ -445,14 +445,22 @@ export default function OperationsInventoryRelations() {
                           <div>
                             <h6 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Sealed Packets</h6>
                             <div className="ml-2 space-y-1">
-                              {assignment.kitStructure.packets.map((packet: any, packetIdx: number) => (
-                                <div key={packetIdx} className="text-sm flex justify-between items-center py-1">
-                                  <span className="text-muted-foreground">• {packet.name}</span>
-                                  <span className="font-mono text-xs">
-                                    {(packet.quantity || 0) * assignment.quantity} {packet.unit || 'pcs'}
-                                  </span>
-                                </div>
-                              ))}
+                              {assignment.kitStructure.packets.map((packet: any, packetIdx: number) => {
+                                // Find the actual quantity from the packing request items
+                                const packetItem = viewItemsSheet.request?.items.find(
+                                  (item: any) => item.category === "sealed_packet" && item.name === packet.name
+                                );
+                                const actualQuantity = packetItem ? packetItem.quantity : (packet.quantity || 0) * assignment.quantity;
+                                
+                                return (
+                                  <div key={packetIdx} className="text-sm flex justify-between items-center py-1">
+                                    <span className="text-muted-foreground">• {packet.name}</span>
+                                    <span className="font-mono text-xs">
+                                      {actualQuantity} {packetItem?.unit || packet.unit || 'pcs'}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
