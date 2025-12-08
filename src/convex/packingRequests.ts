@@ -11,16 +11,28 @@ export const list = query({
         const requester = await ctx.db.get(r.requestedBy);
         const fulfiller = r.fulfilledBy ? await ctx.db.get(r.fulfilledBy) : null;
         
-        // Fetch assignment details
+        // Fetch assignment details with kit structure
         const assignments = await Promise.all(
           r.assignmentIds.map(async (id) => {
             const assignment = await ctx.db.get(id);
             if (!assignment) return null;
             const kit = await ctx.db.get(assignment.kitId);
+            
+            // Parse kit structure if available
+            let kitStructure = null;
+            if (kit?.isStructured && kit?.packingRequirements) {
+              try {
+                kitStructure = JSON.parse(kit.packingRequirements);
+              } catch (e) {
+                console.error('Error parsing kit structure:', e);
+              }
+            }
+            
             return {
               _id: assignment._id,
               kitName: kit?.name || "Unknown",
               quantity: assignment.quantity,
+              kitStructure,
             };
           })
         );
