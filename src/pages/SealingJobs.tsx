@@ -128,6 +128,20 @@ export default function SealingJobs() {
     );
   }
 
+  // Filter processing jobs to show only sealed packet jobs
+  const sealingJobs = processingJobs?.filter(job => {
+    return job.targets.some(target => {
+      const item = inventory.find(i => i._id === target.targetItemId);
+      return item?.type === "sealed_packet";
+    });
+  }) || [];
+
+  const handleOpenSealingJobDialog = () => {
+    const nextJobNumber = (sealingJobs?.length || 0) + 1;
+    setSealingForm(prev => ({ ...prev, name: `Sealing ${nextJobNumber}` }));
+    setSealingJobOpen(true);
+  };
+
   const handleCreateItem = (name: string) => {
     setNewItemName(name);
     setCreateItemOpen(true);
@@ -267,14 +281,6 @@ export default function SealingJobs() {
     }
   };
 
-  // Filter processing jobs to show only sealed packet jobs
-  const sealingJobs = processingJobs?.filter(job => {
-    return job.targets.some(target => {
-      const item = inventory.find(i => i._id === target.targetItemId);
-      return item?.type === "sealed_packet";
-    });
-  }) || [];
-
   return (
     <Layout>
       <div className="p-8">
@@ -296,7 +302,7 @@ export default function SealingJobs() {
                 Refresh
               </Button>
               {canEdit && (
-                <Button onClick={() => setSealingJobOpen(true)}>
+                <Button onClick={handleOpenSealingJobDialog}>
                   <Plus className="mr-2 h-4 w-4" />
                   Start Sealing Job
                 </Button>
