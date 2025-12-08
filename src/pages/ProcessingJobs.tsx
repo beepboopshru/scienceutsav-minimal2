@@ -115,7 +115,6 @@ export default function ProcessingJobs() {
 
   const [sealingPacketComboboxOpen, setSealingPacketComboboxOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"requirements" | "jobs">("requirements");
-  const [isFromRequirements, setIsFromRequirements] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -507,33 +506,6 @@ export default function ProcessingJobs() {
     }
   };
 
-  const handleStartRequirementJob = (targetItemId: Id<"inventory">, quantity: number, assignmentIds?: Id<"assignments">[]) => {
-    const item = inventory.find(i => i._id === targetItemId);
-    if (!item) return;
-
-    // Calculate sources immediately
-    let sources: any[] = [{ sourceItemId: "" as Id<"inventory">, sourceQuantity: 0 }];
-    if (item.components && item.components.length > 0) {
-      sources = item.components.map((component) => ({
-        sourceItemId: component.rawMaterialId,
-        sourceQuantity: component.quantityRequired * quantity,
-      }));
-    }
-
-    setProcessingForm({
-      name: `Process ${item.name}`,
-      sources: sources,
-      targets: [{ targetItemId, targetQuantity: quantity }],
-      processedBy: "",
-      processedByType: "in_house",
-      notes: "Auto-generated from requirements",
-      assignmentIds: assignmentIds || [],
-    });
-    
-    setIsFromRequirements(true);
-    setPreProcessingOpen(true);
-  };
-
   // Filter processing jobs to show only pre-processed material jobs (exclude sealed packets)
   const preProcessingJobs = jobs?.filter(job => {
     return job.targets.some(target => {
@@ -581,7 +553,6 @@ export default function ProcessingJobs() {
               <ProcessingRequirements 
                 assignments={assignments} 
                 inventory={inventory} 
-                onStartJob={handleStartRequirementJob}
                 activeJobs={preProcessingJobs}
                 refreshTrigger={lastRefresh}
               />

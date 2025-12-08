@@ -13,11 +13,10 @@ interface ProcessingRequirementsProps {
   assignments: any[];
   inventory: any[];
   activeJobs?: any[];
-  onStartJob: (targetItemId: Id<"inventory">, quantity: number, assignmentIds?: Id<"assignments">[]) => void;
   refreshTrigger?: number;
 }
 
-export function ProcessingRequirements({ assignments, inventory, activeJobs = [], onStartJob, refreshTrigger }: ProcessingRequirementsProps) {
+export function ProcessingRequirements({ assignments, inventory, activeJobs = [], refreshTrigger }: ProcessingRequirementsProps) {
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<"summary" | "kit-wise" | "month-wise" | "client-wise" | "assignment-wise">("summary");
 
@@ -432,7 +431,6 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
           <TableHead>Available</TableHead>
           <TableHead>In Progress</TableHead>
           <TableHead>Shortage</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -471,18 +469,10 @@ export function ProcessingRequirements({ assignments, inventory, activeJobs = []
                 <TableCell>
                   <Badge variant="destructive">{item.shortage} {item.unit}</Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                  <Button 
-                    size="sm" 
-                    onClick={() => onStartJob(item.id, item.shortage, item.assignmentIds)}
-                  >
-                    Start Job
-                  </Button>
-                </TableCell>
               </TableRow>
               {hasComponents && expandedRows[rowKey] && (
                 <TableRow>
-                  <TableCell colSpan={7} className="bg-muted/50 p-4">
+                  <TableCell colSpan={6} className="bg-muted/50 p-4">
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Raw Materials Required (per unit):</p>
                       <div className="grid gap-2">
