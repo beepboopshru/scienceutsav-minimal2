@@ -1466,16 +1466,17 @@ export default function Assignments() {
                         </TableRow>
 
                         {/* Batch Assignment Rows */}
-                        {isExpanded &&
-                          batchAssignments.map((assignment, index) => (
-                            <motion.tr
-                              key={assignment._id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.02 }}
-                              className="hover:bg-muted/50"
-                            >
-                              <TableCell>
+                        {isExpanded && (
+                          <>
+                            {batchAssignments.map((assignment, index) => (
+                              <motion.tr
+                                key={assignment._id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: index * 0.02 }}
+                                className="hover:bg-muted/50"
+                              >
+                                <TableCell>
                                 <Badge variant="outline">{batch?.batchId || "-"}</Badge>
                               </TableCell>
                               {editingAssignmentId === assignment._id ? (
@@ -1786,6 +1787,8 @@ export default function Assignments() {
                               </TableCell>
                             </motion.tr>
                           ))}
+                          </>
+                        )}
                       </React.Fragment>
                     );
                   }
@@ -2110,7 +2113,7 @@ export default function Assignments() {
                       </TableCell>
                     </motion.tr>
                   ));
-                })
+                })}
               )}
             </TableBody>
           </Table>
