@@ -18,7 +18,8 @@ export function MaterialRequestsTab({ view = "active" }: MaterialRequestsTabProp
   const { hasPermission } = usePermissions();
   
   const canApprove = hasPermission("materialRequests", "approve");
-  const canFulfill = hasPermission("inventory", "editStock");
+  const canReject = hasPermission("materialRequests", "reject");
+  const canFulfill = hasPermission("materialRequests", "fulfill");
 
   const handleApprove = async (id: any) => {
     try {
@@ -103,24 +104,28 @@ export function MaterialRequestsTab({ view = "active" }: MaterialRequestsTabProp
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  {request.status === "pending" && canApprove && (
+                  {request.status === "pending" && (
                     <>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => handleApprove(request._id)}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleReject(request._id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      {canApprove && (
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleApprove(request._id)}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canReject && (
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleReject(request._id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
                     </>
                   )}
                   {request.status === "approved" && canFulfill && (
