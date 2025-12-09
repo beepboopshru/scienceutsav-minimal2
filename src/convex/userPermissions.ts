@@ -185,6 +185,11 @@ export const update = mutation({
         reject: v.boolean(),
         fulfill: v.boolean(),
       })),
+      packingRequests: v.optional(v.object({
+        view: v.boolean(),
+        create: v.boolean(),
+        fulfill: v.boolean(),
+      })),
       notifications: v.optional(v.object({
         view: v.boolean(),
         receive: v.boolean(),
