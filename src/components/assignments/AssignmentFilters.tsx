@@ -101,7 +101,7 @@ export function AssignmentFilters({
     )
   ).sort().reverse();
 
-  const statuses = ["transferred_to_dispatch", "ready_for_dispatch", "dispatched"];
+  const statuses = ["processing", "received_from_inventory", "transferred_to_dispatch", "ready_for_dispatch", "dispatched"];
 
   const activeFilterCount = 
     selectedPrograms.length +
