@@ -759,13 +759,10 @@ export default function B2BAssignments() {
     }
 
     try {
-      // Note: You'll need to create an update mutation in assignments.ts
-      // For now, we'll delete and recreate
-      await deleteAssignment({ id: assignmentId });
-      await createAssignment({
+      await updateAssignment({
+        id: assignmentId,
         kitId: editRowKit as Id<"kits">,
-        clientId: editRowClient,
-        clientType: "b2b",
+        clientId: editRowClient as Id<"clients">,
         quantity: parseInt(editRowQuantity),
         grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: editRowNotes || undefined,
