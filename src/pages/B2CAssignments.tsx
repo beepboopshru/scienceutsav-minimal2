@@ -1380,12 +1380,62 @@ export default function Assignments() {
                     </Popover>
                   </TableCell>
                   <TableCell>
-                    <Input
-                      type="month"
-                      value={newRowProductionMonth}
-                      onChange={(e) => setNewRowProductionMonth(e.target.value)}
-                      className="w-full"
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !newRowProductionMonth && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {newRowProductionMonth
+                            ? format(new Date(newRowProductionMonth + "-01"), "MMMM yyyy")
+                            : "Pick month"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <div className="p-3 space-y-2">
+                          <Select
+                            value={newRowProductionMonth ? newRowProductionMonth.split("-")[1] : ""}
+                            onValueChange={(month) => {
+                              const year = newRowProductionMonth ? newRowProductionMonth.split("-")[0] : new Date().getFullYear().toString();
+                              setNewRowProductionMonth(`${year}-${month}`);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                <SelectItem key={m} value={m.toString().padStart(2, "0")}>
+                                  {format(new Date(2000, m - 1, 1), "MMMM")}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={newRowProductionMonth ? newRowProductionMonth.split("-")[0] : ""}
+                            onValueChange={(year) => {
+                              const month = newRowProductionMonth ? newRowProductionMonth.split("-")[1] : "01";
+                              setNewRowProductionMonth(`${year}-${month}`);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
+                                <SelectItem key={y} value={y.toString()}>
+                                  {y}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground">-</span>
