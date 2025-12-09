@@ -34,6 +34,15 @@ export default function Packing() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
+  const { hasPermission } = usePermissions();
+  const canView = hasPermission("packing", "view");
+  const canEdit = hasPermission("packing", "edit");
+  
+  const canViewRequests = hasPermission("packingRequests", "view");
+  const canCreateRequests = hasPermission("packingRequests", "create");
+  
+  console.log("Packing permissions - canView:", canView, "canEdit:", canEdit, "canViewRequests:", canViewRequests);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
     if (!isLoading && isAuthenticated && user && !user.isApproved) navigate("/pending-approval");
@@ -52,7 +61,7 @@ export default function Packing() {
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
   const createPackingRequest = useMutation(api.packingRequests.create);
-  const packingRequests = useQuery(api.packingRequests.list);
+  const packingRequests = useQuery(api.packingRequests.list, canViewRequests ? {} : "skip");
 
   const [customerTypeFilter, setCustomerTypeFilter] = useState<string>("all");
   const [packingStatusFilter, setPackingStatusFilter] = useState<string>("all");
@@ -212,12 +221,6 @@ export default function Packing() {
       });
     }
   };
-
-  const { hasPermission } = usePermissions();
-  const canView = hasPermission("packing", "view");
-  const canEdit = hasPermission("packing", "edit");
-  
-  console.log("Packing permissions - canView:", canView, "canEdit:", canEdit);
 
   const toggleAssignmentSelection = (assignmentId: Id<"assignments">) => {
     setSelectedAssignments((prev) => {
@@ -471,40 +474,42 @@ export default function Packing() {
               </span>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="default"
-                onClick={async () => {
-                  try {
-                    // Filter out assignments that already have requests
-                    const selectedArray = Array.from(selectedAssignments);
-                    const assignmentsWithRequests = selectedArray.filter(id => hasPackingRequest(id));
-                    const assignmentsWithoutRequests = selectedArray.filter(id => !hasPackingRequest(id));
+              {canCreateRequests && (
+                <Button 
+                  variant="default"
+                  onClick={async () => {
+                    try {
+                      // Filter out assignments that already have requests
+                      const selectedArray = Array.from(selectedAssignments);
+                      const assignmentsWithRequests = selectedArray.filter(id => hasPackingRequest(id));
+                      const assignmentsWithoutRequests = selectedArray.filter(id => !hasPackingRequest(id));
 
-                    if (assignmentsWithRequests.length > 0) {
-                      toast.warning("Request already made", {
-                        description: "This assignment already has a packing request.",
+                      if (assignmentsWithRequests.length > 0) {
+                        toast.warning("Request already made", {
+                          description: "This assignment already has a packing request.",
+                        });
+                      }
+
+                      if (assignmentsWithoutRequests.length === 0) {
+                        toast.error("Selected assignment already has a packing request");
+                        return;
+                      }
+
+                      await createPackingRequest({
+                        assignmentIds: assignmentsWithoutRequests,
+                      });
+                      toast.success("Packing request created");
+                      setSelectedAssignments(new Set());
+                    } catch (error) {
+                      toast.error("Failed to create packing request", {
+                        description: error instanceof Error ? error.message : "Unknown error",
                       });
                     }
-
-                    if (assignmentsWithoutRequests.length === 0) {
-                      toast.error("Selected assignment already has a packing request");
-                      return;
-                    }
-
-                    await createPackingRequest({
-                      assignmentIds: assignmentsWithoutRequests,
-                    });
-                    toast.success("Packing request created");
-                    setSelectedAssignments(new Set());
-                  } catch (error) {
-                    toast.error("Failed to create packing request", {
-                      description: error instanceof Error ? error.message : "Unknown error",
-                    });
-                  }
-                }}
-              >
-                Request Materials
-              </Button>
+                  }}
+                >
+                  Request Materials
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setSelectedAssignments(new Set())}>
                 Clear Selection
               </Button>
@@ -563,7 +568,7 @@ export default function Packing() {
                                   checked={selectedAssignments.has(assignment._id)}
                                   onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
                                 />
-                                {hasPackingRequest(assignment._id) && (
+                                {canViewRequests && hasPackingRequest(assignment._id) && (
                                   <Badge variant="outline" className="text-xs">
                                     Requested
                                   </Badge>
@@ -798,7 +803,7 @@ export default function Packing() {
                                     checked={selectedAssignments.has(assignment._id)}
                                     onCheckedChange={() => toggleAssignmentSelection(assignment._id)}
                                   />
-                                  {hasPackingRequest(assignment._id) && (
+                                  {canViewRequests && hasPackingRequest(assignment._id) && (
                                     <Badge variant="outline" className="text-xs">
                                       Requested
                                     </Badge>
