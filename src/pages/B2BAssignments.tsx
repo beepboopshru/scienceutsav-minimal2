@@ -884,10 +884,6 @@ export default function B2BAssignments() {
               <Plus className="mr-2 h-4 w-4" />
               Add New Assignment
             </Button>
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Assignment
-            </Button>
           </div>
         </div>
 
