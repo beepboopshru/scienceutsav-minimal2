@@ -1,2 +1,13 @@
-const newStockCount = kit.stockCount - args.quantity;
-await ctx.db.patch(args.kitId, { stockCount: newStockCount, status: newStatus });
+// Track virtual inventory to account for stock usage across assignments
+const virtualInventory = new Map<string, number>();
+// ... (loads physical inventory)
+
+// Add target quantities from assigned/in_progress processing jobs
+processingJobs.forEach(job => {
+  if (job.status === "assigned" || job.status === "in_progress") {
+    job.targets.forEach((target: any) => {
+      const currentVirtual = virtualInventory.get(target.targetItemId) || 0;
+      virtualInventory.set(target.targetItemId, currentVirtual + target.targetQuantity);
+    });
+  }
+});
