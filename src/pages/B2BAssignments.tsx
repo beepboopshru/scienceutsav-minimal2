@@ -448,8 +448,8 @@ export default function B2BAssignments() {
       await deleteAssignment({ id: selectedAssignment._id });
       toast.success(
         selectedAssignment.status === "dispatched"
-          ? "Assignment deleted (stock not restored)"
-          : "Assignment deleted and stock restored"
+          ? "Deletion Request Sent (stock not restored)"
+          : "Deletion Request Sent"
       );
       setDeleteDialogOpen(false);
     } catch (error) {
