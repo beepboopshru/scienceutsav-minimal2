@@ -128,14 +128,14 @@ export const update = mutation({
     await ctx.db.patch(args.id, updates);
 
     // Log activity
-    await ctx.db.insert("activityLogs", {
-      userId: identity.subject,
-      action: "update",
-      entityType: "assignment",
-      entityId: args.id,
-      details: `Updated assignment`,
-      timestamp: Date.now(),
-    });
+    const userId = await getAuthUserId(ctx);
+    if (userId) {
+      await ctx.db.insert("activityLogs", {
+        userId: userId,
+        actionType: "assignment_updated",
+        details: `Updated assignment ${args.id}`,
+      });
+    }
 
     return args.id;
   },

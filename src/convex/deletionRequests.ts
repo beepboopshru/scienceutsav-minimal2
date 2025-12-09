@@ -339,6 +339,18 @@ async function performDeletion(ctx: MutationCtx, entityType: string, entityId: s
     case "batch":
       const batch = await ctx.db.get(entityId as Id<"batches">);
       if (batch) {
+        // Get all assignments in the batch
+        const assignments = await ctx.db
+          .query("assignments")
+          .withIndex("by_batch", (q) => q.eq("batchId", entityId as Id<"batches">))
+          .collect();
+
+        // Delete all assignments in the batch
+        for (const assignment of assignments) {
+          await ctx.db.delete(assignment._id);
+        }
+
+        // Delete the batch itself
         await ctx.db.delete(entityId as Id<"batches">);
       }
       break;
