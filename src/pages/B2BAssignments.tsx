@@ -89,6 +89,7 @@ export default function B2BAssignments() {
   const batches = useQuery(api.batches.list, { clientType: "b2b" });
 
   const createAssignment = useMutation(api.assignments.create);
+  const updateAssignment = useMutation(api.assignments.update);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const updateNotes = useMutation(api.assignments.updateNotes);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);

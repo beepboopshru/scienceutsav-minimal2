@@ -87,43 +87,57 @@ export const create = mutation({
 export const update = mutation({
   args: {
     id: v.id("assignments"),
-    clientId: v.optional(v.string()),
     kitId: v.optional(v.id("kits")),
+    clientId: v.optional(v.id("clients")),
+    b2cClientId: v.optional(v.id("b2cClients")),
     quantity: v.optional(v.number()),
     grade: v.optional(v.union(
-      v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
-      v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+      v.literal("1"),
+      v.literal("2"),
+      v.literal("3"),
+      v.literal("4"),
+      v.literal("5"),
+      v.literal("6"),
+      v.literal("7"),
+      v.literal("8"),
+      v.literal("9"),
+      v.literal("10")
     )),
     notes: v.optional(v.string()),
+    dispatchedAt: v.optional(v.number()),
     productionMonth: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
-    const canUpdate = await hasPermission(ctx, userId, "assignments", "edit");
-    if (!canUpdate) throw new Error("Permission denied");
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
     const assignment = await ctx.db.get(args.id);
     if (!assignment) throw new Error("Assignment not found");
 
-    const { id, ...updateData } = args;
-    
-    // Filter out undefined values
-    const filteredData = Object.fromEntries(
-      Object.entries(updateData).filter(([_, value]) => value !== undefined)
-    );
+    // Build update object with only provided fields
+    const updates: any = {};
+    if (args.kitId !== undefined) updates.kitId = args.kitId;
+    if (args.clientId !== undefined) updates.clientId = args.clientId;
+    if (args.b2cClientId !== undefined) updates.clientId = args.b2cClientId;
+    if (args.quantity !== undefined) updates.quantity = args.quantity;
+    if (args.grade !== undefined) updates.grade = args.grade;
+    if (args.notes !== undefined) updates.notes = args.notes;
+    if (args.dispatchedAt !== undefined) updates.dispatchedAt = args.dispatchedAt;
+    if (args.productionMonth !== undefined) updates.productionMonth = args.productionMonth;
 
-    await ctx.db.patch(id, filteredData);
+    await ctx.db.patch(args.id, updates);
 
-    // Log the update
+    // Log activity
     await ctx.db.insert("activityLogs", {
-      userId: userId,
-      actionType: "assignment_updated",
-      details: `Assignment ${id} updated`,
+      userId: identity.subject,
+      action: "update",
+      entityType: "assignment",
+      entityId: args.id,
+      details: `Updated assignment`,
+      timestamp: Date.now(),
     });
 
-    return id;
+    return args.id;
   },
 });
 

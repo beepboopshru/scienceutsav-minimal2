@@ -88,6 +88,7 @@ export default function Assignments() {
   const batches = useQuery(api.batches.list, { clientType: "b2c" });
 
   const createAssignment = useMutation(api.assignments.create);
+  const updateAssignment = useMutation(api.assignments.update);
   const updateStatus = useMutation(api.assignments.updateStatus);
   const updateNotes = useMutation(api.assignments.updateNotes);
   const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
@@ -714,16 +715,11 @@ export default function Assignments() {
       return;
     }
 
-    // Validate production month vs dispatch date (Removed)
-
     try {
-      // Note: You'll need to create an update mutation in assignments.ts
-      // For now, we'll delete and recreate
-      await deleteAssignment({ id: assignmentId });
-      await createAssignment({
+      await updateAssignment({
+        id: assignmentId,
         kitId: editRowKit as Id<"kits">,
-        clientId: editRowClient as Id<"b2cClients">,
-        clientType: "b2c",
+        b2cClientId: editRowClient as Id<"b2cClients">,
         quantity: parseInt(editRowQuantity),
         grade: editRowGrade && editRowGrade !== "none" ? editRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
         notes: editRowNotes || undefined,
