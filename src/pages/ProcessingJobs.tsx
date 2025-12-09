@@ -690,85 +690,55 @@ export default function ProcessingJobs() {
                 <Separator />
 
                 <div>
-                  <Label>Target Materials (Output)</Label>
+                  <Label>Target Material (Output)</Label>
                   <div className="space-y-2">
-                    {processingForm.targets.map((target, index) => (
-                      <div key={index} className="flex gap-2 items-end">
-                        <div className="flex-1">
-                          <Label>Material</Label>
-                          <Popover
-                            open={targetComboboxOpen[index]}
-                            onOpenChange={(open) =>
-                              setTargetComboboxOpen({ ...targetComboboxOpen, [index]: open })
-                            }
-                          >
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between" disabled={!canEditTargets}>
-                                {target.targetItemId
-                                  ? inventory?.find((i) => i._id === target.targetItemId)?.name
-                                  : "Select material"}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search materials..." />
-                                <CommandList>
-                                  <CommandEmpty>No material found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {inventory?.filter(i => i.type === "pre_processed").map((item) => (
-                                      <CommandItem
-                                        key={item._id}
-                                        onSelect={() => handleTargetSelection(index, item._id)}
-                                      >
-                                        {item.name} ({item.quantity} {item.unit})
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <div className="w-32">
-                          <Label>Quantity</Label>
-                          <Input
-                            type="number"
-                            value={target.targetQuantity}
-                            onChange={(e) => handleTargetQuantityChange(index, parseFloat(e.target.value) || 0)}
-                            disabled={!canEditTargets}
-                          />
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => {
-                            const newTargets = processingForm.targets.filter((_, i) => i !== index);
-                            setProcessingForm({ ...processingForm, targets: newTargets });
-                          }}
-                          disabled={!canEditTargets}
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <Label>Material</Label>
+                        <Popover
+                          open={targetComboboxOpen[0]}
+                          onOpenChange={(open) =>
+                            setTargetComboboxOpen({ ...targetComboboxOpen, [0]: open })
+                          }
                         >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between" disabled={!canEditTargets}>
+                              {processingForm.targets[0]?.targetItemId
+                                ? inventory?.find((i) => i._id === processingForm.targets[0].targetItemId)?.name
+                                : "Select material"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Search materials..." />
+                              <CommandList>
+                                <CommandEmpty>No material found.</CommandEmpty>
+                                <CommandGroup>
+                                  {inventory?.filter(i => i.type === "pre_processed").map((item) => (
+                                    <CommandItem
+                                      key={item._id}
+                                      onSelect={() => handleTargetSelection(0, item._id)}
+                                    >
+                                      {item.name} ({item.quantity} {item.unit})
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                    ))}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setProcessingForm({
-                          ...processingForm,
-                          targets: [
-                            ...processingForm.targets,
-                            { targetItemId: "" as Id<"inventory">, targetQuantity: 0 },
-                          ],
-                        })
-                      }
-                      disabled={!canEditTargets}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Target Material
-                    </Button>
+                      <div className="w-32">
+                        <Label>Quantity</Label>
+                        <Input
+                          type="number"
+                          value={processingForm.targets[0]?.targetQuantity || 0}
+                          onChange={(e) => handleTargetQuantityChange(0, parseFloat(e.target.value) || 0)}
+                          disabled={!canEditTargets}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
