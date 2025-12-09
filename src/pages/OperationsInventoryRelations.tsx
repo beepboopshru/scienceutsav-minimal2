@@ -54,10 +54,11 @@ export default function OperationsInventoryRelations() {
   
   const canViewMaterialRequests = hasPermission("materialRequests", "view");
   const canCreateMaterialRequests = hasPermission("materialRequests", "create");
-  const canViewPacking = hasPermission("packing", "view");
+  const canViewPackingRequests = hasPermission("packingRequests", "view");
+  const canFulfillPackingRequests = hasPermission("packingRequests", "fulfill");
   
   const inventory = useQuery(api.inventory.list);
-  const packingRequests = useQuery(api.packingRequests.list);
+  const packingRequests = useQuery(api.packingRequests.list, canViewPackingRequests ? {} : "skip");
   const createRequest = useMutation(api.materialRequests.create);
   const fulfillPackingRequest = useMutation(api.packingRequests.fulfill);
   
@@ -162,7 +163,7 @@ export default function OperationsInventoryRelations() {
     }
   };
 
-  if (!canViewMaterialRequests && !canViewPacking) {
+  if (!canViewMaterialRequests && !canViewPackingRequests) {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center">
@@ -338,7 +339,7 @@ export default function OperationsInventoryRelations() {
                 {canViewMaterialRequests && (
                   <TabsTrigger value="material-requests">Material Requests</TabsTrigger>
                 )}
-                {canViewPacking && (
+                {canViewPackingRequests && (
                   <TabsTrigger value="packing-requests">Packing Requests</TabsTrigger>
                 )}
                 <TabsTrigger value="completed-requests">Completed Requests</TabsTrigger>
@@ -350,7 +351,7 @@ export default function OperationsInventoryRelations() {
                 </TabsContent>
               )}
 
-              {canViewPacking && (
+              {canViewPackingRequests && (
                 <TabsContent value="packing-requests">
                   <div className="space-y-4">
                     <Table>
@@ -404,7 +405,7 @@ export default function OperationsInventoryRelations() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                {hasPermission("inventory", "editStock") && (
+                                {canFulfillPackingRequests && (
                                   <>
                                     {request.status === "pending" ? (
                                       <Button
@@ -447,7 +448,7 @@ export default function OperationsInventoryRelations() {
                     </div>
                   )}
                   
-                  {canViewPacking && (
+                  {canViewPackingRequests && (
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold">Completed Packing Requests</h3>
                       <Table>
