@@ -321,7 +321,7 @@ export default function Packing() {
       });
     } else {
       try {
-        await updatePackingStatus({ assignmentId, packingStatus: newStatus as "assigned" | "in_progress" | "transferred_to_dispatch" });
+        await updatePackingStatus({ assignmentId, packingStatus: newStatus as "assigned" | "in_progress" | "transferred_to_dispatch" | "processing" | "received_from_inventory" });
         toast.success("Packing status updated");
       } catch (error) {
         toast.error("Failed to update status", {
@@ -622,7 +622,7 @@ export default function Packing() {
                                       try {
                                         await updatePackingStatus({
                                           assignmentId: assignment._id,
-                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch" | "processing" | "received_from_inventory",
                                         });
                                         toast.success("Packing status updated successfully");
                                       } catch (error) {
@@ -637,6 +637,7 @@ export default function Packing() {
                                   <SelectContent>
                                     <SelectItem value="assigned">Assigned</SelectItem>
                                     <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="processing">Processing</SelectItem>
                                     <SelectItem value="received_from_inventory">Received from Inventory</SelectItem>
                                     <SelectItem value="transferred_to_dispatch">
                                       Transferred to Dispatch
@@ -851,7 +852,7 @@ export default function Packing() {
                                       try {
                                         await updatePackingStatus({
                                           assignmentId: assignment._id,
-                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch",
+                                          packingStatus: value as "assigned" | "in_progress" | "transferred_to_dispatch" | "processing" | "received_from_inventory",
                                         });
                                         toast.success("Packing status updated successfully");
                                       } catch (error) {
@@ -866,6 +867,7 @@ export default function Packing() {
                                   <SelectContent>
                                     <SelectItem value="assigned">Assigned</SelectItem>
                                     <SelectItem value="in_progress">In Progress</SelectItem>
+                                    <SelectItem value="processing">Processing</SelectItem>
                                     <SelectItem value="received_from_inventory">Received from Inventory</SelectItem>
                                     <SelectItem value="transferred_to_dispatch">
                                       Transferred to Dispatch
