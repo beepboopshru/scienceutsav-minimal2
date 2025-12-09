@@ -41,7 +41,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
     lms: { view: true, edit: true },
     materialRequests: { view: true, create: true, approve: true, reject: true, fulfill: true },
-    packingRequests: { view: true, create: true, fulfill: true },
+    packingRequests: { view: true, create: true, fulfill: true, approve: true },
   },
   manager: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -69,7 +69,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: true, viewCapacityPricing: true },
     lms: { view: true, edit: true },
     materialRequests: { view: true, create: true, approve: true, reject: true, fulfill: true },
-    packingRequests: { view: true, create: true, fulfill: true },
+    packingRequests: { view: true, create: true, fulfill: true, approve: true },
   },
   finance: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -97,7 +97,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
     materialRequests: { view: true, create: true, approve: false, reject: false, fulfill: false },
-    packingRequests: { view: false, create: false, fulfill: false },
+    packingRequests: { view: false, create: false, fulfill: false, approve: false },
   },
   operations: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -125,7 +125,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: true, viewStock: true, editStock: true, viewFiles: false, viewCapacityPricing: true },
     lms: { view: false, edit: false },
     materialRequests: { view: true, create: true, approve: true, reject: true, fulfill: true },
-    packingRequests: { view: true, create: true, fulfill: false },
+    packingRequests: { view: true, create: true, fulfill: false, approve: true },
   },
   sales: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -153,7 +153,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: false, viewCapacityPricing: true },
     lms: { view: false, edit: false },
     materialRequests: { view: true, create: true, approve: false, reject: false, fulfill: false },
-    packingRequests: { view: false, create: false, fulfill: false },
+    packingRequests: { view: false, create: false, fulfill: false, approve: false },
   },
   laser_operator: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -181,7 +181,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
     materialRequests: { view: true, create: true, approve: false, reject: false, fulfill: false },
-    packingRequests: { view: false, create: false, fulfill: false },
+    packingRequests: { view: false, create: false, fulfill: false, approve: false },
   },
   research_head: {
     programs: { view: true, create: true, edit: true, delete: true, archive: true },
@@ -209,7 +209,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: true, viewCapacityPricing: false },
     lms: { view: true, edit: true },
     materialRequests: { view: true, create: true, approve: false, reject: false, fulfill: false },
-    packingRequests: { view: false, create: false, fulfill: false },
+    packingRequests: { view: false, create: false, fulfill: false, approve: false },
   },
   research_development: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -237,7 +237,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: true, viewStock: true, editStock: false, viewFiles: true, viewCapacityPricing: false },
     lms: { view: true, edit: true },
     materialRequests: { view: true, create: true, approve: false, reject: false, fulfill: false },
-    packingRequests: { view: false, create: false, fulfill: false },
+    packingRequests: { view: false, create: false, fulfill: false, approve: false },
   },
   inventory: {
     programs: { view: false, create: false, edit: false, delete: false, archive: false },
@@ -265,7 +265,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
     materialRequests: { view: true, create: true, approve: true, reject: true, fulfill: true },
-    packingRequests: { view: true, create: false, fulfill: true },
+    packingRequests: { view: true, create: false, fulfill: true, approve: true },
   },
   content: {
     programs: { view: true, create: false, edit: false, delete: false, archive: false },
@@ -293,7 +293,7 @@ const ROLE_DEFAULTS: Record<string, Record<PermissionResource, Record<string, bo
     kitStatistics: { view: false, viewStock: false, editStock: false, viewFiles: false, viewCapacityPricing: false },
     lms: { view: false, edit: false },
     materialRequests: { view: true, create: true, approve: false, reject: false, fulfill: false },
-    packingRequests: { view: false, create: false, fulfill: false },
+    packingRequests: { view: false, create: false, fulfill: false, approve: false },
   },
 };
 

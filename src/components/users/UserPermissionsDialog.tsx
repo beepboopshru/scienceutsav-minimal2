@@ -50,7 +50,7 @@ const PERMISSION_RESOURCES = [
   { key: "lms", label: "LMS", actions: ["view", "edit"] },
   { key: "deletionRequests", label: "Deletion Requests", actions: ["view", "create", "approve", "reject"] },
   { key: "materialRequests", label: "Material Requests", actions: ["view", "create", "approve", "reject", "fulfill"] },
-  { key: "packingRequests", label: "Packing Requests", actions: ["view", "create", "fulfill"] },
+  { key: "packingRequests", label: "Packing Requests", actions: ["view", "create", "fulfill", "approve"] },
   { key: "notifications", label: "Notifications", actions: ["view", "receive"] },
 ];
 
