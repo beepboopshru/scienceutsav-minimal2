@@ -1785,8 +1785,10 @@ export default function Assignments() {
                                   )}
                                 </div>
                               </TableCell>
+                                </>
+                              )}
                             </motion.tr>
-                          ))}
+                          )}
                           </>
                         )}
                       </React.Fragment>
