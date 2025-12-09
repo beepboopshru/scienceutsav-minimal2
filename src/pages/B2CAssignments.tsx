@@ -1466,232 +1466,77 @@ export default function Assignments() {
                         </TableRow>
 
                         {/* Batch Assignment Rows */}
-                        {isExpanded && (
-                          <>
-                            {batchAssignments.map((assignment, index) => (
-                              <motion.tr
-                                key={assignment._id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.02 }}
-                                className="hover:bg-muted/50"
-                              >
-                                <TableCell>
+                        {isExpanded &&
+                          batchAssignments.map((assignment, index) => (
+                            <motion.tr
+                              key={assignment._id}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.02 }}
+                              className="hover:bg-muted/50"
+                            >
+                              <TableCell>
                                 <Badge variant="outline">{batch?.batchId || "-"}</Badge>
                               </TableCell>
-                              {editingAssignmentId === assignment._id ? (
-                                <>
-                                  {/* Edit mode */}
-                                  {columnVisibility.program && (
-                                    <TableCell>
-                                      <Select value={editRowProgram} onValueChange={(val) => {
-                                        setEditRowProgram(val);
-                                        setEditRowKit("");
-                                      }}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {programs.map((program) => (
-                                            <SelectItem key={program._id} value={program._id}>
-                                              {program.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.kit && (
-                                    <TableCell>
-                                      <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {editRowFilteredKits.map((kit) => (
-                                            <SelectItem key={kit._id} value={kit._id}>
-                                              {kit.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.category && (
-                                    <TableCell>
-                                      <span className="text-sm text-muted-foreground">
-                                        {editRowSelectedKit?.category || "-"}
-                                      </span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.client && (
-                                    <TableCell>
-                                      <Select value={editRowClient} onValueChange={setEditRowClient}>
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {clients.map((client) => (
-                                            <SelectItem key={client._id} value={client._id}>
-                                              {client.buyerName}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.quantity && (
-                                    <TableCell>
-                                      <Input
-                                        type="number"
-                                        min="1"
-                                        value={editRowQuantity}
-                                        onChange={(e) => setEditRowQuantity(e.target.value)}
-                                        className="w-20"
-                                      />
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.grade && (
-                                    <TableCell>
-                                      <Select value={editRowGrade} onValueChange={setEditRowGrade}>
-                                        <SelectTrigger className="w-24">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="none">None</SelectItem>
-                                          {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                            <SelectItem key={g} value={g.toString()}>
-                                              {g}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.status && (
-                                    <TableCell>
-                                      <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                        {assignment.status}
-                                      </Badge>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.dispatchDate && (
-                                    <TableCell>
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                                          </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                          <Calendar
-                                            mode="single"
-                                            selected={editRowDispatchDate}
-                                            onSelect={setEditRowDispatchDate}
-                                            initialFocus
-                                          />
-                                        </PopoverContent>
-                                      </Popover>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.productionMonth && (
-                                    <TableCell>
-                                      <Input
-                                        type="month"
-                                        value={editRowProductionMonth}
-                                        onChange={(e) => setEditRowProductionMonth(e.target.value)}
-                                        className="w-full"
-                                      />
-                                    </TableCell>
-                                  )}
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">
-                                      {format(assignment._creationTime, "MMM dd, yyyy")}
-                                    </span>
-                                  </TableCell>
-                                  {columnVisibility.notes && (
-                                    <TableCell className="text-center">
-                                      <Input
-                                        value={editRowNotes}
-                                        onChange={(e) => setEditRowNotes(e.target.value)}
-                                        placeholder="Notes..."
-                                      />
-                                    </TableCell>
-                                  )}
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                        <Save className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </>
-                              ) : (
-                                <>
-                                  {/* View mode */}
-                                  {columnVisibility.program && (
-                                    <TableCell>
-                                      <span className="text-sm">{programs?.find((p) => p._id === assignment.kit?.programId)?.name}</span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.kit && (
-                                    <TableCell>
-                                      <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.category && (
-                                    <TableCell>
-                                      <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.client && (
-                                    <TableCell>
-                                      <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.quantity && (
-                                    <TableCell>
-                                      <span className="text-sm">{assignment.quantity}</span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.grade && (
-                                    <TableCell>
-                                      <span className="text-sm">{assignment.grade || "-"}</span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.status && (
-                                    <TableCell>
-                                      <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                        {assignment.status}
-                                      </Badge>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.dispatchDate && (
-                                    <TableCell>
-                                      <span className="text-sm">
-                                        {assignment.dispatchedAt ? format(assignment.dispatchedAt, "MMM dd, yyyy") : "-"}
-                                      </span>
-                                    </TableCell>
-                                  )}
-                                  {columnVisibility.productionMonth && (
-                                    <TableCell>
-                                      <span className="text-sm">
-                                        {assignment.productionMonth
-                                          ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
-                                          : "-"}
-                                      </span>
-                                    </TableCell>
-                                  )}
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">
-                                      {format(assignment._creationTime, "MMM dd, yyyy")}
-                                    </span>
-                                  </TableCell>
-                                  {columnVisibility.notes && (
+                              {columnVisibility.program && (
+                                <TableCell>
+                                  <span className="text-sm">{programs?.find((p) => p._id === assignment.kit?.programId)?.name}</span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.kit && (
+                                <TableCell>
+                                  <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.category && (
+                                <TableCell>
+                                  <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.client && (
+                                <TableCell>
+                                  <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.quantity && (
+                                <TableCell>
+                                  <span className="text-sm">{assignment.quantity}</span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.grade && (
+                                <TableCell>
+                                  <span className="text-sm">{assignment.grade || "-"}</span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.status && (
+                                <TableCell>
+                                  <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
+                                    {assignment.status}
+                                  </Badge>
+                                </TableCell>
+                              )}
+                              {columnVisibility.dispatchDate && (
+                                <TableCell>
+                                  <span className="text-sm">
+                                    {assignment.dispatchedAt ? format(assignment.dispatchedAt, "MMM dd, yyyy") : "-"}
+                                  </span>
+                                </TableCell>
+                              )}
+                              {columnVisibility.productionMonth && (
+                                <TableCell>
+                                  <span className="text-sm">
+                                    {assignment.productionMonth
+                                      ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
+                                      : "-"}
+                                  </span>
+                                </TableCell>
+                              )}
+                              <TableCell>
+                                <span className="text-sm text-muted-foreground">
+                                  {format(assignment._creationTime, "MMM dd, yyyy")}
+                                </span>
+                              </TableCell>
+                              {columnVisibility.notes && (
                                 <TableCell className="text-center">
                                   <div className="flex items-center justify-center gap-1">
                                     <TooltipProvider>
@@ -1785,12 +1630,8 @@ export default function Assignments() {
                                   )}
                                 </div>
                               </TableCell>
-                                </>
-                              )}
                             </motion.tr>
-                          )}
-                          </>
-                        )}
+                          ))}
                       </React.Fragment>
                     );
                   }
@@ -1807,219 +1648,65 @@ export default function Assignments() {
                       <TableCell>
                         <span className="text-sm text-muted-foreground">-</span>
                       </TableCell>
-                      {editingAssignmentId === assignment._id ? (
-                        <>
-                          {/* Edit mode */}
-                          {columnVisibility.program && (
-                            <TableCell>
-                              <Select value={editRowProgram} onValueChange={(val) => {
-                                setEditRowProgram(val);
-                                setEditRowKit("");
-                              }}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {programs.map((program) => (
-                                    <SelectItem key={program._id} value={program._id}>
-                                      {program.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          )}
-                          {columnVisibility.kit && (
-                            <TableCell>
-                              <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {editRowFilteredKits.map((kit) => (
-                                    <SelectItem key={kit._id} value={kit._id}>
-                                      {kit.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          )}
-                          {columnVisibility.category && (
-                            <TableCell>
-                              <span className="text-sm text-muted-foreground">
-                                {editRowSelectedKit?.category || "-"}
-                              </span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.client && (
-                            <TableCell>
-                              <Select value={editRowClient} onValueChange={setEditRowClient}>
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {clients.map((client) => (
-                                    <SelectItem key={client._id} value={client._id}>
-                                      {client.buyerName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          )}
-                          {columnVisibility.quantity && (
-                            <TableCell>
-                              <Input
-                                type="number"
-                                min="1"
-                                value={editRowQuantity}
-                                onChange={(e) => setEditRowQuantity(e.target.value)}
-                                className="w-20"
-                              />
-                            </TableCell>
-                          )}
-                          {columnVisibility.grade && (
-                            <TableCell>
-                              <Select value={editRowGrade} onValueChange={setEditRowGrade}>
-                                <SelectTrigger className="w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                    <SelectItem key={g} value={g.toString()}>
-                                      {g}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          )}
-                          {columnVisibility.status && (
-                            <TableCell>
-                              <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                {assignment.status}
-                              </Badge>
-                            </TableCell>
-                          )}
-                          {columnVisibility.dispatchDate && (
-                            <TableCell>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0">
-                                  <Calendar
-                                    mode="single"
-                                    selected={editRowDispatchDate}
-                                    onSelect={setEditRowDispatchDate}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </TableCell>
-                          )}
-                          {columnVisibility.productionMonth && (
-                            <TableCell>
-                              <Input
-                                type="month"
-                                value={editRowProductionMonth}
-                                onChange={(e) => setEditRowProductionMonth(e.target.value)}
-                                className="w-full"
-                              />
-                            </TableCell>
-                          )}
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {format(assignment._creationTime, "MMM dd, yyyy")}
-                            </span>
-                          </TableCell>
-                          {columnVisibility.notes && (
-                            <TableCell className="text-center">
-                              <Input
-                                value={editRowNotes}
-                                onChange={(e) => setEditRowNotes(e.target.value)}
-                                placeholder="Notes..."
-                              />
-                            </TableCell>
-                          )}
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </>
-                      ) : (
-                        <>
-                          {/* View mode */}
-                          {columnVisibility.program && (
-                            <TableCell>
-                              <span className="text-sm">{programs?.find((p) => p._id === assignment.kit?.programId)?.name}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.kit && (
-                            <TableCell>
-                              <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.category && (
-                            <TableCell>
-                              <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.client && (
-                            <TableCell>
-                              <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.quantity && (
-                            <TableCell>
-                              <span className="text-sm">{assignment.quantity}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.grade && (
-                            <TableCell>
-                              <span className="text-sm">{assignment.grade || "-"}</span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.status && (
-                            <TableCell>
-                              <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                {assignment.status}
-                              </Badge>
-                            </TableCell>
-                          )}
-                          {columnVisibility.dispatchDate && (
-                            <TableCell>
-                              <span className="text-sm">
-                                {assignment.dispatchedAt ? format(assignment.dispatchedAt, "MMM dd, yyyy") : "-"}
-                              </span>
-                            </TableCell>
-                          )}
-                          {columnVisibility.productionMonth && (
-                            <TableCell>
-                              <span className="text-sm">
-                                {assignment.productionMonth
-                                  ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
-                                  : "-"}
-                              </span>
-                            </TableCell>
-                          )}
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {format(assignment._creationTime, "MMM dd, yyyy")}
-                            </span>
-                          </TableCell>
-                          {columnVisibility.notes && (
+                      {columnVisibility.program && (
+                        <TableCell>
+                          <span className="text-sm">{programs?.find((p) => p._id === assignment.kit?.programId)?.name}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.kit && (
+                        <TableCell>
+                          <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.category && (
+                        <TableCell>
+                          <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.client && (
+                        <TableCell>
+                          <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.quantity && (
+                        <TableCell>
+                          <span className="text-sm">{assignment.quantity}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.grade && (
+                        <TableCell>
+                          <span className="text-sm">{assignment.grade || "-"}</span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.status && (
+                        <TableCell>
+                          <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
+                            {assignment.status}
+                          </Badge>
+                        </TableCell>
+                      )}
+                      {columnVisibility.dispatchDate && (
+                        <TableCell>
+                          <span className="text-sm">
+                            {assignment.dispatchedAt ? format(assignment.dispatchedAt, "MMM dd, yyyy") : "-"}
+                          </span>
+                        </TableCell>
+                      )}
+                      {columnVisibility.productionMonth && (
+                        <TableCell>
+                          <span className="text-sm">
+                            {assignment.productionMonth
+                              ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
+                              : "-"}
+                          </span>
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {format(assignment._creationTime, "MMM dd, yyyy")}
+                        </span>
+                      </TableCell>
+                      {columnVisibility.notes && (
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-1">
                             <TooltipProvider>
@@ -2115,7 +1802,7 @@ export default function Assignments() {
                       </TableCell>
                     </motion.tr>
                   ));
-                })}
+                })
               )}
             </TableBody>
           </Table>
