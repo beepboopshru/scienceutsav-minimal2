@@ -45,7 +45,8 @@ export const shouldIncludeAssignment = (status: string): boolean => {
     "received_from_inventory",
     "dispatched",
     "delivered",
-    "cancelled"
+    "cancelled",
+    "processing"
   ];
   const normalizedStatus = (status || "").toLowerCase();
   return !excludedStatuses.includes(normalizedStatus);

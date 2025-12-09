@@ -152,7 +152,8 @@ export const updateStatus = mutation({
       v.literal("transferred_to_dispatch"),
       v.literal("ready_for_dispatch"),
       v.literal("dispatched"),
-      v.literal("delivered")
+      v.literal("delivered"),
+      v.literal("processing")
     ),
     ewayNumber: v.optional(v.string()),
     ewayDocumentId: v.optional(v.id("_storage")),
@@ -387,7 +388,8 @@ export const updatePackingStatus = mutation({
       v.literal("assigned"),
       v.literal("in_progress"),
       v.literal("received_from_inventory"),
-      v.literal("transferred_to_dispatch")
+      v.literal("transferred_to_dispatch"),
+      v.literal("processing")
     ),
   },
   handler: async (ctx, args) => {

@@ -276,25 +276,26 @@ const schema = defineSchema(
 
     // Kit assignments to clients
     assignments: defineTable({
-      clientId: v.string(),
+      clientId: v.string(), // Can be Id<"clients"> or Id<"b2cClients">
       clientType: v.union(v.literal("b2b"), v.literal("b2c")),
       kitId: v.id("kits"),
       quantity: v.number(),
-      grade: v.optional(
-        v.union(
-          v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
-          v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
-        )
+      grade: v.optional(v.union(
+        v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+        v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+      )),
+      status: v.union(
+        v.literal("assigned"),
+        v.literal("in_production"), // Legacy/Unused but kept for safety
+        v.literal("in_progress"),
+        v.literal("ready_to_pack"), // Legacy/Unused
+        v.literal("received_from_inventory"),
+        v.literal("transferred_to_dispatch"),
+        v.literal("ready_for_dispatch"), // Legacy/Unused
+        v.literal("dispatched"),
+        v.literal("delivered"),
+        v.literal("processing")
       ),
-    status: v.union(
-      v.literal("assigned"),
-      v.literal("in_progress"),
-      v.literal("received_from_inventory"),
-      v.literal("transferred_to_dispatch"),
-      v.literal("ready_for_dispatch"),
-      v.literal("dispatched"),
-      v.literal("delivered")
-    ),
       notes: v.optional(v.string()),
       packingNotes: v.optional(v.string()),
       dispatchNotes: v.optional(v.string()),

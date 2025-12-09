@@ -26,7 +26,8 @@ export function SealingRequirements({ assignments, inventory, activeJobs = [], o
     return assignments.filter(a => 
       a.status !== "received_from_inventory" && 
       a.status !== "dispatched" && 
-      a.status !== "delivered"
+      a.status !== "delivered" &&
+      a.status !== "processing"
     );
   }, [assignments]);
 
