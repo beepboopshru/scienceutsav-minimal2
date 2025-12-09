@@ -181,33 +181,34 @@ export const update = mutation({
   },
 });
 
-export const deleteBatch = mutation({
-  args: { id: v.id("batches") },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+// Deprecated: Use remove (deletion request) instead
+// export const deleteBatch = mutation({
+//   args: { id: v.id("batches") },
+//   handler: async (ctx, args) => {
+//     const userId = await getAuthUserId(ctx);
+//     if (!userId) throw new Error("Not authenticated");
 
-    // Get all assignments in batch
-    const assignments = await ctx.db
-      .query("assignments")
-      .withIndex("by_batch", (q) => q.eq("batchId", args.id))
-      .collect();
+//     // Get all assignments in batch
+//     const assignments = await ctx.db
+//       .query("assignments")
+//       .withIndex("by_batch", (q) => q.eq("batchId", args.id))
+//       .collect();
 
-    // Check if any assignment is dispatched
-    const hasDispatched = assignments.some((a) => a.status === "dispatched");
-    if (hasDispatched) {
-      throw new Error("Cannot delete batch with dispatched assignments");
-    }
+//     // Check if any assignment is dispatched
+//     const hasDispatched = assignments.some((a) => a.status === "dispatched");
+//     if (hasDispatched) {
+//       throw new Error("Cannot delete batch with dispatched assignments");
+//     }
 
-    // Delete all assignments (do NOT restore stock - inventory is managed separately)
-    for (const assignment of assignments) {
-      await ctx.db.delete(assignment._id);
-    }
+//     // Delete all assignments (do NOT restore stock - inventory is managed separately)
+//     for (const assignment of assignments) {
+//       await ctx.db.delete(assignment._id);
+//     }
 
-    // Delete batch
-    await ctx.db.delete(args.id);
-  },
-});
+//     // Delete batch
+//     await ctx.db.delete(args.id);
+//   },
+// });
 
 export const addAssignment = mutation({
   args: {
@@ -278,12 +279,24 @@ export const remove = mutation({
     const batch = await ctx.db.get(args.id);
     if (!batch) throw new Error("Batch not found");
 
+    // Check if any assignment is dispatched
+    const assignments = await ctx.db
+      .query("assignments")
+      .withIndex("by_batch", (q) => q.eq("batchId", args.id))
+      .collect();
+
+    const hasDispatched = assignments.some((a) => a.status === "dispatched");
+    if (hasDispatched) {
+      throw new Error("Cannot delete batch with dispatched assignments");
+    }
+
     await ctx.db.insert("deletionRequests", {
       entityType: "batch",
       entityId: args.id,
       entityName: batch.batchId,
       status: "pending",
       requestedBy: userId,
+      reason: "User requested deletion",
     });
   },
 });

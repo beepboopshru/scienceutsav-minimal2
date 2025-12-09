@@ -103,7 +103,7 @@ export default function Assignments() {
   const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
   const deleteAssignment = useMutation(api.assignments.deleteAssignment);
   const createBatch = useMutation(api.batches.create);
-  const deleteBatch = useMutation(api.batches.deleteBatch);
+  const requestDeleteBatch = useMutation(api.batches.remove);
 
   // Permission checks
   const canEdit = hasPermission("assignments", "edit");
@@ -776,12 +776,12 @@ export default function Assignments() {
   };
 
   const handleDeleteBatch = async (batchId: string) => {
-    if (!confirm("Are you sure you want to delete this entire batch?")) return;
+    if (!confirm("Are you sure you want to request deletion for this entire batch?")) return;
     try {
-      await deleteBatch({ id: batchId as Id<"batches"> });
-      toast.success("Batch deleted successfully");
+      await requestDeleteBatch({ id: batchId as Id<"batches"> });
+      toast.success("Batch deletion requested successfully");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to delete batch");
+      toast.error(error instanceof Error ? error.message : "Failed to request batch deletion");
     }
   };
 
