@@ -1,1 +1,1 @@
-{"file_paths":["src/components/inventory/MaterialRequestsTab.tsx","src/pages/OperationsInventoryRelations.tsx","src/pages/Packing.tsx"],"replace_files_in_context":true}
+{"type":"tool_call","tool_number":1,"tool_name":"readFilesToContextTool","input_args":{"file_paths":["package.json"],"replace_files_in_context":true}}
