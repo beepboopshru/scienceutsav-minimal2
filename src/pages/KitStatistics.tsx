@@ -116,6 +116,7 @@ export default function KitStatistics() {
     laserFiles: false,
     componentPictures: false,
     workbooks: false,
+    misc: false,
   });
 
   const downloadKitSheet = useAction(api.kitPdf.generateKitSheet);
@@ -208,6 +209,7 @@ export default function KitStatistics() {
       laserFiles: false,
       componentPictures: false,
       workbooks: false,
+      misc: false,
     });
   };
 
@@ -217,7 +219,8 @@ export default function KitStatistics() {
     fileStatusFilters.kitImages || 
     fileStatusFilters.laserFiles || 
     fileStatusFilters.componentPictures || 
-    fileStatusFilters.workbooks;
+    fileStatusFilters.workbooks ||
+    fileStatusFilters.misc;
 
   // Program Selection View
   if (!selectedProgramId) {
@@ -313,6 +316,12 @@ export default function KitStatistics() {
 
     if (fileStatusFilters.workbooks) {
       if (!kit.workbookFiles || kit.workbookFiles.length === 0) {
+        return false;
+      }
+    }
+
+    if (fileStatusFilters.misc) {
+      if (!kit.miscFiles || kit.miscFiles.length === 0) {
         return false;
       }
     }
@@ -500,6 +509,24 @@ export default function KitStatistics() {
                         Workbooks
                       </label>
                     </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-misc"
+                        checked={fileStatusFilters.misc}
+                        onCheckedChange={(checked) =>
+                          setFileStatusFilters((prev) => ({
+                            ...prev,
+                            misc: checked as boolean,
+                          }))
+                        }
+                      />
+                      <label
+                        htmlFor="filter-misc"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        Miscellaneous
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -597,6 +624,13 @@ export default function KitStatistics() {
                                   title="Workbooks"
                                 >
                                   <FileText className="h-3 w-3" />
+                                </Badge>
+                                <Badge 
+                                  variant={kit.miscFiles && kit.miscFiles.length > 0 ? "default" : "outline"}
+                                  className="text-xs"
+                                  title="Miscellaneous"
+                                >
+                                  <File className="h-3 w-3" />
                                 </Badge>
                               </div>
                             </TableCell>
@@ -806,7 +840,8 @@ function KitFileViewer({ kitId }: { kitId: Id<"kits"> }) {
     { label: "Kit Images", files: kit.kitImageFiles || [] },
     { label: "Laser Files", files: kit.laserFiles || [] },
     { label: "Component Pictures", files: kit.componentFiles || [] },
-    { label: "Workbooks & Misc", files: kit.workbookFiles || [] },
+    { label: "Workbooks", files: kit.workbookFiles || [] },
+    { label: "Miscellaneous", files: kit.miscFiles || [] },
   ];
 
   return (
