@@ -73,9 +73,10 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
-import { BatchAssignmentDialog } from "@/components/assignments/BatchAssignmentDialog";
+// BatchAssignmentDialog removed - using InlineBatchEditor for both create and edit
 import { ImportCurriculumDialog } from "@/components/assignments/ImportCurriculumDialog";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
+import { InlineBatchEditor, type InlineBatchData, type BatchRow } from "@/components/assignments/InlineBatchEditor";
 
 export default function B2BAssignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -125,8 +126,8 @@ export default function B2BAssignments() {
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
-  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
-  const [editingBatch, setEditingBatch] = useState<{ batch: any; assignments: any[] } | null>(null);
+  // isBatchDialogOpen removed - no longer using dialog for batch operations
+  // const [editingBatch, setEditingBatch] = useState<{ batch: any; assignments: any[] } | null>(null);
 
   // Form states for dialog
   const [selectedProgram, setSelectedProgram] = useState<string>("");
@@ -190,7 +191,7 @@ export default function B2BAssignments() {
     rows: BatchRow[];
   };
 
-  const [batchesInProgress, setBatchesInProgress] = useState<BatchInProgress[]>([]);
+  const [batchesInProgress, setBatchesInProgress] = useState<InlineBatchData[]>([]);
 
   // Popover states for inline editing
   const [programPopoverOpen, setProgramPopoverOpen] = useState(false);
@@ -499,19 +500,19 @@ export default function B2BAssignments() {
   };
 
   const handleStartBatch = () => {
-    const newBatchId = `BATCH-${Date.now()}`;
-    const newBatch: BatchInProgress = {
-      id: newBatchId,
-      batchId: "", // Will be generated after client selection
+    const newBatch: InlineBatchData = {
+      id: Math.random().toString(),
+      batchId: "",
       client: "",
       clientName: "",
       batchName: "",
       dispatchDate: undefined,
       productionMonth: "",
       batchNotes: "",
+      mode: "create",
       rows: [
         {
-          id: `row-${Date.now()}`,
+          id: Math.random().toString(),
           program: "",
           kit: "",
           quantity: "1",
@@ -538,7 +539,7 @@ export default function B2BAssignments() {
               rows: [
                 ...batch.rows,
                 {
-                  id: `row-${Date.now()}`,
+                  id: Math.random().toString(),
                   program: "",
                   kit: "",
                   quantity: "1",
@@ -565,7 +566,7 @@ export default function B2BAssignments() {
     );
   };
 
-  const handleUpdateBatchRow = (batchId: string, rowId: string, field: keyof BatchRow, value: string) => {
+  const handleUpdateBatchRow = (batchId: string, rowId: string, field: string, value: any) => {
     setBatchesInProgress((prevBatches) =>
       prevBatches.map((batch) =>
         batch.id === batchId
@@ -581,10 +582,21 @@ export default function B2BAssignments() {
   };
 
   const handleUpdateBatchMetadata = (batchId: string, field: string, value: any) => {
-    setBatchesInProgress(
-      batchesInProgress.map((batch) =>
-        batch.id === batchId ? { ...batch, [field]: value } : batch
-      )
+    setBatchesInProgress((prevBatches) =>
+      prevBatches.map((b) => {
+        if (b.id !== batchId) return b;
+        
+        const updates: any = { [field]: value };
+        
+        // Auto-generate batch ID when client is selected (only for create mode)
+        if (field === "client" && b.mode === "create") {
+          const generatedBatchId = generateBatchId(value);
+          updates.batchId = generatedBatchId;
+          updates.batchName = generatedBatchId;
+        }
+        
+        return { ...b, ...updates };
+      })
     );
   };
 
@@ -633,38 +645,64 @@ export default function B2BAssignments() {
     const batch = batchesInProgress.find((b) => b.id === batchId);
     if (!batch) return;
 
-    if (!batch.client) {
-      toast.error("Please select a client for this batch");
+    // Validation
+    const invalidRow = batch.rows.find((r) => !r.kit || !r.quantity || parseInt(r.quantity) < 1);
+    if (invalidRow) {
+      toast.error("Please fill in all required fields for each kit");
       return;
     }
 
-    const validRows = batch.rows.filter((row) => row.kit && row.quantity);
-    if (validRows.length === 0) {
-      toast.error("Please add at least one kit to this batch");
-      return;
+    if (batch.productionMonth && batch.dispatchDate) {
+      const prodMonth = new Date(batch.productionMonth + "-01");
+      const dispMonth = new Date(batch.dispatchDate.getFullYear(), batch.dispatchDate.getMonth(), 1);
+      if (prodMonth > dispMonth) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
     }
 
     try {
-      await createBatch({
-        clientId: batch.client,
-        clientType: "b2b",
-        batchName: batch.batchName || batch.batchId,
-        notes: batch.batchNotes || undefined,
-        dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
-        productionMonth: batch.productionMonth || undefined,
-        assignments: validRows.map((row) => ({
-          kitId: row.kit as Id<"kits">,
-          quantity: parseInt(row.quantity),
-          grade: row.grade && row.grade !== "none" ? row.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
-          notes: row.notes || undefined,
-        })),
-      });
+      if (batch.mode === "edit" && batch.originalBatchId) {
+        // Update existing batch
+        await updateBatchWithAssignments({
+          batchId: batch.originalBatchId,
+          batchName: batch.batchName || undefined,
+          notes: batch.batchNotes || undefined,
+          dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
+          productionMonth: batch.productionMonth || undefined,
+          assignments: batch.rows.map((r) => ({
+            assignmentId: r.assignmentId,
+            kitId: r.kit as Id<"kits">,
+            quantity: parseInt(r.quantity),
+            grade: r.grade && r.grade !== "" ? (r.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10") : undefined,
+            notes: r.notes || undefined,
+          })),
+        });
+        toast.success("Batch updated successfully");
+      } else {
+        // Create new batch
+        await createBatch({
+          clientId: batch.client as Id<"clients">,
+          clientType: "b2b",
+          batchName: batch.batchName || undefined,
+          notes: batch.batchNotes || undefined,
+          dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
+          productionMonth: batch.productionMonth || undefined,
+          assignments: batch.rows.map((r) => ({
+            kitId: r.kit as Id<"kits">,
+            quantity: parseInt(r.quantity),
+            grade: r.grade && r.grade !== "" ? (r.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10") : undefined,
+            notes: r.notes || undefined,
+          })),
+        });
+        toast.success("Batch created successfully");
+      }
 
-      toast.success("Batch created successfully");
-      setBatchesInProgress(batchesInProgress.filter((b) => b.id !== batchId));
+      // Remove batch from in-progress list
+      setBatchesInProgress((prev) => prev.filter((b) => b.id !== batchId));
     } catch (error) {
-      toast.error("Failed to create batch");
-      console.error(error);
+      console.error("Failed to save batch:", error);
+      toast.error(batch.mode === "edit" ? "Failed to update batch" : "Failed to create batch");
     }
   };
 
@@ -830,16 +868,39 @@ export default function B2BAssignments() {
       batchId,
       ...data,
     });
-    setEditingBatch(null);
+    // Editing batch state removed - using inline editing now
   };
 
   const handleEditBatch = (batch: any) => {
     const batchAssignments = assignments?.filter(a => a.batchId === batch._id) || [];
     
-    setEditingBatch({
-      batch,
-      assignments: batchAssignments,
-    });
+    // Convert existing batch to InlineBatchData format
+    const editBatchData: InlineBatchData = {
+      id: Math.random().toString(),
+      batchId: batch.batchId,
+      client: batch.clientId,
+      clientName: batch.client?.organization || batch.client?.name || "",
+      batchName: batch.batchId,
+      dispatchDate: batch.dispatchDate ? new Date(batch.dispatchDate) : undefined,
+      productionMonth: batch.productionMonth || "",
+      batchNotes: batch.notes || "",
+      mode: "edit",
+      originalBatchId: batch._id,
+      rows: batchAssignments.map(a => {
+        const kit = kits?.find(k => k._id === a.kitId);
+        return {
+          id: Math.random().toString(),
+          assignmentId: a._id,
+          program: kit?.programId || "",
+          kit: a.kitId,
+          quantity: a.quantity.toString(),
+          grade: a.grade || "",
+          notes: a.notes || "",
+        };
+      }),
+    };
+
+    setBatchesInProgress(prev => [...prev, editBatchData]);
   };
 
   const handleSaveInlineEdit = async (batchId: Id<"batches">, updates: { batchId?: string; notes?: string }) => {
@@ -880,7 +941,7 @@ export default function B2BAssignments() {
       "july", "august", "september", "october", "november", "december"
     ].indexOf(month.toLowerCase());
     
-    const newBatch: BatchInProgress = {
+    const newBatch: InlineBatchData = {
       id: batchId,
       batchId: "", // Will be generated
       client: client._id,
@@ -889,6 +950,7 @@ export default function B2BAssignments() {
       dispatchDate: undefined, // User must set
       productionMonth: `${year}-${(monthIndex + 1).toString().padStart(2, '0')}`, // YYYY-MM format
       batchNotes: `Imported from ${month} ${year} curriculum`,
+      mode: "create",
       rows: assignments.map((a: any) => ({
         id: `row-${Date.now()}-${Math.random()}`,
         program: a.programId,
@@ -970,376 +1032,22 @@ export default function B2BAssignments() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {/* Batch Creation Rows */}
+              {/* Batch Creation/Edit Rows */}
               {batchesInProgress.map((batch) => (
-                <React.Fragment key={batch.id}>
-                  {/* Batch Info Panel Row */}
-                  <TableRow className="bg-muted/70 border-b-2 border-border">
-                    <TableCell colSpan={13}>
-                      <div className="space-y-4 p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <Badge variant="outline" className="text-lg px-3 py-1">
-                              {batch.batchId || "Select client to generate Batch ID"}
-                            </Badge>
-                            <div className="text-sm text-muted-foreground">
-                              Batch Creation Mode
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSaveBatch(batch.id)}
-                              disabled={!batch.client || batch.rows.length === 0}
-                            >
-                              Save Batch
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCancelBatch(batch.id)}
-                            >
-                              Cancel Batch
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-4">
-                          <div className="space-y-2">
-                            <Label>Client *</Label>
-                            <Popover 
-                              open={batchClientPopoverOpen[batch.id] || false}
-                              onOpenChange={(open) => 
-                                setBatchClientPopoverOpen({ ...batchClientPopoverOpen, [batch.id]: open })
-                              }
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                >
-                                  {batch.client
-                                    ? (() => {
-                                        const selectedClient = clients?.find((c) => c._id === batch.client);
-                                        return selectedClient?.organization || selectedClient?.name || "Unknown Client";
-                                      })()
-                                    : "Select Client"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[200px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search client..." />
-                                  <CommandList>
-                                    <CommandEmpty>No client found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {clients?.map((client) => (
-                                        <CommandItem
-                                          key={client._id}
-                                          value={client.organization || client.name}
-                                          onSelect={() => {
-                                            const generatedBatchId = generateBatchId(client._id);
-                                            setBatchesInProgress((prevBatches) =>
-                                              prevBatches.map((b) =>
-                                                b.id === batch.id
-                                                  ? {
-                                                      ...b,
-                                                      client: client._id,
-                                                      batchId: generatedBatchId,
-                                                      batchName: generatedBatchId,
-                                                    }
-                                                  : b
-                                              )
-                                            );
-                                            setBatchClientPopoverOpen((prev) => ({ ...prev, [batch.id]: false }));
-                                          }}
-                                        >
-                                          {client.organization || client.name}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Batch Name</Label>
-                            <Input
-                              value={batch.batchName}
-                              onChange={(e) =>
-                                handleUpdateBatchMetadata(batch.id, "batchName", e.target.value)
-                              }
-                              placeholder="Auto-generated"
-                              disabled={!batch.client}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Dispatch Date</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                  disabled={!batch.client}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {batch.dispatchDate
-                                    ? format(batch.dispatchDate, "MMM dd, yyyy")
-                                    : "Pick date"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                  mode="single"
-                                  selected={batch.dispatchDate}
-                                  onSelect={(date) =>
-                                    handleUpdateBatchMetadata(batch.id, "dispatchDate", date)
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Production Month</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                  disabled={!batch.client}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {batch.productionMonth
-                                    ? format(new Date(batch.productionMonth + "-01"), "MMMM yyyy")
-                                    : "Pick month"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <div className="p-3 space-y-2">
-                                  <Select
-                                    value={batch.productionMonth ? batch.productionMonth.split("-")[1] : ""}
-                                    onValueChange={(month) => {
-                                      const year = batch.productionMonth ? batch.productionMonth.split("-")[0] : new Date().getFullYear().toString();
-                                      handleUpdateBatchMetadata(batch.id, "productionMonth", `${year}-${month}`);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select month" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                        <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                                          {format(new Date(2000, m - 1, 1), "MMMM")}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Select
-                                    value={batch.productionMonth ? batch.productionMonth.split("-")[0] : ""}
-                                    onValueChange={(year) => {
-                                      const month = batch.productionMonth ? batch.productionMonth.split("-")[1] : "01";
-                                      handleUpdateBatchMetadata(batch.id, "productionMonth", `${year}-${month}`);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select year" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                                        <SelectItem key={y} value={y.toString()}>
-                                          {y}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Batch Notes</Label>
-                          <Textarea
-                            value={batch.batchNotes}
-                            onChange={(e) =>
-                              handleUpdateBatchMetadata(batch.id, "batchNotes", e.target.value)
-                            }
-                            placeholder="Notes for this batch..."
-                            rows={2}
-                            disabled={!batch.client}
-                          />
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
-                  {/* Batch Assignment Rows */}
-                  {batch.rows.map((row, rowIndex) => (
-                    <TableRow key={row.id} className="bg-muted/70">
-                      <TableCell>
-                        <Badge variant="outline">{batch.batchId || "-"}</Badge>
-                      </TableCell>
-                      {columnVisibility.program && (
-                        <TableCell>
-                          <Select
-                            value={row.program}
-                            onValueChange={(val) => {
-                              handleUpdateBatchRow(batch.id, row.id, "program", val);
-                              handleUpdateBatchRow(batch.id, row.id, "kit", "");
-                            }}
-                            disabled={!batch.client}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Program" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {programs?.map((program) => (
-                                <SelectItem key={program._id} value={program._id}>
-                                  {program.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      )}
-                      {columnVisibility.kit && (
-                        <TableCell>
-                          <Select
-                            value={row.kit}
-                            onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "kit", val)}
-                            disabled={!row.program || !batch.client}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select Kit" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {kits
-                                ?.filter((kit) => kit.programId === row.program)
-                                .map((kit) => (
-                                  <SelectItem key={kit._id} value={kit._id}>
-                                    {kit.name}
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {kits?.find((k) => k._id === row.kit)?.category || "-"}
-                        </span>
-                      </TableCell>
-                      {columnVisibility.client && (
-                        <TableCell>
-                          <span className="text-sm">
-                            {clients?.find((c) => c._id === batch.client)?.organization || 
-                             clients?.find((c) => c._id === batch.client)?.name || "-"}
-                          </span>
-                        </TableCell>
-                      )}
-                      {columnVisibility.quantity && (
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={row.quantity}
-                            onChange={(e) =>
-                              handleUpdateBatchRow(batch.id, row.id, "quantity", e.target.value)
-                            }
-                            className="w-20"
-                            disabled={!batch.client}
-                          />
-                        </TableCell>
-                      )}
-                      {columnVisibility.grade && (
-                        <TableCell>
-                          <Select
-                            value={row.grade}
-                            onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "grade", val)}
-                            disabled={!batch.client}
-                          >
-                            <SelectTrigger className="w-24">
-                              <SelectValue placeholder="Grade" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                <SelectItem key={g} value={g.toString()}>
-                                  {g}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                      )}
-                      {columnVisibility.status && (
-                        <TableCell>
-                          <Badge variant="secondary">Assigned</Badge>
-                        </TableCell>
-                      )}
-                      {columnVisibility.dispatchDate && (
-                        <TableCell>
-                          <span className="text-sm">
-                            {batch.dispatchDate ? format(batch.dispatchDate, "MMM dd, yyyy") : "-"}
-                          </span>
-                        </TableCell>
-                      )}
-                      {columnVisibility.productionMonth && (
-                        <TableCell>
-                          <span className="text-sm">
-                            {batch.productionMonth
-                              ? format(new Date(batch.productionMonth + "-01"), "MMM yyyy")
-                              : "-"}
-                          </span>
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">-</span>
-                      </TableCell>
-                      {columnVisibility.notes && (
-                        <TableCell>
-                          <Input
-                            value={row.notes}
-                            onChange={(e) =>
-                              handleUpdateBatchRow(batch.id, row.id, "notes", e.target.value)
-                            }
-                            placeholder="Notes..."
-                            disabled={!batch.client}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleRemoveRowFromBatch(batch.id, row.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {/* Add Another Kit Row */}
-                  <TableRow className="bg-muted/70">
-                    <TableCell colSpan={13} className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAddRowToBatch(batch.id)}
-                        disabled={!batch.client}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Another Kit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
+                <InlineBatchEditor
+                  key={batch.id}
+                  batch={batch}
+                  clients={clients || []}
+                  programs={programs || []}
+                  kits={kits || []}
+                  columnVisibility={columnVisibility}
+                  onUpdateMetadata={handleUpdateBatchMetadata}
+                  onUpdateRow={handleUpdateBatchRow}
+                  onAddRow={handleAddRowToBatch}
+                  onRemoveRow={handleRemoveRowFromBatch}
+                  onSave={handleSaveBatch}
+                  onCancel={handleCancelBatch}
+                />
               ))}
 
               {/* New Row for inline creation */}
@@ -2582,11 +2290,13 @@ export default function B2BAssignments() {
         </AlertDialog>
 
         {/* Batch Assignment Dialog */}
-        <BatchAssignmentDialog
+        {/* <BatchAssignmentDialog
           open={isBatchDialogOpen || !!editingBatch}
           onOpenChange={(open) => {
             setIsBatchDialogOpen(open);
-            if (!open) setEditingBatch(null);
+            if (!open) {
+              // Editing batch state removed - using inline editing now
+            }
           }}
           clients={clients || []}
           programs={programs || []}
@@ -2595,7 +2305,7 @@ export default function B2BAssignments() {
           mode={editingBatch ? "edit" : "create"}
           initialData={editingBatch || undefined}
           onUpdateBatch={handleUpdateBatch}
-        />
+        /> */}
 
         {/* Notes Dialog */}
         <Dialog open={notesDialog.open} onOpenChange={(open) => setNotesDialog({ ...notesDialog, open })}>
