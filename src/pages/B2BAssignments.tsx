@@ -98,6 +98,7 @@ export default function B2BAssignments() {
   const createBatch = useMutation(api.batches.create);
   const requestDeleteBatch = useMutation(api.batches.remove);
   const updateBatchWithAssignments = useMutation(api.batches.updateBatchWithAssignments);
+  const updateBatchInline = useMutation(api.batches.updateBatchInline);
 
   // Permission checks
   const canEdit = hasPermission("assignments", "edit");
@@ -839,6 +840,16 @@ export default function B2BAssignments() {
       batch,
       assignments: batchAssignments,
     });
+  };
+
+  const handleSaveInlineEdit = async (batchId: Id<"batches">, updates: { batchId?: string; notes?: string }) => {
+    try {
+      await updateBatchInline({ batchId, updates });
+      toast.success("Batch updated successfully");
+    } catch (error) {
+      console.error("Failed to update batch:", error);
+      toast.error("Failed to update batch");
+    }
   };
 
   const handleDeleteBatch = async (batchId: string) => {

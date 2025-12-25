@@ -256,6 +256,39 @@ export const updateBatchWithAssignments = mutation({
   },
 });
 
+export const updateBatchInline = mutation({
+  args: {
+    batchId: v.id("batches"),
+    updates: v.object({
+      batchId: v.optional(v.string()),
+      notes: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    const batch = await ctx.db.get(args.batchId);
+    if (!batch) {
+      throw new Error("Batch not found");
+    }
+
+    // Update the batch with provided fields
+    await ctx.db.patch(args.batchId, args.updates);
+
+    // Log the activity
+    await ctx.db.insert("activityLogs", {
+      userId,
+      actionType: "update",
+      details: `Updated batch inline: ${JSON.stringify(args.updates)}`,
+    });
+
+    return { success: true };
+  },
+});
+
 // Deprecated: Use remove (deletion request) instead
 // export const deleteBatch = mutation({
 //   args: { id: v.id("batches") },
