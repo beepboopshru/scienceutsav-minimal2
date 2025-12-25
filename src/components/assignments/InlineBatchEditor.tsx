@@ -368,7 +368,7 @@ export function InlineBatchEditor({
                     <SelectValue placeholder="Grade" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
                       <SelectItem key={g} value={g.toString()}>
                         {g}
