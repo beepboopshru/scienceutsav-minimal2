@@ -73,7 +73,7 @@ import {
 } from "@/components/ui/tooltip";
 import { api } from "@/convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
-import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save, Pencil, FileText, MessageSquare, Truck } from "lucide-react";
+import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save, Pencil, FileText, MessageSquare, Truck, ChevronUp, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -104,6 +104,7 @@ export default function Assignments() {
   const deleteAssignment = useMutation(api.assignments.deleteAssignment);
   const createBatch = useMutation(api.batches.create);
   const requestDeleteBatch = useMutation(api.batches.remove);
+  const updateBatchWithAssignments = useMutation(api.batches.updateBatchWithAssignments);
 
   // Permission checks
   const canEdit = hasPermission("assignments", "edit");
@@ -117,6 +118,8 @@ export default function Assignments() {
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<{ batch: any; assignments: any[] } | null>(null);
 
   // Form states for dialog
   const [selectedProgram, setSelectedProgram] = useState<string>("");
@@ -772,7 +775,26 @@ export default function Assignments() {
   };
 
   const handleCreateBatch = async (data: any) => {
-    await createBatch(data);
+    await createBatch({
+      ...data,
+      clientType: "b2c",
+    });
+  };
+
+  const handleUpdateBatch = async (batchId: Id<"batches">, data: any) => {
+    await updateBatchWithAssignments({
+      batchId,
+      ...data,
+    });
+    setEditingBatch(null);
+  };
+
+  const handleEditBatch = (batch: any) => {
+    const batchAssignments = assignments?.filter(a => a.batchId === batch._id) || [];
+    setEditingBatch({
+      batch,
+      assignments: batchAssignments,
+    });
   };
 
   const handleDeleteBatch = async (batchId: string) => {
@@ -1490,6 +1512,28 @@ export default function Assignments() {
                           <TableCell colSpan={13}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-lg">
+                                  Batch: {batch.batchId}
+                                  {batch.notes && (
+                                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                      ({batch.notes})
+                                    </span>
+                                  )}
+                                </h3>
+                                <Badge variant="outline">
+                                  {batch.assignmentCount} items
+                                </Badge>
+                                {canEdit && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditBatch(batch)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                    <span className="sr-only">Edit Batch</span>
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1497,16 +1541,16 @@ export default function Assignments() {
                                 >
                                   {isExpanded ? "▼" : "▶"}
                                 </Button>
-                                <Badge variant="outline">{batch.batchId}</Badge>
-                                <span>
-                                  {(() => {
-                                    const client = clients?.find((c) => c._id === (batch.client as unknown as string));
-                                    return client?.buyerName || "Unknown";
-                                  })()}
-                                </span>
-                                <span className="text-sm text-muted-foreground">
-                                  ({batchAssignments.length} assignments: {statusSummary})
-                                </span>
+                                {canEdit && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => handleDeleteBatch(batch._id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                               <Button
                                 variant="ghost"
@@ -2206,12 +2250,18 @@ export default function Assignments() {
 
         {/* Batch Assignment Dialog */}
         <BatchAssignmentDialog
-          open={batchDialogOpen}
-          onOpenChange={setBatchDialogOpen}
-          clients={clients}
-          programs={programs}
-          kits={kits}
+          open={isBatchDialogOpen || !!editingBatch}
+          onOpenChange={(open) => {
+            setIsBatchDialogOpen(open);
+            if (!open) setEditingBatch(null);
+          }}
+          clients={clients || []}
+          programs={programs || []}
+          kits={kits || []}
           onCreateBatch={handleCreateBatch}
+          mode={editingBatch ? "edit" : "create"}
+          initialData={editingBatch || undefined}
+          onUpdateBatch={handleUpdateBatch}
         />
       </div>
     </Layout>

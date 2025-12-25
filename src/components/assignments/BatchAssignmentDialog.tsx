@@ -45,6 +45,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useEffect } from "react";
 
 interface BatchAssignmentDialogProps {
   open: boolean;
@@ -53,10 +54,17 @@ interface BatchAssignmentDialogProps {
   programs: Array<any>;
   kits: Array<any>;
   onCreateBatch: (data: any) => Promise<void>;
+  mode?: "create" | "edit";
+  initialData?: {
+    batch: any;
+    assignments: any[];
+  };
+  onUpdateBatch?: (batchId: Id<"batches">, data: any) => Promise<void>;
 }
 
 interface BatchKit {
   id: string;
+  assignmentId?: string; // For editing existing assignments
   programId: string;
   kitId: string;
   quantity: number;
@@ -71,6 +79,9 @@ export function BatchAssignmentDialog({
   programs,
   kits,
   onCreateBatch,
+  mode = "create",
+  initialData,
+  onUpdateBatch,
 }: BatchAssignmentDialogProps) {
   const [step, setStep] = useState(1);
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -80,6 +91,35 @@ export function BatchAssignmentDialog({
   const [productionMonth, setProductionMonth] = useState<string>("");
   const [batchKits, setBatchKits] = useState<BatchKit[]>([]);
   const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+
+  // Initialize form when opening in edit mode
+  useEffect(() => {
+    if (open && mode === "edit" && initialData) {
+      setStep(2); // Skip client selection in edit mode
+      setSelectedClient(initialData.batch.clientId);
+      setBatchName(initialData.batch.batchId || "");
+      setBatchNotes(initialData.batch.notes || "");
+      setDispatchDate(initialData.batch.dispatchDate ? new Date(initialData.batch.dispatchDate) : undefined);
+      setProductionMonth(initialData.batch.productionMonth || "");
+      
+      // Map existing assignments to BatchKit format
+      const mappedKits = initialData.assignments.map(a => {
+        const kit = kits.find(k => k._id === a.kitId);
+        return {
+          id: Math.random().toString(),
+          assignmentId: a._id,
+          programId: kit?.programId || "",
+          kitId: a.kitId,
+          quantity: a.quantity,
+          grade: a.grade || "none",
+          notes: a.notes || "",
+        };
+      });
+      setBatchKits(mappedKits);
+    } else if (open && mode === "create") {
+      resetForm();
+    }
+  }, [open, mode, initialData, kits]);
 
   const resetForm = () => {
     setStep(1);
@@ -149,24 +189,40 @@ export function BatchAssignmentDialog({
     }
 
     try {
-      await onCreateBatch({
-        clientId: selectedClient as Id<"clients">,
+      const commonData = {
         batchName: batchName || undefined,
         notes: batchNotes || undefined,
         dispatchDate: dispatchDate ? dispatchDate.getTime() : undefined,
         productionMonth: productionMonth || undefined,
-        assignments: batchKits.map((k) => ({
-          kitId: k.kitId as Id<"kits">,
-          quantity: k.quantity,
-          grade: k.grade && k.grade !== "none" ? k.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
-          notes: k.notes || undefined,
-        })),
-      });
-      toast.success("Batch assignment created successfully");
+      };
+
+      const assignmentsData = batchKits.map((k) => ({
+        assignmentId: k.assignmentId as Id<"assignments"> | undefined,
+        kitId: k.kitId as Id<"kits">,
+        quantity: k.quantity,
+        grade: k.grade && k.grade !== "none" ? k.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
+        notes: k.notes || undefined,
+      }));
+
+      if (mode === "edit" && onUpdateBatch && initialData) {
+        await onUpdateBatch(initialData.batch._id, {
+          ...commonData,
+          assignments: assignmentsData,
+        });
+        toast.success("Batch updated successfully");
+      } else {
+        await onCreateBatch({
+          clientId: selectedClient as Id<"clients">,
+          ...commonData,
+          assignments: assignmentsData,
+        });
+        toast.success("Batch assignment created successfully");
+      }
+      
       resetForm();
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to create batch assignment");
+      toast.error(mode === "edit" ? "Failed to update batch" : "Failed to create batch assignment");
       console.error(error);
     }
   };
@@ -180,17 +236,26 @@ export function BatchAssignmentDialog({
     }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Batch Assignment - Step {step} of 4</DialogTitle>
+          <DialogTitle>
+            {mode === "edit" ? "Edit Batch Assignment" : `Create Batch Assignment - Step ${step} of 4`}
+          </DialogTitle>
           <DialogDescription>
-            {step === 1 && "Select the client for this batch"}
-            {step === 2 && "Add kits to the batch"}
-            {step === 3 && "Set common fields for all assignments"}
-            {step === 4 && "Review and confirm the batch"}
+            {mode === "edit" 
+              ? "Modify batch details and assignments. Adding new kits will create new assignments."
+              : (
+                <>
+                  {step === 1 && "Select the client for this batch"}
+                  {step === 2 && "Add kits to the batch"}
+                  {step === 3 && "Set common fields for all assignments"}
+                  {step === 4 && "Review and confirm the batch"}
+                </>
+              )
+            }
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {step === 1 && (
+          {step === 1 && mode === "create" && (
             <div className="space-y-2">
               <Label>Client *</Label>
               <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
@@ -485,7 +550,7 @@ export function BatchAssignmentDialog({
         </div>
 
         <DialogFooter>
-          {step > 1 && (
+          {step > (mode === "edit" ? 2 : 1) && (
             <Button variant="outline" onClick={handleBack}>
               Back
             </Button>
@@ -493,7 +558,9 @@ export function BatchAssignmentDialog({
           {step < 4 ? (
             <Button onClick={handleNext}>Next</Button>
           ) : (
-            <Button onClick={handleCreate}>Create Batch</Button>
+            <Button onClick={handleCreate}>
+              {mode === "edit" ? "Update Batch" : "Create Batch"}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

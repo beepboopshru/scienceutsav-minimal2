@@ -181,6 +181,81 @@ export const update = mutation({
   },
 });
 
+export const updateBatchWithAssignments = mutation({
+  args: {
+    batchId: v.id("batches"),
+    batchName: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    dispatchDate: v.optional(v.number()),
+    productionMonth: v.optional(v.string()),
+    assignments: v.array(v.object({
+      assignmentId: v.optional(v.id("assignments")),
+      kitId: v.id("kits"),
+      quantity: v.number(),
+      grade: v.optional(v.union(
+        v.literal("1"), v.literal("2"), v.literal("3"), v.literal("4"), v.literal("5"),
+        v.literal("6"), v.literal("7"), v.literal("8"), v.literal("9"), v.literal("10")
+      )),
+      notes: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const batch = await ctx.db.get(args.batchId);
+    if (!batch) throw new Error("Batch not found");
+
+    // Update batch details
+    const batchUpdates: any = {};
+    if (args.batchName !== undefined) batchUpdates.batchId = args.batchName;
+    if (args.notes !== undefined) batchUpdates.notes = args.notes;
+    if (args.dispatchDate !== undefined) batchUpdates.dispatchDate = args.dispatchDate;
+    if (args.productionMonth !== undefined) batchUpdates.productionMonth = args.productionMonth;
+
+    if (Object.keys(batchUpdates).length > 0) {
+      await ctx.db.patch(args.batchId, batchUpdates);
+    }
+
+    // Handle assignments (Upsert)
+    for (const item of args.assignments) {
+      if (item.assignmentId) {
+        // Update existing assignment
+        const existing = await ctx.db.get(item.assignmentId);
+        if (existing && existing.batchId === args.batchId) {
+           await ctx.db.patch(item.assignmentId, {
+             kitId: item.kitId,
+             quantity: item.quantity,
+             grade: item.grade,
+             notes: item.notes,
+             // Sync common fields from batch if they were updated, or keep them?
+             // Usually in a batch edit, we want these to align with the batch settings
+             // if they are being set.
+             // if they are being set.
+             dispatchedAt: args.dispatchDate ?? existing.dispatchedAt,
+             productionMonth: args.productionMonth ?? existing.productionMonth,
+           });
+        }
+      } else {
+        // Create new assignment
+        await ctx.db.insert("assignments", {
+          batchId: args.batchId,
+          kitId: item.kitId,
+          clientId: batch.clientId,
+          clientType: batch.clientType,
+          quantity: item.quantity,
+          grade: item.grade,
+          notes: item.notes,
+          status: "assigned",
+          createdBy: userId,
+          dispatchedAt: args.dispatchDate ?? batch.dispatchDate,
+          productionMonth: args.productionMonth ?? batch.productionMonth,
+        });
+      }
+    }
+  },
+});
+
 // Deprecated: Use remove (deletion request) instead
 // export const deleteBatch = mutation({
 //   args: { id: v.id("batches") },

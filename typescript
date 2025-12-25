@@ -1,13 +1,263 @@
-// Track virtual inventory to account for stock usage across assignments
-const virtualInventory = new Map<string, number>();
-// ... (loads physical inventory)
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import type { Id } from "@/convex/_generated/dataModel";
+import { useEffect } from "react";
 
-// Add target quantities from assigned/in_progress processing jobs
-processingJobs.forEach(job => {
-  if (job.status === "assigned" || job.status === "in_progress") {
-    job.targets.forEach((target: any) => {
-      const currentVirtual = virtualInventory.get(target.targetItemId) || 0;
-      virtualInventory.set(target.targetItemId, currentVirtual + target.targetQuantity);
-    });
-  }
-});
+interface BatchAssignmentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clients: Array<any>;
+  programs: Array<any>;
+  kits: Array<any>;
+  onCreateBatch: (data: any) => Promise<void>;
+  mode?: "create" | "edit";
+  initialData?: {
+    batch: any;
+    assignments: any[];
+  };
+  onUpdateBatch?: (batchId: Id<"batches">, data: any) => Promise<void>;
+}
+
+interface BatchKit {
+  id: string;
+  assignmentId?: string;
+  programId: string;
+  kitId: string;
+  quantity: number;
+  grade: string;
+  notes: string;
+}
+
+export function BatchAssignmentDialog({
+  open,
+  onOpenChange,
+  clients,
+  programs,
+  kits,
+  onCreateBatch,
+  mode = "create",
+  initialData,
+  onUpdateBatch,
+}: BatchAssignmentDialogProps) {
+  const [step, setStep] = useState(1);
+  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [batchName, setBatchName] = useState<string>("");
+  const [batchNotes, setBatchNotes] = useState<string>("");
+  const [dispatchDate, setDispatchDate] = useState<Date | undefined>(undefined);
+  const [productionMonth, setProductionMonth] = useState<string>("");
+  const [batchKits, setBatchKits] = useState<BatchKit[]>([]);
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
+
+  useEffect(() => {
+    if (open && mode === "edit" && initialData) {
+      setStep(2);
+      setSelectedClient(initialData.batch.clientId);
+      setBatchName(initialData.batch.batchId || "");
+      setBatchNotes(initialData.batch.notes || "");
+      setDispatchDate(initialData.batch.dispatchDate ? new Date(initialData.batch.dispatchDate) : undefined);
+      setProductionMonth(initialData.batch.productionMonth || "");
+      
+      const mappedKits = initialData.assignments.map(a => {
+        const kit = kits.find(k => k._id === a.kitId);
+        return {
+          id: Math.random().toString(),
+          assignmentId: a._id,
+          programId: kit?.programId || "",
+          kitId: a.kitId,
+          quantity: a.quantity,
+          grade: a.grade || "none",
+          notes: a.notes || "",
+        };
+      });
+      setBatchKits(mappedKits);
+    } else if (open && mode === "create") {
+      resetForm();
+    }
+  }, [open, mode, initialData, kits]);
+
+  const resetForm = () => {
+    setStep(1);
+    setSelectedClient("");
+    setBatchName("");
+    setBatchNotes("");
+    setDispatchDate(undefined);
+    setProductionMonth("");
+    setBatchKits([]);
+  };
+
+  const handleBack = () => {
+    if (step > 1) {
+      setStep(step - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (step < 4) {
+      setStep(step + 1);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (productionMonth && dispatchDate) {
+      const prodMonth = new Date(productionMonth + "-01");
+      const dispMonth = new Date(dispatchDate.getFullYear(), dispatchDate.getMonth(), 1);
+      if (prodMonth > dispMonth) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
+    }
+
+    try {
+      const commonData = {
+        batchName: batchName || undefined,
+        notes: batchNotes || undefined,
+        dispatchDate: dispatchDate ? dispatchDate.getTime() : undefined,
+        productionMonth: productionMonth || undefined,
+      };
+
+      const assignmentsData = batchKits.map((k) => ({
+        assignmentId: k.assignmentId as Id<"assignments"> | undefined,
+        kitId: k.kitId as Id<"kits">,
+        quantity: k.quantity,
+        grade: k.grade && k.grade !== "none" ? k.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
+        notes: k.notes || undefined,
+      }));
+
+      if (mode === "edit" && onUpdateBatch && initialData) {
+        await onUpdateBatch(initialData.batch._id, {
+          ...commonData,
+          assignments: assignmentsData,
+        });
+        toast.success("Batch updated successfully");
+      } else {
+        await onCreateBatch({
+          clientId: selectedClient as Id<"clients">,
+          ...commonData,
+          assignments: assignmentsData,
+        });
+        toast.success("Batch assignment created successfully");
+      }
+      
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(mode === "edit" ? "Failed to update batch" : "Failed to create batch assignment");
+      console.error(error);
+    }
+  };
+
+  const selectedClientData = clients.find((c) => c._id === selectedClient);
+
+  return (
+    <Dialog open={open} onOpenChange={(open) => {
+      onOpenChange(open);
+      if (!open) resetForm();
+    }}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "edit" ? "Edit Batch Assignment" : `Create Batch Assignment - Step ${step} of 4`}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "edit" 
+              ? "Modify batch details and assignments. Adding new kits will create new assignments."
+              : (
+                <>
+                  {step === 1 && "Select the client for this batch"}
+                  {step === 2 && "Add kits to the batch"}
+                  {step === 3 && "Set common fields for all assignments"}
+                  {step === 4 && "Review and confirm the batch"}
+                </>
+              )
+            }
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {step === 1 && mode === "create" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="client">Client</Label>
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setClientPopoverOpen(true)}
+                      className="flex-1"
+                    >
+                      {selectedClient ? selectedClientData?.name : "Select a client"}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setClientPopoverOpen(true)}
+                      className="flex-1"
+                    >
+                      {selectedClient ? selectedClientData?.name : "Select a client"}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="batchName">Batch Name</Label>
+                <Input
+                  id="batchName"
+                  value={batchName}
+                  onChange={(e) => setBatchName(e.target.value)}
+                  placeholder="Batch name"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="batchNotes">Notes</Label>
+                <Textarea
+                  id="batchNotes"
+                  value={batchNotes}
+                  onChange={(e) => setBatchNotes(e.target.value)}
+                  placeholder="Batch notes"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="dispatchDate">Dispatch Date</Label>
+                <Input
+                  id="dispatchDate"
+                  type="date"
+                  value={dispatchDate ? dispatchDate.toISOString().split("T")[0] : ""}
+                  onChange={(e) => setDispatchDate(new Date(e.target.value))}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          {step > (mode === "edit" ? 2 : 1) && (
+            <Button variant="outline" onClick={handleBack}>
+              Back
+            </Button>
+          )}
+          {step < 4 ? (
+            <Button onClick={handleNext}>Next</Button>
+          ) : (
+            <Button onClick={handleCreate}>
+              {mode === "edit" ? "Update Batch" : "Create Batch"}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
