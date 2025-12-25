@@ -1817,54 +1817,72 @@ export default function B2BAssignments() {
                                   {columnVisibility.notes && (
                                     <TableCell className="text-center">
                                       <div className="flex items-center justify-center gap-1">
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() =>
-                                            handleOpenNotesDialog(
-                                              assignment._id,
-                                              "assignment",
-                                              assignment.notes || "",
-                                              canEdit
-                                            )
-                                          }
-                                          className="h-8 w-8"
-                                          title="Assignment Notes"
-                                        >
-                                          <FileText className="h-4 w-4 text-blue-500" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() =>
-                                            handleOpenNotesDialog(
-                                              assignment._id,
-                                              "packing",
-                                              assignment.packingNotes || "",
-                                              false
-                                            )
-                                          }
-                                          className="h-8 w-8"
-                                          title="Packing Notes"
-                                        >
-                                          <MessageSquare className="h-4 w-4 text-green-500" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() =>
-                                            handleOpenNotesDialog(
-                                              assignment._id,
-                                              "dispatch",
-                                              assignment.dispatchNotes || "",
-                                              false
-                                            )
-                                          }
-                                          className="h-8 w-8"
-                                          title="Dispatch Notes"
-                                        >
-                                          <Truck className="h-4 w-4 text-orange-500" />
-                                        </Button>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() =>
+                                                  handleOpenNotesDialog(
+                                                    assignment._id,
+                                                    "assignment",
+                                                    assignment.notes || "",
+                                                    canEdit
+                                                  )
+                                                }
+                                                className="h-8 w-8"
+                                              >
+                                                <FileText className="h-4 w-4 text-blue-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Assignment Notes</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() =>
+                                                  handleOpenNotesDialog(
+                                                    assignment._id,
+                                                    "packing",
+                                                    assignment.packingNotes || "",
+                                                    false
+                                                  )
+                                                }
+                                                className="h-8 w-8"
+                                              >
+                                                <MessageSquare className="h-4 w-4 text-green-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Packing Notes</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() =>
+                                                  handleOpenNotesDialog(
+                                                    assignment._id,
+                                                    "dispatch",
+                                                    assignment.dispatchNotes || "",
+                                                    false
+                                                  )
+                                                }
+                                                className="h-8 w-8"
+                                              >
+                                                <Truck className="h-4 w-4 text-orange-500" />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>Dispatch Notes</TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
                                       </div>
                                     </TableCell>
                                   )}
@@ -1872,21 +1890,30 @@ export default function B2BAssignments() {
                                     <div className="flex items-center justify-end gap-2">
                                       {canEdit && (
                                         <>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  onClick={() => handleStartEditRow(assignment)}
+                                                  className="h-8 w-8 p-0"
+                                                >
+                                                  <Edit2 className="h-4 w-4" />
+                                                  <span className="sr-only">Edit</span>
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                <p>Edit Assignment</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
                                           <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            onClick={() => handleStartEditRow(assignment)}
+                                            size="sm"
+                                            onClick={() => handleDispatch(assignment._id)}
                                           >
-                                            <Edit2 className="h-4 w-4" />
+                                            Dispatch
                                           </Button>
-                                          {assignment.status === "in_progress" && (
-                                            <Button
-                                              size="sm"
-                                              onClick={() => handleDispatch(assignment._id)}
-                                            >
-                                              Dispatch
-                                            </Button>
-                                          )}
                                           <Button
                                             size="icon"
                                             variant="ghost"
@@ -2152,13 +2179,24 @@ export default function B2BAssignments() {
                             <div className="flex items-center justify-end gap-2">
                               {canEdit && (
                                 <>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => handleStartEditRow(assignment)}
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleStartEditRow(assignment)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                          <span className="sr-only">Edit</span>
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Edit Assignment</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                   <Button
                                     size="icon"
                                     variant="ghost"
