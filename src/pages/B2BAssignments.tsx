@@ -1298,7 +1298,12 @@ export default function B2BAssignments() {
                     (b) => b.originalBatchId === batchId
                   );
 
-                  if (isBatch && batch && !isBeingEdited) {
+                  // Skip rendering entirely if batch is being edited
+                  if (isBatch && isBeingEdited) {
+                    return null;
+                  }
+
+                  if (isBatch && batch) {
                     const statusCounts = batchAssignments.reduce((acc, a) => {
                       acc[a.status] = (acc[a.status] || 0) + 1;
                       return acc;
