@@ -525,9 +525,8 @@ export default function B2BAssignments() {
   };
 
   const handleCancelBatch = (batchId: string) => {
-    if (confirm("Discard this batch? All unsaved assignments will be lost.")) {
-      setBatchesInProgress(batchesInProgress.filter((b) => b.id !== batchId));
-    }
+    setBatchesInProgress(batchesInProgress.filter((b) => b.id !== batchId));
+    toast.info("Batch creation cancelled");
   };
 
   const handleAddRowToBatch = (batchId: string) => {
