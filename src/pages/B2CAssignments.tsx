@@ -3,26 +3,19 @@ import { Layout } from "@/components/Layout";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Loader2, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { format } from "date-fns";
+import type { Id } from "@/convex/_generated/dataModel";
+import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
+import { InlineBatchEditor, type InlineBatchData, type BatchRow } from "@/components/assignments/InlineBatchEditor";
+import { B2CAssignmentRow } from "@/components/assignments/B2CAssignmentRow";
+import { B2CBatchHeader } from "@/components/assignments/B2CBatchHeader";
+import { NotesDialog } from "@/components/assignments/NotesDialog";
+import { useB2CAssignments } from "@/hooks/use-b2c-assignments";
 import {
   Table,
   TableBody,
@@ -31,14 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,130 +34,56 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
 import { ColumnVisibility } from "@/components/ui/column-visibility";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { api } from "@/convex/_generated/api";
-import { useMutation, useQuery } from "convex/react";
-import { CheckCircle2, Edit2, Loader2, Plus, Trash2, CalendarIcon, Check, X, Save, Pencil, FileText, MessageSquare, Truck, ChevronUp, ChevronDown } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import type { Id } from "@/convex/_generated/dataModel";
-import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
-import { BatchAssignmentDialog } from "@/components/assignments/BatchAssignmentDialog";
-import { InlineBatchEditor, type InlineBatchData, type BatchRow } from "@/components/assignments/InlineBatchEditor";
 
 export default function Assignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
-  const assignments = useQuery(api.assignments.list, { clientType: "b2c" });
-  const programs = useQuery(api.programs.list, {});
-  const kits = useQuery(api.kits.list, {});
-  const clients = useQuery(api.b2cClients.list, {});
-  const batches = useQuery(api.batches.list, { clientType: "b2c" });
+  const {
+    assignments,
+    programs,
+    kits,
+    clients,
+    batches,
+    updateAssignment,
+    updateNotes,
+    updatePackingNotes,
+    updateDispatchNotes,
+    createBatch,
+    requestDeleteBatch,
+    updateBatchWithAssignments,
+    selectedPrograms,
+    setSelectedPrograms,
+    selectedCategories,
+    setSelectedCategories,
+    selectedKits,
+    setSelectedKits,
+    selectedClients,
+    setSelectedClients,
+    selectedDispatchMonths,
+    setSelectedDispatchMonths,
+    selectedStatuses,
+    setSelectedStatuses,
+    selectedProductionMonths,
+    setSelectedProductionMonths,
+    expandedBatches,
+    toggleBatchExpansion,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    selectedAssignment,
+    handleDeleteClick,
+    handleConfirmDelete,
+    handleDispatch,
+    columnVisibility,
+    toggleColumn,
+  } = useB2CAssignments();
 
-  const createAssignment = useMutation(api.assignments.create);
-  const updateAssignment = useMutation(api.assignments.update);
-  const updateStatus = useMutation(api.assignments.updateStatus);
-  const updateNotes = useMutation(api.assignments.updateNotes);
-  const updatePackingNotes = useMutation(api.assignments.updatePackingNotes);
-  const updateDispatchNotes = useMutation(api.assignments.updateDispatchNotes);
-  const deleteAssignment = useMutation(api.assignments.deleteAssignment);
-  const createBatch = useMutation(api.batches.create);
-  const requestDeleteBatch = useMutation(api.batches.remove);
-  const updateBatchWithAssignments = useMutation(api.batches.updateBatchWithAssignments);
-
-  // Permission checks
   const canEdit = hasPermission("assignments", "edit");
   const canView = hasPermission("assignments", "view");
 
-  // Dialog states
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [packingDialogOpen, setPackingDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
-  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
-  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
-  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
-  const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false);
-  const [editingBatch, setEditingBatch] = useState<{ batch: any; assignments: any[] } | null>(null);
-
-  // Form states for dialog
-  const [selectedProgram, setSelectedProgram] = useState<string>("");
-  const [selectedKit, setSelectedKit] = useState<string>("");
-  const [selectedClient, setSelectedClient] = useState<string>("");
-  const [quantity, setQuantity] = useState<string>("1");
-  const [grade, setGrade] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
-  const [dispatchDate, setDispatchDate] = useState<Date | undefined>(undefined);
-  const [productionMonth, setProductionMonth] = useState<string>("");
-
-  // Packing checklist states
-  const [checkPouches, setCheckPouches] = useState(false);
-  const [checkSpareKits, setCheckSpareKits] = useState(false);
-  const [checkBulkMaterial, setCheckBulkMaterial] = useState(false);
-  const [checkTools, setCheckTools] = useState(false);
-
-  // Filter states
-  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedKits, setSelectedKits] = useState<string[]>([]);
-  const [selectedClients, setSelectedClients] = useState<string[]>([]);
-  const [selectedDispatchMonths, setSelectedDispatchMonths] = useState<string[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedProductionMonths, setSelectedProductionMonths] = useState<string[]>([]);
-
-  // Inline editing states
-  const [editingNotes, setEditingNotes] = useState<string | null>(null);
-  const [editNotesValue, setEditNotesValue] = useState<string>("");
-
-  // Inline row creation states
-  const [isAddingNewRow, setIsAddingNewRow] = useState(false);
-  const [newRowProgram, setNewRowProgram] = useState<string>("");
-  const [newRowKit, setNewRowKit] = useState<string>("");
-  const [newRowClient, setNewRowClient] = useState<string>("");
-  const [newRowQuantity, setNewRowQuantity] = useState<string>("1");
-  const [newRowGrade, setNewRowGrade] = useState<string>("");
-  const [newRowDispatchDate, setNewRowDispatchDate] = useState<Date | undefined>(undefined);
-  const [newRowNotes, setNewRowNotes] = useState<string>("");
-  const [newRowProductionMonth, setNewRowProductionMonth] = useState<string>("");
-
-  // Batch creation states
-  type BatchRow = {
-    id: string;
-    assignmentId?: Id<"assignments">; // For edit mode
-    program: string;
-    kit: string;
-    quantity: string;
-    grade: string;
-    notes: string;
-  };
-
+  // Batch management states
   type BatchInProgress = {
     id: string;
     batchId: string;
@@ -189,40 +100,6 @@ export default function Assignments() {
 
   const [batchesInProgress, setBatchesInProgress] = useState<BatchInProgress[]>([]);
 
-  // Popover states for inline editing
-  const [programPopoverOpen, setProgramPopoverOpen] = useState(false);
-  const [kitPopoverOpen, setKitPopoverOpen] = useState(false);
-  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
-  const [dispatchDatePopoverOpen, setDispatchDatePopoverOpen] = useState(false);
-  
-  // Popover states for batch creation
-  const [batchClientPopoverOpen, setBatchClientPopoverOpen] = useState<Record<string, boolean>>({});
-
-  // Edit mode states
-  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
-  const [editRowProgram, setEditRowProgram] = useState<string>("");
-  const [editRowKit, setEditRowKit] = useState<string>("");
-  const [editRowClient, setEditRowClient] = useState<string>("");
-  const [editRowQuantity, setEditRowQuantity] = useState<string>("1");
-  const [editRowGrade, setEditRowGrade] = useState<string>("");
-  const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
-  const [editRowNotes, setEditRowNotes] = useState<string>("");
-  const [editRowProductionMonth, setEditRowProductionMonth] = useState<string>("");
-
-  // Column visibility state
-  const [columnVisibility, setColumnVisibility] = useState({
-    program: true,
-    kit: true,
-    category: true,
-    client: true,
-    quantity: true,
-    grade: true,
-    status: true,
-    dispatchDate: true,
-    productionMonth: true,
-    notes: true,
-  });
-
   // Notes dialog state
   const [notesDialog, setNotesDialog] = useState<{
     open: boolean;
@@ -238,25 +115,19 @@ export default function Assignments() {
     canEdit: false,
   });
 
-  const toggleColumn = (columnId: string) => {
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [columnId as keyof typeof prev]: !prev[columnId as keyof typeof prev],
-    }));
-  };
+  // Inline row creation states
+  const [isAddingNewRow, setIsAddingNewRow] = useState(false);
 
-  const columns = [
-    { id: "program", label: "Program", visible: columnVisibility.program },
-    { id: "kit", label: "Kit", visible: columnVisibility.kit },
-    { id: "category", label: "Category", visible: columnVisibility.category },
-    { id: "client", label: "Client", visible: columnVisibility.client },
-    { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
-    { id: "grade", label: "Grade", visible: columnVisibility.grade },
-    { id: "status", label: "Status", visible: columnVisibility.status },
-    { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
-    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
-    { id: "notes", label: "Notes", visible: columnVisibility.notes },
-  ];
+  // Edit mode states
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [editRowProgram, setEditRowProgram] = useState<string>("");
+  const [editRowKit, setEditRowKit] = useState<string>("");
+  const [editRowClient, setEditRowClient] = useState<string>("");
+  const [editRowQuantity, setEditRowQuantity] = useState<string>("1");
+  const [editRowGrade, setEditRowGrade] = useState<string>("");
+  const [editRowDispatchDate, setEditRowDispatchDate] = useState<Date | undefined>(undefined);
+  const [editRowNotes, setEditRowNotes] = useState<string>("");
+  const [editRowProductionMonth, setEditRowProductionMonth] = useState<string>("");
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) navigate("/auth");
@@ -309,43 +180,6 @@ export default function Assignments() {
     return true;
   });
 
-  const uniqueMonths = Array.from(
-    new Set(
-      assignments.map((a) => {
-        const date = a.dispatchedAt || a._creationTime;
-        return format(new Date(date), "yyyy-MM");
-      })
-    )
-  ).sort().reverse();
-
-  const uniqueProductionMonths = Array.from(
-    new Set(
-      assignments
-        .filter((a) => a.productionMonth)
-        .map((a) => a.productionMonth!)
-    )
-  ).sort().reverse();
-
-  const filteredKits = selectedProgram
-    ? kits.filter((kit) => kit.programId === selectedProgram)
-    : [];
-
-  const selectedKitData = kits.find((k) => k._id === selectedKit);
-
-  // Get filtered kits for new row
-  const newRowFilteredKits = newRowProgram
-    ? kits.filter((kit) => kit.programId === newRowProgram)
-    : [];
-
-  const newRowSelectedKit = kits.find((k) => k._id === newRowKit);
-
-  // Get filtered kits for edit row
-  const editRowFilteredKits = editRowProgram
-    ? kits.filter((kit) => kit.programId === editRowProgram)
-    : [];
-
-  const editRowSelectedKit = kits.find((k) => k._id === editRowKit);
-
   // Group assignments by batch
   const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
     const batchId = assignment.batchId || "standalone";
@@ -355,162 +189,6 @@ export default function Assignments() {
     acc[batchId].push(assignment);
     return acc;
   }, {} as Record<string, typeof filteredAssignments>);
-
-  const handleCreateAssignment = async () => {
-    if (!selectedKit || !selectedClient || !quantity) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    // Validate production month vs dispatch date (Removed)
-
-    try {
-      await createAssignment({
-        kitId: selectedKit as Id<"kits">,
-        clientId: selectedClient as Id<"b2cClients">,
-        clientType: "b2c",
-        quantity: parseInt(quantity),
-        grade: grade && grade !== "none" ? grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
-        notes: notes || undefined,
-        dispatchedAt: dispatchDate ? dispatchDate.getTime() : undefined,
-        productionMonth: productionMonth || undefined,
-      });
-
-      toast.success("Assignment created successfully");
-      setCreateDialogOpen(false);
-      resetForm();
-    } catch (error) {
-      toast.error("Failed to create assignment");
-      console.error(error);
-    }
-  };
-
-  const resetForm = () => {
-    setSelectedProgram("");
-    setSelectedKit("");
-    setSelectedClient("");
-    setQuantity("1");
-    setGrade("");
-    setNotes("");
-    setDispatchDate(undefined);
-    setProductionMonth("");
-  };
-
-  const handleOpenPackingDialog = (assignment: any) => {
-    setSelectedAssignment(assignment);
-    setCheckPouches(false);
-    setCheckSpareKits(false);
-    setCheckBulkMaterial(false);
-    setCheckTools(false);
-    setPackingDialogOpen(true);
-  };
-
-  const handleMarkAsPacked = async () => {
-    if (!checkPouches || !checkSpareKits || !checkBulkMaterial || !checkTools) {
-      toast.error("Please check all items before packing");
-      return;
-    }
-
-    try {
-      await updateStatus({
-        id: selectedAssignment._id,
-        status: "ready_to_pack",
-      });
-      toast.success("Marked as ready to pack");
-      setPackingDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to update status");
-      console.error(error);
-    }
-  };
-
-  const handleDispatch = async (assignmentId: Id<"assignments">) => {
-    try {
-      await updateStatus({
-        id: assignmentId,
-        status: "dispatched",
-      });
-      toast.success("Assignment dispatched and inventory updated");
-    } catch (error) {
-      toast.error("Failed to dispatch assignment");
-      console.error(error);
-    }
-  };
-
-  const handleDeleteClick = (assignment: any) => {
-    setSelectedAssignment(assignment);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    try {
-      await deleteAssignment({ id: selectedAssignment._id });
-      toast.success(
-        selectedAssignment.status === "dispatched"
-          ? "Assignment deleted (stock not restored)"
-          : "Assignment deleted and stock restored"
-      );
-      setDeleteDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to delete assignment");
-      console.error(error);
-    }
-  };
-
-  const handleOpenNotesDialog = (
-    assignmentId: Id<"assignments">,
-    type: "assignment" | "packing" | "dispatch",
-    value: string,
-    canEdit: boolean
-  ) => {
-    setNotesDialog({
-      open: true,
-      assignmentId,
-      type,
-      value,
-      canEdit,
-    });
-  };
-
-  const handleSaveNotesDialog = async () => {
-    if (!notesDialog.assignmentId) return;
-
-    try {
-      if (notesDialog.type === "assignment") {
-        await updateNotes({
-          id: notesDialog.assignmentId,
-          notes: notesDialog.value,
-        });
-      } else if (notesDialog.type === "packing") {
-        await updatePackingNotes({
-          id: notesDialog.assignmentId,
-          packingNotes: notesDialog.value,
-        });
-      } else if (notesDialog.type === "dispatch") {
-        await updateDispatchNotes({
-          id: notesDialog.assignmentId,
-          dispatchNotes: notesDialog.value,
-        });
-      }
-      toast.success("Notes updated");
-      setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false });
-    } catch (error) {
-      toast.error("Failed to update notes");
-      console.error(error);
-    }
-  };
-
-  const handleAddNewRow = () => {
-    setIsAddingNewRow(true);
-    setNewRowProgram("");
-    setNewRowKit("");
-    setNewRowClient("");
-    setNewRowQuantity("1");
-    setNewRowGrade("");
-    setNewRowDispatchDate(undefined);
-    setNewRowNotes("");
-    setNewRowProductionMonth("");
-  };
 
   const handleStartBatch = () => {
     const newBatchId = `BATCH-${Date.now()}`;
@@ -714,36 +392,97 @@ export default function Assignments() {
     }
   };
 
-  const handleSaveNewRow = async () => {
-    if (!newRowKit || !newRowClient || !newRowQuantity) {
-      toast.error("Please fill in Program, Kit, Client, and Quantity");
-      return;
+  const handleEditBatch = (batch: any) => {
+    // Check if this batch is already being edited
+    const alreadyEditing = batchesInProgress.some(
+      b => b.mode === "edit" && b.originalBatchId === batch._id
+    );
+    
+    if (alreadyEditing) {
+      return; // Don't add duplicate
     }
 
-    // Validate production month vs dispatch date (Removed)
+    const batchAssignments = assignments?.filter(a => a.batchId === batch._id) || [];
+    
+    // Convert existing batch to InlineBatchData format
+    const editBatchData: InlineBatchData = {
+      id: Math.random().toString(),
+      batchId: batch.batchId,
+      client: batch.clientId,
+      clientName: batch.client?.buyerName || "",
+      batchName: batch.batchId,
+      dispatchDate: batch.dispatchDate ? new Date(batch.dispatchDate) : undefined,
+      productionMonth: batch.productionMonth || "",
+      batchNotes: batch.notes || "",
+      mode: "edit",
+      originalBatchId: batch._id,
+      rows: batchAssignments.map(a => {
+        const kit = kits?.find(k => k._id === a.kitId);
+        return {
+          id: Math.random().toString(),
+          assignmentId: a._id,
+          program: kit?.programId || "",
+          kit: a.kitId,
+          quantity: a.quantity.toString(),
+          grade: a.grade || "",
+          notes: a.notes || "",
+        };
+      }),
+    };
 
+    setBatchesInProgress(prev => [...prev, editBatchData]);
+  };
+
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm("Are you sure you want to request deletion for this entire batch?")) return;
     try {
-      await createAssignment({
-        kitId: newRowKit as Id<"kits">,
-        clientId: newRowClient as Id<"b2cClients">,
-        clientType: "b2c",
-        quantity: parseInt(newRowQuantity),
-        grade: newRowGrade && newRowGrade !== "none" ? newRowGrade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
-        notes: newRowNotes || undefined,
-        dispatchedAt: newRowDispatchDate ? newRowDispatchDate.getTime() : undefined,
-        productionMonth: newRowProductionMonth || undefined,
-      });
-
-      toast.success("Assignment created successfully");
-      setIsAddingNewRow(false);
+      await requestDeleteBatch({ id: batchId as Id<"batches"> });
+      toast.success("Batch deletion requested successfully");
     } catch (error) {
-      toast.error("Failed to create assignment");
-      console.error(error);
+      toast.error(error instanceof Error ? error.message : "Failed to request batch deletion");
     }
   };
 
-  const handleCancelNewRow = () => {
-    setIsAddingNewRow(false);
+  const handleOpenNotesDialog = (
+    assignmentId: Id<"assignments">,
+    type: "assignment" | "packing" | "dispatch",
+    value: string
+  ) => {
+    setNotesDialog({
+      open: true,
+      assignmentId,
+      type,
+      value,
+      canEdit: type === "assignment" && canEdit,
+    });
+  };
+
+  const handleSaveNotesDialog = async () => {
+    if (!notesDialog.assignmentId) return;
+
+    try {
+      if (notesDialog.type === "assignment") {
+        await updateNotes({
+          id: notesDialog.assignmentId,
+          notes: notesDialog.value,
+        });
+      } else if (notesDialog.type === "packing") {
+        await updatePackingNotes({
+          id: notesDialog.assignmentId,
+          packingNotes: notesDialog.value,
+        });
+      } else if (notesDialog.type === "dispatch") {
+        await updateDispatchNotes({
+          id: notesDialog.assignmentId,
+          dispatchNotes: notesDialog.value,
+        });
+      }
+      toast.success("Notes updated successfully");
+      setNotesDialog({ ...notesDialog, open: false });
+    } catch (error) {
+      console.error("Error updating notes:", error);
+      toast.error("Failed to update notes");
+    }
   };
 
   const handleStartEditRow = (assignment: any) => {
@@ -812,1856 +551,215 @@ export default function Assignments() {
     setSelectedProductionMonths([]);
   };
 
-  const handleCreateBatch = async (data: any) => {
-    await createBatch({
-      ...data,
-      clientType: "b2c",
-    });
-  };
-
-  const handleUpdateBatch = async (batchId: Id<"batches">, data: any) => {
-    await updateBatchWithAssignments({
-      batchId,
-      ...data,
-    });
-    setEditingBatch(null);
-  };
-
-  const handleEditBatch = (batch: any) => {
-    // Check if this batch is already being edited
-    const alreadyEditing = batchesInProgress.some(
-      b => b.mode === "edit" && b.originalBatchId === batch._id
-    );
-    
-    if (alreadyEditing) {
-      return; // Don't add duplicate
-    }
-
-    const batchAssignments = assignments?.filter(a => a.batchId === batch._id) || [];
-    
-    // Convert existing batch to InlineBatchData format
-    const editBatchData: InlineBatchData = {
-      id: Math.random().toString(),
-      batchId: batch.batchId,
-      client: batch.clientId,
-      clientName: batch.client?.buyerName || "",
-      batchName: batch.batchId,
-      dispatchDate: batch.dispatchDate ? new Date(batch.dispatchDate) : undefined,
-      productionMonth: batch.productionMonth || "",
-      batchNotes: batch.notes || "",
-      mode: "edit",
-      originalBatchId: batch._id,
-      rows: batchAssignments.map(a => {
-        const kit = kits?.find(k => k._id === a.kitId);
-        return {
-          id: Math.random().toString(),
-          assignmentId: a._id,
-          program: kit?.programId || "",
-          kit: a.kitId,
-          quantity: a.quantity.toString(),
-          grade: a.grade || "",
-          notes: a.notes || "",
-        };
-      }),
-    };
-
-    setBatchesInProgress(prev => [...prev, editBatchData]);
-  };
-
-  const handleDeleteBatch = async (batchId: string) => {
-    if (!confirm("Are you sure you want to request deletion for this entire batch?")) return;
-    try {
-      await requestDeleteBatch({ id: batchId as Id<"batches"> });
-      toast.success("Batch deletion requested successfully");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to request batch deletion");
-    }
-  };
-
-  const toggleBatchExpand = (batchId: string) => {
-    const newExpanded = new Set(expandedBatches);
-    if (newExpanded.has(batchId)) {
-      newExpanded.delete(batchId);
-    } else {
-      newExpanded.add(batchId);
-    }
-    setExpandedBatches(newExpanded);
-  };
+  const columns = [
+    { id: "program", label: "Program", visible: columnVisibility.program },
+    { id: "kit", label: "Kit", visible: columnVisibility.kit },
+    { id: "category", label: "Category", visible: columnVisibility.category },
+    { id: "client", label: "Client", visible: columnVisibility.client },
+    { id: "quantity", label: "Quantity", visible: columnVisibility.quantity },
+    { id: "grade", label: "Grade", visible: columnVisibility.grade },
+    { id: "status", label: "Status", visible: columnVisibility.status },
+    { id: "dispatchDate", label: "Dispatch Date", visible: columnVisibility.dispatchDate },
+    { id: "productionMonth", label: "Production Month", visible: columnVisibility.productionMonth },
+    { id: "notes", label: "Notes", visible: columnVisibility.notes },
+  ];
 
   return (
     <Layout>
-      <div className="p-8 space-y-6">
-        {/* Header */}
+      <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">B2C Assignments</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage B2C kit assignments, track packing status, and monitor material shortages
-            </p>
+          <h1 className="text-3xl font-bold">B2C Assignments</h1>
+          <div className="flex gap-2">
+            {canEdit && (
+              <>
+                <Button onClick={() => setIsAddingNewRow(true)} disabled={isAddingNewRow || batchesInProgress.length > 0}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Assignment
+                </Button>
+                <Button onClick={handleStartBatch} disabled={batchesInProgress.length > 0}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Start Batch
+                </Button>
+              </>
+            )}
+            <ColumnVisibility columns={columns} onToggle={toggleColumn} />
           </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleAddNewRow} 
-                variant="outline" 
-                disabled={isAddingNewRow || batchesInProgress.length > 0}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add New Assignment
-              </Button>
-              <Button onClick={handleStartBatch} variant="outline">
-                <Plus className="mr-2 h-4 w-4" />
-                Start Batch
-              </Button>
-            </div>
-          )}
         </div>
 
-        {/* Filter Bar */}
-        <div className="space-y-4">
-          <AssignmentFilters
-            programs={programs || []}
-            kits={kits || []}
-            clients={clients || []}
-            assignments={assignments || []}
-            selectedPrograms={selectedPrograms}
-            selectedCategories={selectedCategories}
-            selectedKits={selectedKits}
-            selectedClients={selectedClients}
-            selectedDispatchMonths={selectedDispatchMonths}
-            selectedStatuses={selectedStatuses}
-            selectedProductionMonths={selectedProductionMonths}
-            onProgramsChange={setSelectedPrograms}
-            onCategoriesChange={setSelectedCategories}
-            onKitsChange={setSelectedKits}
-            onClientsChange={setSelectedClients}
-            onDispatchMonthsChange={setSelectedDispatchMonths}
-            onStatusesChange={setSelectedStatuses}
-            onProductionMonthsChange={setSelectedProductionMonths}
-            onClearAll={handleClearAllFilters}
-          />
-          <ColumnVisibility columns={columns} onToggle={toggleColumn} />
-        </div>
+        <AssignmentFilters
+          programs={programs}
+          kits={kits}
+          clients={clients}
+          assignments={assignments}
+          selectedPrograms={selectedPrograms}
+          onProgramsChange={setSelectedPrograms}
+          selectedCategories={selectedCategories}
+          onCategoriesChange={setSelectedCategories}
+          selectedKits={selectedKits}
+          onKitsChange={setSelectedKits}
+          selectedClients={selectedClients}
+          onClientsChange={setSelectedClients}
+          selectedDispatchMonths={selectedDispatchMonths}
+          onDispatchMonthsChange={setSelectedDispatchMonths}
+          selectedStatuses={selectedStatuses}
+          onStatusesChange={setSelectedStatuses}
+          selectedProductionMonths={selectedProductionMonths}
+          onProductionMonthsChange={setSelectedProductionMonths}
+          onClearAll={() => {
+            setSelectedPrograms([]);
+            setSelectedCategories([]);
+            setSelectedKits([]);
+            setSelectedClients([]);
+            setSelectedDispatchMonths([]);
+            setSelectedStatuses([]);
+            setSelectedProductionMonths([]);
+          }}
+        />
 
-        {/* Assignments Table with Batch Grouping */}
-        <Card>
-          <Table>
-            <TableHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columnVisibility.program && <TableHead>Program</TableHead>}
+              {columnVisibility.kit && <TableHead>Kit</TableHead>}
+              {columnVisibility.category && <TableHead>Category</TableHead>}
+              {columnVisibility.client && <TableHead>Client</TableHead>}
+              {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
+              {columnVisibility.grade && <TableHead>Grade</TableHead>}
+              {columnVisibility.status && <TableHead>Status</TableHead>}
+              {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
+              {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
+              {columnVisibility.notes && <TableHead>Notes</TableHead>}
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {/* Render batches in progress */}
+            {batchesInProgress.map((batch) => (
+              <InlineBatchEditor
+                key={batch.id}
+                batch={batch}
+                clients={clients}
+                programs={programs}
+                kits={kits}
+                columnVisibility={columnVisibility}
+                onUpdateMetadata={handleUpdateBatchMetadata}
+                onUpdateRow={handleUpdateBatchRow}
+                onAddRow={handleAddRowToBatch}
+                onRemoveRow={handleRemoveRowFromBatch}
+                onSave={handleSaveBatch}
+                onCancel={handleCancelBatch}
+              />
+            ))}
+
+            {filteredAssignments.length === 0 ? (
               <TableRow>
-                <TableHead className="w-[50px]"></TableHead>
-                {columnVisibility.program && <TableHead>Program</TableHead>}
-                {columnVisibility.kit && <TableHead>Kit</TableHead>}
-                {columnVisibility.category && <TableHead>Category</TableHead>}
-                {columnVisibility.client && <TableHead>Client</TableHead>}
-                {columnVisibility.quantity && <TableHead>Quantity</TableHead>}
-                {columnVisibility.grade && <TableHead>Grade</TableHead>}
-                {columnVisibility.status && <TableHead>Status</TableHead>}
-                {columnVisibility.dispatchDate && <TableHead>Dispatch Date</TableHead>}
-                {columnVisibility.productionMonth && <TableHead>Production Month</TableHead>}
-                <TableHead>Order Created On</TableHead>
-                {columnVisibility.notes && <TableHead className="text-center">Notes</TableHead>}
-                {canEdit && <TableHead className="text-right">Actions</TableHead>}
+                <TableCell colSpan={13} className="text-center text-muted-foreground">
+                  No assignments found
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {/* Batch Creation Rows */}
-              {batchesInProgress.map((batch) => (
-                <React.Fragment key={batch.id}>
-                  {/* Batch Info Panel Row */}
-                  <TableRow className="bg-muted/70 border-b-2 border-border">
-                    <TableCell colSpan={13}>
-                      <div className="space-y-4 p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <Badge variant="outline" className="text-lg px-3 py-1">
-                              {batch.batchId || "Select client to generate Batch ID"}
-                            </Badge>
-                            <div className="text-sm text-muted-foreground">
-                              Batch Creation Mode
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleSaveBatch(batch.id)}
-                              disabled={!batch.client || batch.rows.length === 0}
-                            >
-                              Save Batch
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCancelBatch(batch.id)}
-                            >
-                              Cancel Batch
-                            </Button>
-                          </div>
-                        </div>
+            ) : (
+              Object.entries(groupedAssignments).map(([batchId, batchAssignments]) => {
+                const batch = batches?.find((b) => b._id === batchId);
+                const isExpanded = expandedBatches.has(batchId);
+                const isBatch = batchId !== "standalone";
 
-                        <div className="grid grid-cols-4 gap-4">
-                          <div className="space-y-2">
-                            <Label>Client *</Label>
-                            <Popover 
-                              open={batchClientPopoverOpen[batch.id] || false}
-                              onOpenChange={(open) => 
-                                setBatchClientPopoverOpen({ ...batchClientPopoverOpen, [batch.id]: open })
-                              }
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                >
-                                  {batch.client
-                                    ? (() => {
-                                        const selectedClient = clients?.find((c) => c._id === batch.client);
-                                        return selectedClient?.buyerName || "Unknown Client";
-                                      })()
-                                    : "Select Client"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[200px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Search client..." />
-                                  <CommandList>
-                                    <CommandEmpty>No client found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {clients?.map((client) => (
-                                        <CommandItem
-                                          key={client._id}
-                                          value={client.buyerName}
-                                          onSelect={() => {
-                                            const generatedBatchId = generateBatchId(client._id);
-                                            setBatchesInProgress((prevBatches) =>
-                                              prevBatches.map((b) =>
-                                                b.id === batch.id
-                                                  ? {
-                                                      ...b,
-                                                      client: client._id,
-                                                      batchId: generatedBatchId,
-                                                      batchName: generatedBatchId,
-                                                    }
-                                                  : b
-                                              )
-                                            );
-                                            setBatchClientPopoverOpen((prev) => ({ ...prev, [batch.id]: false }));
-                                          }}
-                                        >
-                                          {client.buyerName}
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
+                const isBeingEdited = batchesInProgress.some(
+                  (b) => b.mode === "edit" && b.originalBatchId === batch?._id
+                );
 
-                          <div className="space-y-2">
-                            <Label>Batch Name</Label>
-                            <Input
-                              value={batch.batchName}
-                              onChange={(e) =>
-                                handleUpdateBatchMetadata(batch.id, "batchName", e.target.value)
-                              }
-                              placeholder="Auto-generated"
-                              disabled={!batch.client}
+                if (isBatch && batch && !isBeingEdited) {
+                  const client = clients?.find((c) => c._id === batch.clientId);
+                  const statusCounts = batchAssignments.reduce((acc, a) => {
+                    acc[a.status] = (acc[a.status] || 0) + 1;
+                    return acc;
+                  }, {} as Record<string, number>);
+
+                  const statusSummary = Object.entries(statusCounts)
+                    .map(([status, count]) => `${count} ${status}`)
+                    .join(", ");
+
+                  return (
+                    <React.Fragment key={`batch-group-${batchId}`}>
+                      <B2CBatchHeader
+                        batch={batch}
+                        client={client}
+                        statusSummary={statusSummary}
+                        isExpanded={isExpanded}
+                        canEdit={canEdit}
+                        onToggleExpand={() => toggleBatchExpansion(batchId)}
+                        onEdit={handleEditBatch}
+                        onDelete={handleDeleteBatch}
+                      />
+                      {isExpanded &&
+                        batchAssignments.map((assignment) => {
+                          const kit = kits?.find((k) => k._id === assignment.kitId);
+                          const program = programs?.find((p) => p._id === kit?.programId);
+                          const client = clients?.find((c) => c._id === assignment.clientId);
+
+                          return (
+                            <B2CAssignmentRow
+                              key={assignment._id}
+                              assignment={assignment}
+                              kit={kit}
+                              program={program}
+                              client={client}
+                              columnVisibility={columnVisibility}
+                              canEdit={canEdit}
+                              onEdit={handleStartEditRow}
+                              onDelete={handleDeleteClick}
+                              onOpenNotes={handleOpenNotesDialog}
                             />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Dispatch Date</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                  disabled={!batch.client}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {batch.dispatchDate
-                                    ? format(batch.dispatchDate, "MMM dd, yyyy")
-                                    : "Pick date"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                  mode="single"
-                                  selected={batch.dispatchDate}
-                                  onSelect={(date) =>
-                                    handleUpdateBatchMetadata(batch.id, "dispatchDate", date)
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Production Month</Label>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full justify-start text-left font-normal"
-                                  disabled={!batch.client}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {batch.productionMonth
-                                    ? format(new Date(batch.productionMonth + "-01"), "MMMM yyyy")
-                                    : "Pick month"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <div className="p-3 space-y-2">
-                                  <Select
-                                    value={batch.productionMonth ? batch.productionMonth.split("-")[1] : ""}
-                                    onValueChange={(month) => {
-                                      const year = batch.productionMonth ? batch.productionMonth.split("-")[0] : new Date().getFullYear().toString();
-                                      handleUpdateBatchMetadata(batch.id, "productionMonth", `${year}-${month}`);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select month" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                        <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                                          {format(new Date(2000, m - 1, 1), "MMMM")}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Select
-                                    value={batch.productionMonth ? batch.productionMonth.split("-")[0] : ""}
-                                    onValueChange={(year) => {
-                                      const month = batch.productionMonth ? batch.productionMonth.split("-")[1] : "01";
-                                      handleUpdateBatchMetadata(batch.id, "productionMonth", `${year}-${month}`);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select year" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                                        <SelectItem key={y} value={y.toString()}>
-                                          {y}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Batch Notes</Label>
-                          <Textarea
-                            value={batch.batchNotes}
-                            onChange={(e) =>
-                              handleUpdateBatchMetadata(batch.id, "batchNotes", e.target.value)
-                            }
-                            placeholder="Notes for this batch..."
-                            rows={2}
-                            disabled={!batch.client}
-                          />
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-
-                  {/* Batch Assignment Rows */}
-                  {batch.rows.map((row, rowIndex) => (
-                    <TableRow key={row.id} className="bg-muted/70">
-                      <TableCell>
-                        <Badge variant="outline">{batch.batchId || "-"}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.program}
-                          onValueChange={(val) => {
-                            handleUpdateBatchRow(batch.id, row.id, "program", val);
-                            handleUpdateBatchRow(batch.id, row.id, "kit", "");
-                          }}
-                          disabled={!batch.client}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Program" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {programs?.map((program) => (
-                              <SelectItem key={program._id} value={program._id}>
-                                {program.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.kit}
-                          onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "kit", val)}
-                          disabled={!row.program || !batch.client}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Kit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {kits
-                              ?.filter((kit) => kit.programId === row.program)
-                              .map((kit) => (
-                                <SelectItem key={kit._id} value={kit._id}>
-                                  {kit.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">
-                          {kits?.find((k) => k._id === row.kit)?.category || "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {batch.client
-                            ? clients?.find((c) => c._id === batch.client)?.buyerName
-                            : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={row.quantity}
-                          onChange={(e) =>
-                            handleUpdateBatchRow(batch.id, row.id, "quantity", e.target.value)
-                          }
-                          className="w-20"
-                          disabled={!batch.client}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.grade}
-                          onValueChange={(val) => handleUpdateBatchRow(batch.id, row.id, "grade", val)}
-                          disabled={!batch.client}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue placeholder="Grade" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                              <SelectItem key={g} value={g.toString()}>
-                                {g}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">Assigned</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {batch.dispatchDate ? format(batch.dispatchDate, "MMM dd, yyyy") : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {batch.productionMonth
-                            ? format(new Date(batch.productionMonth + "-01"), "MMM yyyy")
-                            : "-"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-muted-foreground">-</span>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          value={row.notes}
-                          onChange={(e) =>
-                            handleUpdateBatchRow(batch.id, row.id, "notes", e.target.value)
-                          }
-                          placeholder="Notes..."
-                          disabled={!batch.client}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleRemoveRowFromBatch(batch.id, row.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {/* Add Another Kit Row */}
-                  <TableRow className="bg-muted/70">
-                    <TableCell colSpan={13} className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAddRowToBatch(batch.id)}
-                        disabled={!batch.client}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Another Kit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                </React.Fragment>
-              ))}
-
-              {/* Inline Batch Editor for batches in progress */}
-              {batchesInProgress.map((batch) => (
-                <InlineBatchEditor
-                  key={batch.id}
-                  batch={batch}
-                  clients={clients || []}
-                  programs={programs || []}
-                  kits={kits || []}
-                  columnVisibility={columnVisibility}
-                  onUpdateMetadata={handleUpdateBatchMetadata}
-                  onUpdateRow={handleUpdateBatchRow}
-                  onAddRow={handleAddRowToBatch}
-                  onRemoveRow={handleRemoveRowFromBatch}
-                  onSave={handleSaveBatch}
-                  onCancel={handleCancelBatch}
-                />
-              ))}
-
-              {/* New Row for inline creation */}
-              {isAddingNewRow && (
-                <TableRow className="bg-muted/50">
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">-</span>
-                  </TableCell>
-                  <TableCell>
-                    <Popover open={programPopoverOpen} onOpenChange={setProgramPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {newRowProgram ? programs.find(p => p._id === newRowProgram)?.name : "Select Program"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Search program..." />
-                          <CommandList>
-                            <CommandEmpty>No program found.</CommandEmpty>
-                            <CommandGroup>
-                              {programs.map((program) => (
-                                <CommandItem
-                                  key={program._id}
-                                  value={program.name}
-                                  onSelect={() => {
-                                    setNewRowProgram(program._id);
-                                    setNewRowKit("");
-                                    setProgramPopoverOpen(false);
-                                  }}
-                                >
-                                  {program.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </TableCell>
-                  <TableCell>
-                    <Popover open={kitPopoverOpen} onOpenChange={setKitPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal" disabled={!newRowProgram}>
-                          {newRowKit ? kits.find(k => k._id === newRowKit)?.name : "Select Kit"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Search kit..." />
-                          <CommandList>
-                            <CommandEmpty>No kit found.</CommandEmpty>
-                            <CommandGroup>
-                              {newRowFilteredKits.map((kit) => (
-                                <CommandItem
-                                  key={kit._id}
-                                  value={kit.name}
-                                  onSelect={() => {
-                                    setNewRowKit(kit._id);
-                                    setKitPopoverOpen(false);
-                                  }}
-                                >
-                                  {kit.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {newRowSelectedKit?.category || "-"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          {newRowClient ? clients.find(c => c._id === newRowClient)?.buyerName : "Select Client"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0">
-                        <Command>
-                          <CommandInput placeholder="Search client..." />
-                          <CommandList>
-                            <CommandEmpty>No client found.</CommandEmpty>
-                            <CommandGroup>
-                              {clients.map((client) => (
-                                <CommandItem
-                                  key={client._id}
-                                  value={client.buyerName}
-                                  onSelect={() => {
-                                    setNewRowClient(client._id);
-                                    setClientPopoverOpen(false);
-                                  }}
-                                >
-                                  {client.buyerName}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newRowQuantity}
-                      onChange={(e) => setNewRowQuantity(e.target.value)}
-                      className="w-20"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Select value={newRowGrade} onValueChange={setNewRowGrade}>
-                      <SelectTrigger className="w-24">
-                        <SelectValue placeholder="Grade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                          <SelectItem key={g} value={g.toString()}>
-                            {g}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">Assigned</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Popover open={dispatchDatePopoverOpen} onOpenChange={setDispatchDatePopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {newRowDispatchDate ? format(newRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={newRowDispatchDate}
-                          onSelect={(date) => {
-                            setNewRowDispatchDate(date);
-                            setDispatchDatePopoverOpen(false);
-                          }}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </TableCell>
-                  <TableCell>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !newRowProductionMonth && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {newRowProductionMonth
-                            ? format(new Date(newRowProductionMonth + "-01"), "MMMM yyyy")
-                            : "Pick month"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <div className="p-3 space-y-2">
-                          <Select
-                            value={newRowProductionMonth ? newRowProductionMonth.split("-")[1] : ""}
-                            onValueChange={(month) => {
-                              const year = newRowProductionMonth ? newRowProductionMonth.split("-")[0] : new Date().getFullYear().toString();
-                              setNewRowProductionMonth(`${year}-${month}`);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select month" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                                  {format(new Date(2000, m - 1, 1), "MMMM")}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Select
-                            value={newRowProductionMonth ? newRowProductionMonth.split("-")[0] : ""}
-                            onValueChange={(year) => {
-                              const month = newRowProductionMonth ? newRowProductionMonth.split("-")[1] : "01";
-                              setNewRowProductionMonth(`${year}-${month}`);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                                <SelectItem key={y} value={y.toString()}>
-                                  {y}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">-</span>
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={newRowNotes}
-                      onChange={(e) => setNewRowNotes(e.target.value)}
-                      placeholder="Notes..."
-                      className="w-full"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button size="icon" variant="ghost" onClick={handleSaveNewRow}>
-                        <Save className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" onClick={handleCancelNewRow}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-
-              {filteredAssignments.length === 0 && !isAddingNewRow ? (
-                <TableRow>
-                  <TableCell colSpan={13} className="text-center text-muted-foreground">
-                    No assignments found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                Object.entries(groupedAssignments).map(([batchId, batchAssignments]) => {
-                  const batch = batches?.find((b) => b._id === batchId);
-                  const isExpanded = expandedBatches.has(batchId);
-                  const isBatch = batchId !== "standalone";
-
-                  // Filter out batches that are currently being edited
-                  const isBeingEdited = batchesInProgress.some(
-                    (b) => b.mode === "edit" && b.originalBatchId === batch?._id
+                          );
+                        })}
+                    </React.Fragment>
                   );
+                }
 
-                  if (isBatch && batch && !isBeingEdited) {
-                    const statusCounts = batchAssignments.reduce((acc, a) => {
-                      acc[a.status] = (acc[a.status] || 0) + 1;
-                      return acc;
-                    }, {} as Record<string, number>);
-
-                    const statusSummary = Object.entries(statusCounts)
-                      .map(([status, count]) => `${count} ${status}`)
-                      .join(", ");
+                if (!isBatch) {
+                  return batchAssignments.map((assignment) => {
+                    const kit = kits?.find((k) => k._id === assignment.kitId);
+                    const program = programs?.find((p) => p._id === kit?.programId);
+                    const client = clients?.find((c) => c._id === assignment.clientId);
 
                     return (
-                      <React.Fragment key={`batch-group-${batchId}`}>
-                        {/* Batch Header Row */}
-                        <TableRow key={`batch-${batchId}`} className="bg-muted/50 font-semibold">
-                          <TableCell colSpan={13}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-lg">
-                                  Batch: {batch.batchId}
-                                  {batch.notes && (
-                                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                      ({batch.notes})
-                                    </span>
-                                  )}
-                                </h3>
-                                <Badge variant="outline">
-                                  {batch.assignmentCount} items
-                                </Badge>
-                                {canEdit && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEditBatch(batch)}
-                                    className="h-8 w-8 p-0"
-                                  >
-                                    <Edit2 className="h-4 w-4" />
-                                    <span className="sr-only">Edit Batch</span>
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleBatchExpand(batchId)}
-                                >
-                                  {isExpanded ? "▼" : "▶"}
-                                </Button>
-                                {canEdit && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                    onClick={() => handleDeleteBatch(batch._id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteBatch(batchId)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Batch Assignment Rows */}
-                        {isExpanded &&
-                          batchAssignments.map((assignment, index) => {
-                            const isEditing = editingAssignmentId === assignment._id;
-                            
-                            if (isEditing) {
-                              return (
-                                <TableRow key={assignment._id} className="bg-muted/50">
-                                  <TableCell>
-                                    <Badge variant="outline">{batch?.batchId || "-"}</Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowProgram} onValueChange={(val) => { setEditRowProgram(val); setEditRowKit(""); }}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select Program" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {programs?.map((program) => (
-                                          <SelectItem key={program._id} value={program._id}>
-                                            {program.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select Kit" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {editRowFilteredKits.map((kit) => (
-                                          <SelectItem key={kit._id} value={kit._id}>
-                                            {kit.name}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">
-                                      {editRowSelectedKit?.category || "-"}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowClient} onValueChange={setEditRowClient}>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select Client" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {clients?.map((client) => (
-                                          <SelectItem key={client._id} value={client._id}>
-                                            {client.buyerName}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      value={editRowQuantity}
-                                      onChange={(e) => setEditRowQuantity(e.target.value)}
-                                      className="w-20"
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Select value={editRowGrade} onValueChange={setEditRowGrade}>
-                                      <SelectTrigger className="w-24">
-                                        <SelectValue placeholder="Grade" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">None</SelectItem>
-                                        {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                          <SelectItem key={g} value={g.toString()}>
-                                            {g}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                      {assignment.status}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                          <CalendarIcon className="mr-2 h-4 w-4" />
-                                          {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                          mode="single"
-                                          selected={editRowDispatchDate}
-                                          onSelect={setEditRowDispatchDate}
-                                          initialFocus
-                                        />
-                                      </PopoverContent>
-                                    </Popover>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                          <CalendarIcon className="mr-2 h-4 w-4" />
-                                          {editRowProductionMonth ? format(new Date(editRowProductionMonth + "-01"), "MMM yyyy") : "Pick month"}
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0">
-                                        <div className="p-3 space-y-2">
-                                          <Select
-                                            value={editRowProductionMonth ? editRowProductionMonth.split("-")[1] : ""}
-                                            onValueChange={(month) => {
-                                              const year = editRowProductionMonth ? editRowProductionMonth.split("-")[0] : new Date().getFullYear().toString();
-                                              setEditRowProductionMonth(`${year}-${month}`);
-                                            }}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select month" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                                <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                                                  {format(new Date(2000, m - 1, 1), "MMMM")}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                          <Select
-                                            value={editRowProductionMonth ? editRowProductionMonth.split("-")[0] : ""}
-                                            onValueChange={(year) => {
-                                              const month = editRowProductionMonth ? editRowProductionMonth.split("-")[1] : "01";
-                                              setEditRowProductionMonth(`${year}-${month}`);
-                                            }}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Select year" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                                                <SelectItem key={y} value={y.toString()}>
-                                                  {y}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </TableCell>
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">
-                                      {format(assignment._creationTime, "MMM dd, yyyy")}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Input
-                                      value={editRowNotes}
-                                      onChange={(e) => setEditRowNotes(e.target.value)}
-                                      placeholder="Notes..."
-                                      className="w-full"
-                                    />
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                        <Save className="h-4 w-4" />
-                                      </Button>
-                                      <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            }
-                            
-                            return (
-                              <motion.tr
-                                key={assignment._id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.02 }}
-                                className="hover:bg-muted/50"
-                              >
-                                <TableCell>
-                                  <Badge variant="outline">{batch?.batchId || "-"}</Badge>
-                                </TableCell>
-                                {columnVisibility.program && (
-                                  <TableCell>
-                                    <span className="text-sm">{programs?.find((p) => p._id === assignment.kit?.programId)?.name}</span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.kit && (
-                                  <TableCell>
-                                    <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.category && (
-                                  <TableCell>
-                                    <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.client && (
-                                  <TableCell>
-                                    <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.quantity && (
-                                  <TableCell>
-                                    <span className="text-sm">{assignment.quantity}</span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.grade && (
-                                  <TableCell>
-                                    <span className="text-sm">{assignment.grade || "-"}</span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.status && (
-                                  <TableCell>
-                                    <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                                      {assignment.status}
-                                    </Badge>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.dispatchDate && (
-                                  <TableCell>
-                                    <span className="text-sm">
-                                      {assignment.dispatchedAt ? format(assignment.dispatchedAt, "MMM dd, yyyy") : "-"}
-                                    </span>
-                                  </TableCell>
-                                )}
-                                {columnVisibility.productionMonth && (
-                                  <TableCell>
-                                    <span className="text-sm">
-                                      {assignment.productionMonth
-                                        ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
-                                        : "-"}
-                                    </span>
-                                  </TableCell>
-                                )}
-                                <TableCell>
-                                  <span className="text-sm text-muted-foreground">
-                                    {format(assignment._creationTime, "MMM dd, yyyy")}
-                                  </span>
-                                </TableCell>
-                                {columnVisibility.notes && (
-                                  <TableCell className="text-center">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              size="icon"
-                                              variant="ghost"
-                                              onClick={() =>
-                                                handleOpenNotesDialog(
-                                                  assignment._id,
-                                                  "assignment",
-                                                  assignment.notes || "",
-                                                  canEdit
-                                                )
-                                              }
-                                              className="h-8 w-8"
-                                            >
-                                              <FileText className="h-4 w-4 text-blue-500" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Assignment Notes</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              size="icon"
-                                              variant="ghost"
-                                              onClick={() =>
-                                                handleOpenNotesDialog(
-                                                  assignment._id,
-                                                  "packing",
-                                                  assignment.packingNotes || "",
-                                                  false
-                                                )
-                                              }
-                                              className="h-8 w-8"
-                                            >
-                                              <MessageSquare className="h-4 w-4 text-green-500" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Packing Notes</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              size="icon"
-                                              variant="ghost"
-                                              onClick={() =>
-                                                handleOpenNotesDialog(
-                                                  assignment._id,
-                                                  "dispatch",
-                                                  assignment.dispatchNotes || "",
-                                                  false
-                                                )
-                                              }
-                                              className="h-8 w-8"
-                                            >
-                                              <Truck className="h-4 w-4 text-orange-500" />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>Dispatch Notes</TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </div>
-                                  </TableCell>
-                                )}
-                                <TableCell className="text-right">
-                                  <div className="flex items-center justify-end gap-2">
-                                    {canEdit && (
-                                      <>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() => handleStartEditRow(assignment)}
-                                        >
-                                          <Edit2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          onClick={() => handleDeleteClick(assignment)}
-                                        >
-                                          <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </motion.tr>
-                            );
-                          })}
-                      </React.Fragment>
-                    );
-                  }
-
-                  // Standalone assignments
-                  return batchAssignments.map((assignment, index) => {
-                    const isEditing = editingAssignmentId === assignment._id;
-                    
-                    if (isEditing) {
-                      return (
-                        <TableRow key={assignment._id} className="bg-muted/50">
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">-</span>
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowProgram} onValueChange={(val) => { setEditRowProgram(val); setEditRowKit(""); }}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Program" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {programs?.map((program) => (
-                                  <SelectItem key={program._id} value={program._id}>
-                                    {program.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowKit} onValueChange={setEditRowKit} disabled={!editRowProgram}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Kit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {editRowFilteredKits.map((kit) => (
-                                  <SelectItem key={kit._id} value={kit._id}>
-                                    {kit.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {editRowSelectedKit?.category || "-"}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowClient} onValueChange={setEditRowClient}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select Client" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {clients?.map((client) => (
-                                  <SelectItem key={client._id} value={client._id}>
-                                    {client.buyerName}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="1"
-                              value={editRowQuantity}
-                              onChange={(e) => setEditRowQuantity(e.target.value)}
-                              className="w-20"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Select value={editRowGrade} onValueChange={setEditRowGrade}>
-                              <SelectTrigger className="w-24">
-                                <SelectValue placeholder="Grade" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                                  <SelectItem key={g} value={g.toString()}>
-                                    {g}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                              {assignment.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {editRowDispatchDate ? format(editRowDispatchDate, "MMM dd, yyyy") : "Pick date"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                  mode="single"
-                                  selected={editRowDispatchDate}
-                                  onSelect={setEditRowDispatchDate}
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                          </TableCell>
-                          <TableCell>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {editRowProductionMonth ? format(new Date(editRowProductionMonth + "-01"), "MMM yyyy") : "Pick month"}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <div className="p-3 space-y-2">
-                                  <Select
-                                    value={editRowProductionMonth ? editRowProductionMonth.split("-")[1] : ""}
-                                    onValueChange={(month) => {
-                                      const year = editRowProductionMonth ? editRowProductionMonth.split("-")[0] : new Date().getFullYear().toString();
-                                      setEditRowProductionMonth(`${year}-${month}`);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select month" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                        <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                                          {format(new Date(2000, m - 1, 1), "MMMM")}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Select
-                                    value={editRowProductionMonth ? editRowProductionMonth.split("-")[0] : ""}
-                                    onValueChange={(year) => {
-                                      const month = editRowProductionMonth ? editRowProductionMonth.split("-")[1] : "01";
-                                      setEditRowProductionMonth(`${year}-${month}`);
-                                    }}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="Select year" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                                        <SelectItem key={y} value={y.toString()}>
-                                          {y}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {format(assignment._creationTime, "MMM dd, yyyy")}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={editRowNotes}
-                              onChange={(e) => setEditRowNotes(e.target.value)}
-                              placeholder="Notes..."
-                              className="w-full"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button size="icon" variant="ghost" onClick={() => handleSaveEditRow(assignment._id)}>
-                                <Save className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={handleCancelEditRow}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-                    
-                    return (
-                      <motion.tr
+                      <B2CAssignmentRow
                         key={assignment._id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.02 }}
-                        className="hover:bg-muted/50"
-                      >
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">-</span>
-                        </TableCell>
-                        {columnVisibility.program && (
-                          <TableCell>
-                            <span className="text-sm">{programs?.find((p) => p._id === assignment.kit?.programId)?.name}</span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.kit && (
-                          <TableCell>
-                            <span className="text-sm">{kits?.find((k) => k._id === assignment.kitId)?.name}</span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.category && (
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">{kits?.find((k) => k._id === assignment.kitId)?.category || "-"}</span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.client && (
-                          <TableCell>
-                            <span className="text-sm">{clients?.find((c) => c._id === assignment.clientId)?.buyerName}</span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.quantity && (
-                          <TableCell>
-                            <span className="text-sm">{assignment.quantity}</span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.grade && (
-                          <TableCell>
-                            <span className="text-sm">{assignment.grade || "-"}</span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.status && (
-                          <TableCell>
-                            <Badge variant={assignment.status === "dispatched" ? "default" : "secondary"}>
-                              {assignment.status}
-                            </Badge>
-                          </TableCell>
-                        )}
-                        {columnVisibility.dispatchDate && (
-                          <TableCell>
-                            <span className="text-sm">
-                              {assignment.dispatchedAt ? format(assignment.dispatchedAt, "MMM dd, yyyy") : "-"}
-                            </span>
-                          </TableCell>
-                        )}
-                        {columnVisibility.productionMonth && (
-                          <TableCell>
-                            <span className="text-sm">
-                              {assignment.productionMonth
-                                ? format(new Date(assignment.productionMonth + "-01"), "MMM yyyy")
-                                : "-"}
-                            </span>
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          <span className="text-sm text-muted-foreground">
-                            {format(assignment._creationTime, "MMM dd, yyyy")}
-                          </span>
-                        </TableCell>
-                        {columnVisibility.notes && (
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={() =>
-                                        handleOpenNotesDialog(
-                                          assignment._id,
-                                          "assignment",
-                                          assignment.notes || "",
-                                          canEdit
-                                        )
-                                      }
-                                      className="h-8 w-8"
-                                    >
-                                      <FileText className="h-4 w-4 text-blue-500" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Assignment Notes</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={() =>
-                                        handleOpenNotesDialog(
-                                          assignment._id,
-                                          "packing",
-                                          assignment.packingNotes || "",
-                                          false
-                                        )
-                                      }
-                                      className="h-8 w-8"
-                                    >
-                                      <MessageSquare className="h-4 w-4 text-green-500" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Packing Notes</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      onClick={() =>
-                                        handleOpenNotesDialog(
-                                          assignment._id,
-                                          "dispatch",
-                                          assignment.dispatchNotes || "",
-                                          false
-                                        )
-                                      }
-                                      className="h-8 w-8"
-                                    >
-                                      <Truck className="h-4 w-4 text-orange-500" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Dispatch Notes</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {canEdit && (
-                              <>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleStartEditRow(assignment)}
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteClick(assignment)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </motion.tr>
+                        assignment={assignment}
+                        kit={kit}
+                        program={program}
+                        client={client}
+                        columnVisibility={columnVisibility}
+                        canEdit={canEdit}
+                        onEdit={handleStartEditRow}
+                        onDelete={handleDeleteClick}
+                        onOpenNotes={handleOpenNotesDialog}
+                      />
                     );
                   });
-                })
-              )}
-            </TableBody>
-          </Table>
-        </Card>
+                }
 
-        {/* Create Assignment Dialog */}
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create New Assignment</DialogTitle>
-              <DialogDescription>
-                Assign a kit to a client. Stock will be deducted immediately.
-              </DialogDescription>
-            </DialogHeader>
+                return null;
+              })
+            )}
+          </TableBody>
+        </Table>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Program *</Label>
-                <Select value={selectedProgram} onValueChange={setSelectedProgram}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select program" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {programs.map((program) => (
-                      <SelectItem key={program._id} value={program._id}>
-                        {program.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <NotesDialog
+          open={notesDialog.open}
+          type={notesDialog.type}
+          value={notesDialog.value}
+          canEdit={notesDialog.canEdit}
+          onValueChange={(value) => setNotesDialog({ ...notesDialog, value })}
+          onSave={handleSaveNotesDialog}
+          onClose={() => setNotesDialog({ ...notesDialog, open: false })}
+        />
 
-              <div className="space-y-2">
-                <Label>Kit *</Label>
-                <Select
-                  value={selectedKit}
-                  onValueChange={setSelectedKit}
-                  disabled={!selectedProgram}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select kit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredKits.map((kit) => (
-                      <SelectItem key={kit._id} value={kit._id}>
-                        {kit.name} (Stock: {kit.stockCount})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedKitData && (
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    {selectedKitData.spareKits && selectedKitData.spareKits.length > 0 && (
-                      <div>Spare Kits: {selectedKitData.spareKits.length} items</div>
-                    )}
-                    {selectedKitData.bulkMaterials && selectedKitData.bulkMaterials.length > 0 && (
-                      <div>Bulk Materials: {selectedKitData.bulkMaterials.length} items</div>
-                    )}
-                    {selectedKitData.miscellaneous && selectedKitData.miscellaneous.length > 0 && (
-                      <div>Miscellaneous: {selectedKitData.miscellaneous.length} items</div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Client *</Label>
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client._id} value={client._id}>
-                        {client.buyerName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Quantity *</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Grade (Optional)</Label>
-                <Select value={grade} onValueChange={setGrade}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No Grade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Grade</SelectItem>
-                    {Array.from({ length: 10 }, (_, i) => i + 1).map((g) => (
-                      <SelectItem key={g} value={g.toString()}>
-                        Grade {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Dispatch Date (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dispatchDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dispatchDate ? format(dispatchDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dispatchDate}
-                      onSelect={setDispatchDate}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Production Month (Optional)</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !productionMonth && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {productionMonth
-                        ? format(new Date(productionMonth + "-01"), "MMMM yyyy")
-                        : "Pick month"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <div className="p-3 space-y-2">
-                      <Select
-                        value={productionMonth ? productionMonth.split("-")[1] : ""}
-                        onValueChange={(month) => {
-                          const year = productionMonth ? productionMonth.split("-")[0] : new Date().getFullYear().toString();
-                          setProductionMonth(`${year}-${month}`);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select month" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                            <SelectItem key={m} value={m.toString().padStart(2, "0")}>
-                              {format(new Date(2000, m - 1, 1), "MMMM")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={productionMonth ? productionMonth.split("-")[0] : ""}
-                        onValueChange={(year) => {
-                          const month = productionMonth ? productionMonth.split("-")[1] : "01";
-                          setProductionMonth(`${year}-${month}`);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select year" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i).map((y) => (
-                            <SelectItem key={y} value={y.toString()}>
-                              {y}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notes (Optional)</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Packing instructions, delivery notes, etc."
-                  rows={3}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateAssignment}>Create Assignment</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Packing Checklist Dialog */}
-        <Dialog open={packingDialogOpen} onOpenChange={setPackingDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Packing Checklist</DialogTitle>
-              <DialogDescription>
-                Check off all items before marking as packed
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="pouches"
-                  checked={checkPouches}
-                  onCheckedChange={(checked) => setCheckPouches(checked as boolean)}
-                />
-                <label
-                  htmlFor="pouches"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Pouches
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="spareKits"
-                  checked={checkSpareKits}
-                  onCheckedChange={(checked) => setCheckSpareKits(checked as boolean)}
-                />
-                <label
-                  htmlFor="spareKits"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Spare Kits
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="bulkMaterial"
-                  checked={checkBulkMaterial}
-                  onCheckedChange={(checked) => setCheckBulkMaterial(checked as boolean)}
-                />
-                <label
-                  htmlFor="bulkMaterial"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Bulk Material
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="tools"
-                  checked={checkTools}
-                  onCheckedChange={(checked) => setCheckTools(checked as boolean)}
-                />
-                <label
-                  htmlFor="tools"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Tools
-                </label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPackingDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleMarkAsPacked}
-                disabled={!checkPouches || !checkSpareKits || !checkBulkMaterial || !checkTools}
-              >
-                Mark as Packed
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+              <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
               <AlertDialogDescription>
-                {selectedAssignment?.status === "dispatched"
-                  ? "This assignment is dispatched. Stock will NOT be restored. Delete anyway?"
-                  : "Delete this assignment? Stock will be restored to the kit."}
+                Are you sure you want to delete this assignment? This action will create a deletion request.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -2670,55 +768,6 @@ export default function Assignments() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-        {/* Notes Dialog */}
-        <Dialog open={notesDialog.open} onOpenChange={(open) => setNotesDialog({ ...notesDialog, open })}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {notesDialog.type === "assignment" && "Assignment Notes"}
-                {notesDialog.type === "packing" && "Packing Notes"}
-                {notesDialog.type === "dispatch" && "Dispatch Notes"}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <Textarea
-                value={notesDialog.value}
-                onChange={(e) => setNotesDialog({ ...notesDialog, value: e.target.value })}
-                placeholder="Enter notes..."
-                rows={6}
-                disabled={!notesDialog.canEdit}
-              />
-            </div>
-            <DialogFooter>
-              {notesDialog.canEdit && (
-                <Button onClick={handleSaveNotesDialog}>Save Notes</Button>
-              )}
-              <Button
-                variant="outline"
-                onClick={() => setNotesDialog({ open: false, assignmentId: null, type: "assignment", value: "", canEdit: false })}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Batch Assignment Dialog */}
-        <BatchAssignmentDialog
-          open={isBatchDialogOpen || !!editingBatch}
-          onOpenChange={(open) => {
-            setIsBatchDialogOpen(open);
-            if (!open) setEditingBatch(null);
-          }}
-          clients={clients || []}
-          programs={programs || []}
-          kits={kits || []}
-          onCreateBatch={handleCreateBatch}
-          mode={editingBatch ? "edit" : "create"}
-          initialData={editingBatch || undefined}
-          onUpdateBatch={handleUpdateBatch}
-        />
       </div>
     </Layout>
   );
