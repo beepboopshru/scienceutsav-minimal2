@@ -192,7 +192,7 @@ export default function B2CClients() {
     }
   };
 
-  const filteredClients = clients?.filter((client) => {
+  const filteredClients = clients ? clients.filter((client) => {
     const query = searchQuery.toLowerCase();
     return (
       client.buyerName.toLowerCase().includes(query) ||
@@ -200,7 +200,7 @@ export default function B2CClients() {
       client.email?.toLowerCase().includes(query) ||
       client.clientId?.toLowerCase().includes(query)
     );
-  });
+  }) : [];
 
   return (
     <Layout>
@@ -233,11 +233,11 @@ export default function B2CClients() {
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          {!filteredClients ? (
+          {!clients ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredClients.length === 0 ? (
+          ) : filteredClients && filteredClients.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {searchQuery ? "No clients found matching your search." : "No clients yet. Add your first client to get started."}
             </div>
