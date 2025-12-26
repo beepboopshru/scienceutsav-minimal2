@@ -1545,7 +1545,7 @@ export default function Assignments() {
 
                   // Filter out batches that are currently being edited
                   const isBeingEdited = batchesInProgress.some(
-                    (b) => b.mode === "edit" && b.originalBatchId === batchId
+                    (b) => b.mode === "edit" && b.originalBatchId === batch?._id
                   );
 
                   if (isBatch && batch && !isBeingEdited) {
