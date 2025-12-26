@@ -83,6 +83,7 @@ import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
 import { AssignmentFilters } from "@/components/assignments/AssignmentFilters";
 import { BatchAssignmentDialog } from "@/components/assignments/BatchAssignmentDialog";
+import { InlineBatchEditor, type InlineBatchData, type BatchRow } from "@/components/assignments/InlineBatchEditor";
 
 export default function Assignments() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -175,11 +176,14 @@ export default function Assignments() {
     id: string;
     batchId: string;
     client: string;
+    clientName: string;
     batchName: string;
     dispatchDate: Date | undefined;
     productionMonth: string;
     batchNotes: string;
     rows: BatchRow[];
+    mode: "create" | "edit";
+    originalBatchId?: Id<"batches">;
   };
 
   const [batchesInProgress, setBatchesInProgress] = useState<BatchInProgress[]>([]);
@@ -513,10 +517,12 @@ export default function Assignments() {
       id: newBatchId,
       batchId: "", // Will be generated after client selection
       client: "",
+      clientName: "",
       batchName: "",
       dispatchDate: undefined,
       productionMonth: "",
       batchNotes: "",
+      mode: "create",
       rows: [
         {
           id: `row-${Date.now()}`,
@@ -573,7 +579,7 @@ export default function Assignments() {
     );
   };
 
-  const handleUpdateBatchRow = (batchId: string, rowId: string, field: keyof BatchRow, value: string) => {
+  const handleUpdateBatchRow = (batchId: string, rowId: string, field: string, value: any) => {
     setBatchesInProgress((prevBatches) =>
       prevBatches.map((batch) =>
         batch.id === batchId
@@ -791,10 +797,34 @@ export default function Assignments() {
 
   const handleEditBatch = (batch: any) => {
     const batchAssignments = assignments?.filter(a => a.batchId === batch._id) || [];
-    setEditingBatch({
-      batch,
-      assignments: batchAssignments,
-    });
+    
+    // Convert existing batch to InlineBatchData format
+    const editBatchData: InlineBatchData = {
+      id: Math.random().toString(),
+      batchId: batch.batchId,
+      client: batch.clientId,
+      clientName: batch.client?.buyerName || "",
+      batchName: batch.batchId,
+      dispatchDate: batch.dispatchDate ? new Date(batch.dispatchDate) : undefined,
+      productionMonth: batch.productionMonth || "",
+      batchNotes: batch.notes || "",
+      mode: "edit",
+      originalBatchId: batch._id,
+      rows: batchAssignments.map(a => {
+        const kit = kits?.find(k => k._id === a.kitId);
+        return {
+          id: Math.random().toString(),
+          assignmentId: a._id,
+          program: kit?.programId || "",
+          kit: a.kitId,
+          quantity: a.quantity.toString(),
+          grade: a.grade || "",
+          notes: a.notes || "",
+        };
+      }),
+    };
+
+    setBatchesInProgress(prev => [...prev, editBatchData]);
   };
 
   const handleDeleteBatch = async (batchId: string) => {
@@ -1246,6 +1276,24 @@ export default function Assignments() {
                     </TableCell>
                   </TableRow>
                 </React.Fragment>
+              ))}
+
+              {/* Inline Batch Editor for batches in progress */}
+              {batchesInProgress.map((batch) => (
+                <InlineBatchEditor
+                  key={batch.id}
+                  batch={batch}
+                  clients={clients || []}
+                  programs={programs || []}
+                  kits={kits || []}
+                  columnVisibility={columnVisibility}
+                  onUpdateMetadata={handleUpdateBatchMetadata}
+                  onUpdateRow={handleUpdateBatchRow}
+                  onAddRow={handleAddRowToBatch}
+                  onRemoveRow={handleRemoveRowFromBatch}
+                  onSave={handleSaveBatch}
+                  onCancel={handleCancelBatch}
+                />
               ))}
 
               {/* New Row for inline creation */}
