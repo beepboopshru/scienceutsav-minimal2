@@ -165,6 +165,7 @@ export default function Assignments() {
   // Batch creation states
   type BatchRow = {
     id: string;
+    assignmentId?: Id<"assignments">; // For edit mode
     program: string;
     kit: string;
     quantity: string;
@@ -658,27 +659,58 @@ export default function Assignments() {
       return;
     }
 
-    try {
-      await createBatch({
-        clientId: batch.client as Id<"b2cClients">,
-        clientType: "b2c",
-        batchName: batch.batchName || batch.batchId,
-        notes: batch.batchNotes || undefined,
-        dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
-        productionMonth: batch.productionMonth || undefined,
-        assignments: validRows.map((row) => ({
-          kitId: row.kit as Id<"kits">,
-          quantity: parseInt(row.quantity),
-          grade: row.grade && row.grade !== "none" ? row.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
-          notes: row.notes || undefined,
-        })),
-      });
+    // Validate production month vs dispatch date
+    if (batch.productionMonth && batch.dispatchDate) {
+      const prodMonth = new Date(batch.productionMonth + "-01");
+      const dispMonth = new Date(batch.dispatchDate.getFullYear(), batch.dispatchDate.getMonth(), 1);
+      if (prodMonth > dispMonth) {
+        toast.error("Production month must be before or same as dispatch month");
+        return;
+      }
+    }
 
-      toast.success("Batch created successfully");
-      setBatchesInProgress(batchesInProgress.filter((b) => b.id !== batchId));
+    try {
+      if (batch.mode === "edit" && batch.originalBatchId) {
+        // Update existing batch
+        await updateBatchWithAssignments({
+          batchId: batch.originalBatchId,
+          batchName: batch.batchName || undefined,
+          notes: batch.batchNotes || undefined,
+          dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
+          productionMonth: batch.productionMonth || undefined,
+          assignments: batch.rows.map((r) => ({
+            assignmentId: r.assignmentId,
+            kitId: r.kit as Id<"kits">,
+            quantity: parseInt(r.quantity),
+            grade: r.grade && r.grade !== "" ? (r.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10") : undefined,
+            notes: r.notes || undefined,
+          })),
+        });
+        toast.success("Batch updated successfully");
+      } else {
+        // Create new batch
+        await createBatch({
+          clientId: batch.client as Id<"b2cClients">,
+          clientType: "b2c",
+          batchName: batch.batchName || batch.batchId,
+          notes: batch.batchNotes || undefined,
+          dispatchDate: batch.dispatchDate ? batch.dispatchDate.getTime() : undefined,
+          productionMonth: batch.productionMonth || undefined,
+          assignments: validRows.map((row) => ({
+            kitId: row.kit as Id<"kits">,
+            quantity: parseInt(row.quantity),
+            grade: row.grade && row.grade !== "none" ? row.grade as "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" : undefined,
+            notes: row.notes || undefined,
+          })),
+        });
+        toast.success("Batch created successfully");
+      }
+
+      // Remove batch from in-progress list
+      setBatchesInProgress((prev) => prev.filter((b) => b.id !== batchId));
     } catch (error) {
-      toast.error("Failed to create batch");
-      console.error(error);
+      console.error("Failed to save batch:", error);
+      toast.error(batch.mode === "edit" ? "Failed to update batch" : "Failed to create batch");
     }
   };
 
