@@ -1543,7 +1543,12 @@ export default function Assignments() {
                   const isExpanded = expandedBatches.has(batchId);
                   const isBatch = batchId !== "standalone";
 
-                  if (isBatch && batch) {
+                  // Filter out batches that are currently being edited
+                  const isBeingEdited = batchesInProgress.some(
+                    (b) => b.mode === "edit" && b.originalBatchId === batchId
+                  );
+
+                  if (isBatch && batch && !isBeingEdited) {
                     const statusCounts = batchAssignments.reduce((acc, a) => {
                       acc[a.status] = (acc[a.status] || 0) + 1;
                       return acc;
