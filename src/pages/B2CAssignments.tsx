@@ -796,6 +796,15 @@ export default function Assignments() {
   };
 
   const handleEditBatch = (batch: any) => {
+    // Check if this batch is already being edited
+    const alreadyEditing = batchesInProgress.some(
+      b => b.mode === "edit" && b.originalBatchId === batch._id
+    );
+    
+    if (alreadyEditing) {
+      return; // Don't add duplicate
+    }
+
     const batchAssignments = assignments?.filter(a => a.batchId === batch._id) || [];
     
     // Convert existing batch to InlineBatchData format
